@@ -7,6 +7,8 @@ const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
 const saveBtn = document.getElementById('saveOptions');
+const menu = document.querySelector('.menu');
+let gameCanvas = document.getElementById('gameCanvas'); // may be null if not in DOM
 
 function loadOpts() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:false }; }
@@ -24,59 +26,108 @@ function syncUI() {
 
 optionsBtn.addEventListener('click', () => {
   syncUI();
-  dlg.showModal();
+  if (dlg?.showModal) dlg.showModal();
 });
 
 saveBtn.addEventListener('click', () => {
   saveOpts({ mute: optMute.checked, fullscreen: optFullscreen.checked });
 });
 
-startBtn.addEventListener('click', startGame);
+// ---------------- Game bootstrap (merged + optimized) ----------------
+let rafId = null;
+let onEndHandler = null;
+let player = null;
+let startTime = 0;
 
-let player;
-let startTime;
+function ensureCanvas() {
+  if (!gameCanvas) {
+    gameCanvas = document.createElement('canvas');
+    gameCanvas.id = 'gameCanvas';
+    document.body.appendChild(gameCanvas);
+  }
+  gameCanvas.style.display = 'block';
+  return gameCanvas;
+}
+
+function resizeCanvas(ctx) {
+  const ratio = window.devicePixelRatio || 1;
+  const w = Math.floor(window.innerWidth);
+  const h = Math.floor(window.innerHeight);
+  gameCanvas.style.width = w + 'px';
+  gameCanvas.style.height = h + 'px';
+  gameCanvas.width = Math.floor(w * ratio);
+  gameCanvas.height = Math.floor(h * ratio);
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
+  ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.textBaseline = 'top';
+}
+
+function endGame() {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  window.removeEventListener('resize', _onResize);
+  if (onEndHandler) window.removeEventListener('gameEnded', onEndHandler), onEndHandler = null;
+
+  if (gameCanvas) gameCanvas.style.display = 'none';
+  if (menu) menu.style.display = ''; // show menu again
+}
+
+function _onResize() {
+  const ctx = gameCanvas.getContext('2d');
+  resizeCanvas(ctx);
+}
 
 function startGame() {
-  // Old redirect logic removed; game now runs on this page.
-  // const o = loadOpts();
-  // const qs = new URLSearchParams({
-  //   mute: o.mute ? '1' : '0',
-  //   fs: o.fullscreen ? '1' : '0'
-  // }).toString();
-  // window.location.href = `/game/index.html?${qs}`;
-
-  // Hide the main menu container.
-  const menu = document.querySelector('main.container');
+  // Hide the menu UI
   if (menu) menu.style.display = 'none';
 
-  // Create and display a canvas for gameplay.
-  const canvas = document.createElement('canvas');
-  canvas.id = 'gameCanvas';
-  canvas.width = 800;
-  canvas.height = 600;
-  document.body.appendChild(canvas);
-  const ctx = canvas.getContext('2d');
+  // Prepare canvas and context
+  const canvas = ensureCanvas();
+  const ctx = canvas.getContext('2d', { alpha: false });
 
-  // Initialize game state.
+  // Apply fullscreen if requested
+  const opts = loadOpts();
+  if (opts.fullscreen && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {/* ignore */});
+  }
+
+  // Init game state
   player = { x: canvas.width / 2, y: canvas.height / 2, radius: 20 };
-  startTime = Date.now();
+  startTime = performance.now();
 
-  function loop() {
-    const elapsed = (Date.now() - startTime) / 1000;
+  // Size & events
+  resizeCanvas(ctx);
+  window.addEventListener('resize', _onResize);
+
+  // Allow other code to end the game by dispatching: window.dispatchEvent(new Event('gameEnded'))
+  onEndHandler = () => endGame();
+  window.addEventListener('gameEnded', onEndHandler);
+
+  // Main loop (single RAF)
+  function loop(t) {
+    // simple demo scene
+    const elapsed = (t - startTime) / 1000;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // player
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
     ctx.fillStyle = 'blue';
     ctx.fill();
-    ctx.fillStyle = 'black';
-    ctx.fillText(`Time: ${elapsed.toFixed(1)}`, 10, 20);
-    requestAnimationFrame(loop);
-  }
 
-  loop();
+    // HUD
+    ctx.fillStyle = 'black';
+    ctx.fillText(`Time: ${elapsed.toFixed(1)}s`, 12, 12);
+
+    rafId = requestAnimationFrame(loop);
+  }
+  rafId = requestAnimationFrame(loop);
 }
 
+startBtn.addEventListener('click', startGame);
+
+// ---------------- Misc ----------------
 quitBtn.addEventListener('click', () => {
-  // Web pages can't truly "quit". Give a graceful UX.
   alert('Thanks for stopping by! You can close this tab any time.');
 });
