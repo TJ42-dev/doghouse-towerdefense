@@ -23,3 +23,12 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .dialog-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem; }
 
 .footnote { opacity: .7; font-size: .9rem; }
+
+#gameCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: none;
+}

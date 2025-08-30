@@ -7,6 +7,8 @@ const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
 const saveBtn = document.getElementById('saveOptions');
+const menu = document.querySelector('.menu');
+const gameCanvas = document.getElementById('gameCanvas');
 
 function loadOpts() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:false }; }
@@ -31,15 +33,21 @@ saveBtn.addEventListener('click', () => {
   saveOpts({ mute: optMute.checked, fullscreen: optFullscreen.checked });
 });
 
-startBtn.addEventListener('click', () => {
-  // pass options via query string; Godot page can read window.location.search if desired
-  const o = loadOpts();
-  const qs = new URLSearchParams({
-    mute: o.mute ? '1' : '0',
-    fs: o.fullscreen ? '1' : '0'
-  }).toString();
-  window.location.href = `/game/index.html?${qs}`;
-});
+function startGame() {
+  menu.style.display = 'none';
+  gameCanvas.style.display = 'block';
+
+  const onEnd = () => {
+    gameCanvas.style.display = 'none';
+    menu.style.display = '';
+    window.removeEventListener('gameEnded', onEnd);
+  };
+
+  window.addEventListener('gameEnded', onEnd);
+  // Initialize your game here and dispatch a 'gameEnded' event when finished
+}
+
+startBtn.addEventListener('click', startGame);
 
 quitBtn.addEventListener('click', () => {
   // Web pages can't truly "quit". Give a graceful UX.
