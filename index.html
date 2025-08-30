@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>My Godot Web Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preload" href="/game/godot.wasm" as="fetch" type="application/wasm" crossorigin>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>My Godot Web Game</h1>
+
+    <nav class="menu" role="menu" aria-label="Main menu">
+      <button id="startBtn" class="btn" role="menuitem">Start</button>
+      <button id="optionsBtn" class="btn" role="menuitem" aria-haspopup="dialog" aria-controls="optionsDialog">Options</button>
+      <button id="quitBtn" class="btn" role="menuitem">Quit</button>
+    </nav>
+
+    <dialog id="optionsDialog">
+      <form method="dialog" class="dialog-content">
+        <h2>Options</h2>
+        <label class="row">
+          <span>Mute audio</span>
+          <input type="checkbox" id="optMute">
+        </label>
+        <label class="row">
+          <span>Start in fullscreen</span>
+          <input type="checkbox" id="optFullscreen">
+        </label>
+        <menu class="dialog-actions">
+          <button value="cancel" class="btn ghost">Cancel</button>
+          <button id="saveOptions" value="default" class="btn">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <p class="footnote">WebGL 2 + WASM build. Best in modern browsers.</p>
+  </main>
+
+  <script src="./main.js" defer></script>
+</body>
+</html>

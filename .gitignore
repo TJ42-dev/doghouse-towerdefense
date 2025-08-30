@@ -1,0 +1,9 @@
+# Godot / build artifacts / OS junk
+.import/
+.export/
+.cache/
+.DS_Store
+Thumbs.db
+
+# Node (if you ever add tooling)
+node_modules/
