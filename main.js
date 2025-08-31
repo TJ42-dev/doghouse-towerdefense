@@ -35,7 +35,9 @@ let towers = [];
 let bullets = [];
 let money = 0;
 
-const CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
+// Tower and enemy stats are loaded from external JSON for easier tuning
+let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
+let TOWER_TYPES = [];
 function cannonDamage() { return CANNON_BASE.damage / (waveIndex + 1); }
 
 function isWallAt(gx, gy) {
@@ -216,15 +218,34 @@ function cssCenter() {
 
 // -------------------- Enemy definitions & asset loader --------------------
 // Add new dog heads here. Omit baseHealth/baseSpeed to use balanced defaults.
-const DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
-const DOG_TYPES = [
-  { name: 'beagle', src: 'assets/animals/dogs/beagle.png', baseHealth: 60, baseSpeed: 1.3 }, // fast but weak
-  { name: 'labrador', src: 'assets/animals/dogs/labrador.png' }, // balanced
-  { name: 'bulldog', src: 'assets/animals/dogs/bulldog.png', baseHealth: 150, baseSpeed: 0.7 }, // tough but slow
-];
+let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
+let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_SRC = 'assets/cannon.svg';
 const WALL_SRC = 'assets/wall.svg';
+
+let DATA_LOADED = false;
+async function loadData() {
+  if (DATA_LOADED) return;
+  try {
+    const [towerJson, dogJson] = await Promise.all([
+      fetch('data/towers.json').then(r => r.json()),
+      fetch('data/dogs.json').then(r => r.json())
+    ]);
+    if (Array.isArray(towerJson)) {
+      TOWER_TYPES = towerJson;
+      const cannon = TOWER_TYPES.find(t => t.id === 'cannon');
+      if (cannon) CANNON_BASE = { ...CANNON_BASE, ...cannon };
+    }
+    if (dogJson) {
+      DEFAULT_DOG_STATS = { ...DEFAULT_DOG_STATS, ...(dogJson.default || {}) };
+      DOG_TYPES = Array.isArray(dogJson.types) ? dogJson.types : [];
+    }
+  } catch (err) {
+    console.warn('Failed to load data files', err);
+  }
+  DATA_LOADED = true;
+}
 
 function loadImage(src) {
   return new Promise((resolve) => {
@@ -245,6 +266,7 @@ let ASSETS = { dogs: [], cat: null, cannon: null, wall: null };
 let assetsReady; // Promise
 
 async function ensureAssets() {
+  await loadData();
   if (!assetsReady) {
     assetsReady = (async () => {
         const dogImgs = await Promise.all(DOG_TYPES.map(t => loadImage(t.src)));
