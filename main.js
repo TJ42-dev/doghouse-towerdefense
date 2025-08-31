@@ -17,13 +17,49 @@ let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
 
 // -------------------- Grid & Build --------------------
-const GRID_SIZE = 30;
+const GRID_SIZE = 100;
 let CELL = 20; // size of one grid cell in pixels (computed on resize)
 let walls = [];
 let selectedBuild = null;
 
 function isWallAt(gx, gy) {
   return walls.some(w => w.x === gx && w.y === gy);
+}
+
+// Basic BFS pathfinding to navigate around walls
+function findPath(start, goal) {
+  const key = (x, y) => `${x},${y}`;
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const queue = [start];
+  let qi = 0;
+  const visited = new Set([key(start.x, start.y)]);
+  const prev = new Map();
+  while (qi < queue.length) {
+    const cur = queue[qi++];
+    if (cur.x === goal.x && cur.y === goal.y) break;
+    for (const [dx,dy] of dirs) {
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (nx < 0 || ny < 0 || nx >= GRID_SIZE || ny >= GRID_SIZE) continue;
+      if (isWallAt(nx, ny)) continue;
+      const k = key(nx, ny);
+      if (visited.has(k)) continue;
+      visited.add(k);
+      queue.push({x:nx, y:ny});
+      prev.set(k, cur);
+    }
+  }
+  const path = [];
+  let cur = goal;
+  const goalKey = key(goal.x, goal.y);
+  if (!prev.has(goalKey) && (goal.x !== start.x || goal.y !== start.y)) return path;
+  while (cur.x !== start.x || cur.y !== start.y) {
+    path.push(cur);
+    const k = key(cur.x, cur.y);
+    cur = prev.get(k);
+    if (!cur) break;
+  }
+  path.reverse();
+  return path;
 }
 
 // -------------------- Small SFX (respects "Mute") --------------------
@@ -204,8 +240,11 @@ function spawnEnemy() {
   const pool = ASSETS.dogs.filter(imgReady);
   const img = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
   const target = catLives.find(l => l.alive) || null;
+  const startCell = { x: Math.floor(x / CELL), y: 0 };
+  const goalCell = target ? { x: Math.floor(target.x / CELL), y: Math.floor(target.y / CELL) } : null;
+  const path = goalCell ? findPath(startCell, goalCell) : [];
 
-  enemies.push({ x, y, r, speed, img, target });
+  enemies.push({ x, y, r, speed, img, target, path, goalCell });
 }
 
 function update(dt) {
@@ -223,15 +262,46 @@ function update(dt) {
   enemies = enemies.filter(e => {
     if (!e.target || !e.target.alive) e.target = liveTargets[0];
     if (!e.target) return false;
-    const dx = e.target.x - e.x;
-    const dy = e.target.y - e.y;
-    const d = Math.hypot(dx, dy) || 1;
+
+    const goalCell = { x: Math.floor(e.target.x / CELL), y: Math.floor(e.target.y / CELL) };
+    const curCell = { x: Math.min(Math.max(Math.floor(e.x / CELL), 0), GRID_SIZE-1),
+                      y: Math.min(Math.max(Math.floor(e.y / CELL), 0), GRID_SIZE-1) };
+
+    if (!e.path || !e.path.length || !e.goalCell || e.goalCell.x !== goalCell.x || e.goalCell.y !== goalCell.y) {
+      e.path = findPath(curCell, goalCell);
+      e.goalCell = goalCell;
+    }
+
+    if (e.path && e.path.length && isWallAt(e.path[0].x, e.path[0].y)) {
+      e.path = findPath(curCell, goalCell);
+    }
+
+    let destX = e.target.x, destY = e.target.y;
+    if (e.path && e.path.length) {
+      const step = e.path[0];
+      destX = (step.x + 0.5) * CELL;
+      destY = (step.y + 0.5) * CELL;
+    }
+
     const prevX = e.x, prevY = e.y;
-    e.x += (dx / d) * e.speed * dt;
-    e.y += (dy / d) * e.speed * dt;
+    const dx = destX - e.x;
+    const dy = destY - e.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const move = e.speed * dt;
+    if (d <= move) {
+      e.x = destX;
+      e.y = destY;
+      if (e.path && e.path.length) e.path.shift();
+    } else {
+      e.x += (dx / d) * move;
+      e.y += (dy / d) * move;
+    }
     const gx = Math.floor(e.x / CELL);
     const gy = Math.floor(e.y / CELL);
-    if (isWallAt(gx, gy)) { e.x = prevX; e.y = prevY; }
+    if (isWallAt(gx, gy)) {
+      e.x = prevX; e.y = prevY;
+      e.path = findPath(curCell, goalCell);
+    }
 
     const dp = Math.hypot(player.x - e.x, player.y - e.y);
     if (dp < player.r + e.r) { sfx(200, 0.1, 0.05, 'sawtooth'); return false; }
