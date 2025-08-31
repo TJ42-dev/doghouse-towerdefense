@@ -128,7 +128,7 @@ let lastT = 0;
 let elapsed = 0;
 let running = false;
 
-const player = { x: 0, y: 0, r: 14 };
+const player = { x: 0, y: 0, r: 18 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 let spawnTimer = 0; // secs until next spawn
@@ -223,12 +223,6 @@ function render() {
     ctx.fillStyle = '#5bd9ff';
     ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
     ctx.fill();
-  }
-
-  if (mouse.active) {
-    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(mouse.x-8, mouse.y); ctx.lineTo(mouse.x+8, mouse.y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(mouse.x, mouse.y-8); ctx.lineTo(mouse.x, mouse.y+8); ctx.stroke();
   }
 
   drawHUD();
