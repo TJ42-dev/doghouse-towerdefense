@@ -14,6 +14,11 @@ const container = document.querySelector('.container');
 const buildMenu = document.getElementById('buildMenu');
 const wallBtn = document.getElementById('wallBtn');
 const cannonBtn = document.getElementById('cannonBtn');
+const towerMenu = document.getElementById('towerMenu');
+const upgradeBtn = document.getElementById('upgradeTower');
+const sellBtn = document.getElementById('sellTower');
+const closeTowerMenuBtn = document.getElementById('closeTowerMenu');
+let selectedTower = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
@@ -28,6 +33,7 @@ let walls = [];
 let selectedBuild = null;
 let towers = [];
 let bullets = [];
+let money = 0;
 
 const CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
 function cannonDamage() { return CANNON_BASE.damage / (waveIndex + 1); }
@@ -92,6 +98,21 @@ function horn() {
   setTimeout(() => sfx(220, 0.35, 0.09, 'sawtooth'), 200);
 }
 
+function bark() {
+  sfx(500, 0.1, 0.05, 'sawtooth');
+  setTimeout(() => sfx(400, 0.1, 0.05, 'square'), 70);
+}
+
+function rankUp() {
+  sfx(1200, 0.15, 0.05, 'sine');
+  setTimeout(() => sfx(1500, 0.2, 0.05, 'sine'), 120);
+}
+
+function victory() {
+  sfx(660, 0.25, 0.06, 'square');
+  setTimeout(() => sfx(880, 0.3, 0.06, 'square'), 200);
+}
+
 // -------------------- Options helpers --------------------
 function loadOpts() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:false }; }
@@ -127,6 +148,37 @@ if (buildMenu) {
     document.removeEventListener('mousemove', onDrag);
     document.removeEventListener('mouseup', stopDrag);
   }
+}
+
+if (towerMenu) {
+  upgradeBtn?.addEventListener('click', () => {
+    if (selectedTower) { upgradeTower(selectedTower); rankUp(); }
+    hideTowerMenu();
+  });
+  sellBtn?.addEventListener('click', () => {
+    if (selectedTower) {
+      towers = towers.filter(t => t !== selectedTower);
+    }
+    hideTowerMenu();
+  });
+  closeTowerMenuBtn?.addEventListener('click', hideTowerMenu);
+}
+
+function showTowerMenu(t, x, y) {
+  selectedTower = t;
+  towerMenu.style.left = x + 'px';
+  towerMenu.style.top = y + 'px';
+  towerMenu.style.display = 'block';
+}
+function hideTowerMenu() {
+  towerMenu.style.display = 'none';
+  selectedTower = null;
+}
+function upgradeTower(t) {
+  t.level = (t.level || 1) + 1;
+  t.damage *= 1.25;
+  t.fireRate *= 1.1;
+  t.range *= 1.1;
 }
 
 // -------------------- Canvas setup --------------------
@@ -242,6 +294,8 @@ function resetGame() {
   selectedBuild = null;
   towers = [];
   bullets = [];
+  money = 0;
+  hideTowerMenu();
   waveActive = false;
   preWaveTimer = START_DELAY;
   waveElapsed = 0;
@@ -398,8 +452,10 @@ function update(dt) {
     const move = b.speed * dt;
     if (dist <= move) {
       b.target.health -= b.damage;
+      bark();
       if (b.target.health <= 0) {
         enemies.splice(enemies.indexOf(b.target), 1);
+        money += 10;
       }
       return false;
     }
@@ -407,6 +463,12 @@ function update(dt) {
     b.y += (dy / dist) * move;
     return true;
   });
+
+  if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= ENEMIES_PER_WAVE) {
+    money += 50;
+    victory();
+    nextWave();
+  }
 
   if (catLives.every(l => !l.alive)) { endGame(); return; }
 
@@ -441,11 +503,13 @@ function drawHUD() {
   if (!waveActive && preWaveTimer > 0) {
     ctx.fillText(`Next wave in: ${preWaveTimer.toFixed(1)}s`, 12, 12);
     ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 32);
+    ctx.fillText(`Money: $${money}`, 12, 52);
   } else {
     ctx.fillText(`Wave: ${waveIndex + 1}`, 12, 12);
     ctx.fillText(`Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s`, 12, 32);
     ctx.fillText(`Enemies: ${enemies.length}`, 12, 52);
     ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 72);
+    ctx.fillText(`Money: $${money}`, 12, 92);
   }
 }
 function render() {
@@ -529,11 +593,21 @@ function onMouseMove(e) {
   mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.active = true;
 }
 function onCanvasClick(e) {
-  if (!selectedBuild) return;
   const r = gameCanvas.getBoundingClientRect();
   const gx = Math.floor((e.clientX - r.left) / CELL);
   const gy = Math.floor((e.clientY - r.top) / CELL);
   if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
+
+  if (!selectedBuild) {
+    const t = towers.find(t => t.gx === gx && t.gy === gy);
+    if (t) {
+      showTowerMenu(t, e.clientX, e.clientY);
+    } else {
+      hideTowerMenu();
+    }
+    return;
+  }
+
   if (selectedBuild === 'wall') {
     if (!walls.some(w => w.x === gx && w.y === gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
       walls.push({ x: gx, y: gy });
@@ -608,6 +682,7 @@ function endGame() {
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
+  hideTowerMenu();
 
   const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
   alert(msg);
