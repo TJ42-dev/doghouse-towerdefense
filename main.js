@@ -238,7 +238,7 @@ function resetGame() {
 
   // place cat head lives near the bottom-left, shifted 10% from the edge
   catLives = [];
-  const cols = 3, rows = 3;
+  const cols = 27, rows = 2;
   const shiftCells = Math.floor(GRID_COLS * 0.1);
   const startCellX = shiftCells;
   const startCellY = GRID_ROWS - rows - 1;
