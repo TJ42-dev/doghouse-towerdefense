@@ -5,5 +5,11 @@
     "fireRate": 0.5,
     "range": 4,
     "bulletSpeed": 5
+  },
+  {
+    "id": "laser",
+    "damage": 120,
+    "fireRate": 0.4,
+    "range": 4
   }
 ]
