@@ -11,6 +11,7 @@ The menu saves simple options in `localStorage` and forwards them to the game vi
 - `vercel.json` – headers for cross-origin isolation
 - `game/` – place your Godot web export here (`index.html`, `.wasm`, `.pck`, loader `.js`)
 - `data/` – JSON definitions for towers and enemies used by the prototype
+- `game/scripts/` – starter GDScript utilities (`combat/Damage.gd`, `combat/Targeting.gd`)
 
 ## Development
 
