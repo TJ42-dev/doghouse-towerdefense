@@ -19,6 +19,8 @@ let ctx = null;
 // -------------------- Grid & Build --------------------
 const GRID_SIZE = 100;
 let CELL = 20; // size of one grid cell in pixels (computed on resize)
+let GRID_COLS = GRID_SIZE; // dynamic grid width in cells
+let GRID_ROWS = GRID_SIZE; // dynamic grid height in cells
 let walls = [];
 let selectedBuild = null;
 
@@ -39,7 +41,7 @@ function findPath(start, goal) {
     if (cur.x === goal.x && cur.y === goal.y) break;
     for (const [dx,dy] of dirs) {
       const nx = cur.x + dx, ny = cur.y + dy;
-      if (nx < 0 || ny < 0 || nx >= GRID_SIZE || ny >= GRID_SIZE) continue;
+      if (nx < 0 || ny < 0 || nx >= GRID_COLS || ny >= GRID_ROWS) continue;
       if (isWallAt(nx, ny)) continue;
       const k = key(nx, ny);
       if (visited.has(k)) continue;
@@ -136,6 +138,8 @@ function resizeCanvas() {
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
   CELL = Math.floor(Math.min(gameCanvas.clientWidth, gameCanvas.clientHeight) / GRID_SIZE);
+  GRID_COLS = Math.floor(gameCanvas.clientWidth / CELL);
+  GRID_ROWS = Math.floor(gameCanvas.clientHeight / CELL);
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -219,9 +223,9 @@ function resetGame() {
   // place cat head lives in the bottom-right kennel area
   catLives = [];
   const cols = 3, rows = 3;
-  const shiftCells = Math.floor(GRID_SIZE * 0.1);
-  const startCellX = GRID_SIZE - cols - shiftCells;
-  const startCellY = GRID_SIZE - rows - 1;
+  const shiftCells = Math.floor(GRID_COLS * 0.1);
+  const startCellX = GRID_COLS - cols - shiftCells;
+  const startCellY = GRID_ROWS - rows - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -230,7 +234,7 @@ function resetGame() {
 }
 
 function spawnEnemy() {
-  const x = Math.floor(GRID_SIZE / 2) * CELL + CELL / 2;
+  const x = Math.floor(GRID_COLS / 2) * CELL + CELL / 2;
   const y = -CELL;
   const r = CELL / 2;
   const base = CELL * 2.5, scale = 1 + (elapsed / TIME_LIMIT) * 1.6;
@@ -264,8 +268,8 @@ function update(dt) {
     if (!e.target) return false;
 
     const goalCell = { x: Math.floor(e.target.x / CELL), y: Math.floor(e.target.y / CELL) };
-    const curCell = { x: Math.min(Math.max(Math.floor(e.x / CELL), 0), GRID_SIZE-1),
-                      y: Math.min(Math.max(Math.floor(e.y / CELL), 0), GRID_SIZE-1) };
+    const curCell = { x: Math.min(Math.max(Math.floor(e.x / CELL), 0), GRID_COLS-1),
+                      y: Math.min(Math.max(Math.floor(e.y / CELL), 0), GRID_ROWS-1) };
 
     if (!e.path || !e.path.length || !e.goalCell || e.goalCell.x !== goalCell.x || e.goalCell.y !== goalCell.y) {
       e.path = findPath(curCell, goalCell);
@@ -324,11 +328,13 @@ function drawBG() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  for (let i = 0; i <= GRID_SIZE; i++) {
+  for (let i = 0; i <= GRID_COLS; i++) {
     ctx.beginPath();
-    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, GRID_SIZE * CELL); ctx.stroke();
+    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, GRID_ROWS * CELL); ctx.stroke();
+  }
+  for (let i = 0; i <= GRID_ROWS; i++) {
     ctx.beginPath();
-    ctx.moveTo(0, i * CELL); ctx.lineTo(GRID_SIZE * CELL, i * CELL); ctx.stroke();
+    ctx.moveTo(0, i * CELL); ctx.lineTo(GRID_COLS * CELL, i * CELL); ctx.stroke();
   }
   ctx.fillStyle = 'rgba(120,120,120,0.5)';
   for (const wObj of walls) {
@@ -415,6 +421,7 @@ function onCanvasClick(e) {
   const r = gameCanvas.getBoundingClientRect();
   const gx = Math.floor((e.clientX - r.left) / CELL);
   const gy = Math.floor((e.clientY - r.top) / CELL);
+  if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
   if (!walls.some(w => w.x === gx && w.y === gy)) walls.push({ x: gx, y: gy });
 }
 function onKey(e) { if (e.key === 'Escape') endGame(false); }
