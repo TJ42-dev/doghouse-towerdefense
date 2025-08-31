@@ -132,6 +132,8 @@ const player = { x: 0, y: 0, r: 18 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 let spawnTimer = 0; // secs until next spawn
+const INITIAL_LIVES = 5;
+let catLives = [];
 
 function resetGame() {
   enemies = [];
@@ -140,16 +142,22 @@ function resetGame() {
   const c = cssCenter();
   player.x = c.x; player.y = c.y;
   mouse = { x: c.x, y: c.y, active: false };
+
+  // place cat head lives in the bottom-right kennel area
+  const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
+  catLives = [];
+  const startX = w - 150;
+  const startY = h - 80;
+  const spacing = 30;
+  for (let i = 0; i < INITIAL_LIVES; i++) {
+    catLives.push({ x: startX + i * spacing, y: startY, r: 12, alive: true });
+  }
 }
 
 function spawnEnemy() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
-  const edge = Math.floor(Math.random() * 4); // 0 top, 1 right, 2 bottom, 3 left
-  let x=0, y=0;
-  if (edge === 0) { x = Math.random()*w; y = -20; }
-  else if (edge === 1) { x = w + 20; y = Math.random()*h; }
-  else if (edge === 2) { x = Math.random()*w; y = h + 20; }
-  else { x = -20; y = Math.random()*h; }
+  const x = w / 2;
+  const y = -20;
   const r = 12 + Math.random()*10;
   const base = 70, scale = 1 + (elapsed / TIME_LIMIT) * 1.6;
   const speed = base * (0.9 + Math.random()*0.4) * scale; // px/sec
@@ -157,8 +165,9 @@ function spawnEnemy() {
   // Choose only from loaded/valid images
   const pool = ASSETS.dogs.filter(imgReady);
   const img = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+  const target = catLives.find(l => l.alive) || null;
 
-  enemies.push({ x, y, r, speed, img });
+  enemies.push({ x, y, r, speed, img, target });
 }
 
 function update(dt) {
@@ -172,17 +181,26 @@ function update(dt) {
   const cadence = Math.max(minCadence, 1.0 - elapsed * 0.02);
   while (spawnTimer <= 0) { spawnEnemy(); spawnTimer += cadence; }
 
-  for (const e of enemies) {
-    const dx = player.x - e.x; const dy = player.y - e.y;
+  const liveTargets = catLives.filter(l => l.alive);
+  enemies = enemies.filter(e => {
+    if (!e.target || !e.target.alive) e.target = liveTargets[0];
+    if (!e.target) return false;
+    const dx = e.target.x - e.x;
+    const dy = e.target.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
     e.x += (dx / d) * e.speed * dt;
     e.y += (dy / d) * e.speed * dt;
-  }
 
-  for (const e of enemies) {
-    const d = Math.hypot(player.x - e.x, player.y - e.y);
-    if (d < player.r + e.r) { endGame(false); sfx(160, 0.15, 0.06, 'sawtooth'); return; }
-  }
+    const dp = Math.hypot(player.x - e.x, player.y - e.y);
+    if (dp < player.r + e.r) { sfx(200, 0.1, 0.05, 'sawtooth'); return false; }
+
+    const dtgt = Math.hypot(e.target.x - e.x, e.target.y - e.y);
+    if (dtgt < e.r + e.target.r) { e.target.alive = false; sfx(160, 0.15, 0.06, 'sawtooth'); return false; }
+
+    return true;
+  });
+
+  if (catLives.every(l => !l.alive)) { endGame(false); return; }
 
   if (elapsed >= TIME_LIMIT) {
     endGame(true);
@@ -198,9 +216,23 @@ function drawHUD() {
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.fillText(`Time: ${Math.max(0, TIME_LIMIT - elapsed).toFixed(1)}s`, 12, 12);
   ctx.fillText(`Enemies: ${enemies.length}`, 12, 32);
+  ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 52);
 }
 function render() {
   drawBG();
+
+  // Cat lives
+  for (const life of catLives) {
+    if (!life.alive) continue;
+    if (imgReady(ASSETS.cat)) {
+      ctx.drawImage(ASSETS.cat, life.x - life.r, life.y - life.r, life.r*2, life.r*2);
+    } else {
+      ctx.beginPath();
+      ctx.fillStyle = '#5bd9ff';
+      ctx.arc(life.x, life.y, life.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
 
   // Enemies (safe draw)
   for (const e of enemies) {
