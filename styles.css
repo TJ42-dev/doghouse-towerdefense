@@ -30,7 +30,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   left: 0;
   width: 100vw;
   height: 100vh;
-  cursor: none;
+    cursor: pointer;
   display: none;
   background: url("./assets/backyard.svg") center/cover no-repeat;
 }
@@ -43,4 +43,67 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   padding: .5rem .75rem;
   font-size: .8rem;
   z-index: 10;
+}
+
+#nextWaveBtn {
+  position: fixed;
+  top: 1rem;
+  right: 7rem;
+  display: none;
+  padding: .5rem .75rem;
+  font-size: .8rem;
+  z-index: 10;
+}
+
+.build-menu {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(0,0,0,0.6);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  cursor: move;
+  z-index: 20;
+  width: 160px;
+  user-select: none;
+}
+.build-menu h3 {
+  margin: 0 0 .5rem;
+  font-size: 1rem;
+  text-align: center;
+  pointer-events: none;
+}
+.build-menu .btn {
+  display: block;
+  width: 100%;
+  margin: 0.25rem 0 0;
+  cursor: pointer;
+}
+
+.tower-menu {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #fff;
+  border-radius: 8px;
+  padding: 0.5rem;
+  display: none;
+  z-index: 30;
+  width: 120px;
+}
+.tower-menu .btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid #fff;
+  color: #fff;
+  margin: 0.25rem 0;
+  width: 100%;
+}
+.tower-menu .close-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
