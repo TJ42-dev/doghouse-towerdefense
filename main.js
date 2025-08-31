@@ -17,7 +17,8 @@ let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
 
 // -------------------- Grid & Build --------------------
-const GRID_SIZE = 100;
+// Base grid resolution. Lower numbers mean larger cells.
+const GRID_SIZE = 50;
 let CELL = 20; // size of one grid cell in pixels (computed on resize)
 let GRID_COLS = GRID_SIZE; // dynamic grid width in cells
 let GRID_ROWS = GRID_SIZE; // dynamic grid height in cells
@@ -220,11 +221,11 @@ function resetGame() {
   player.x = c.x; player.y = c.y; player.r = CELL / 2;
   mouse = { x: c.x, y: c.y, active: false };
 
-  // place cat head lives in the bottom-right kennel area
+  // place cat head lives near the bottom-left, shifted 10% from the edge
   catLives = [];
   const cols = 3, rows = 3;
   const shiftCells = Math.floor(GRID_COLS * 0.1);
-  const startCellX = GRID_COLS - cols - shiftCells;
+  const startCellX = shiftCells;
   const startCellY = GRID_ROWS - rows - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
