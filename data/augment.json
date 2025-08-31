@@ -1,0 +1,8 @@
+[
+  {
+    "id": "augment_chain",
+    "name": "Chain Conductor",
+    "effects": { "chain_bounces": 3, "chain_falloff": 0.25 },
+    "tags": ["synergy","multi_target"]
+  }
+]

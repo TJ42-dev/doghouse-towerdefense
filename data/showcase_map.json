@@ -1,0 +1,5 @@
+{
+  "id": "showcase",
+  "description": "One chokepoint and one curve",
+  "waypoints": [[0,0],[5,0],[5,5]]
+}

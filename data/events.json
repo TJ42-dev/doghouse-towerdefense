@@ -1,0 +1,8 @@
+[
+  {
+    "id": "turbo_but_tiny",
+    "title": "Turbo but Tiny",
+    "desc": "+25% APS, -20% Range",
+    "mods": { "tower_aps_mult": 0.25, "tower_range_mult": -0.2 }
+  }
+]
