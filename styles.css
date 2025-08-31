@@ -49,14 +49,23 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   position: absolute;
   top: 1rem;
   left: 1rem;
-  background: rgba(0,0,0,0.4);
-  padding: .5rem;
-  border-radius: 8px;
+  background: rgba(0,0,0,0.6);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
   cursor: move;
   z-index: 20;
+  width: 160px;
+  user-select: none;
+}
+.build-menu h3 {
+  margin: 0 0 .5rem;
+  font-size: 1rem;
+  text-align: center;
+  pointer-events: none;
 }
 .build-menu .btn {
   display: block;
-  margin: 0;
+  width: 100%;
+  margin: 0.25rem 0 0;
   cursor: pointer;
 }
