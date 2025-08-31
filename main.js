@@ -18,7 +18,7 @@ let ctx = null;
 
 // -------------------- Grid & Build --------------------
 // Base grid resolution. Lower numbers mean larger cells.
-const GRID_SIZE = 50;
+const GRID_SIZE = 15;
 let CELL = 20; // size of one grid cell in pixels (computed on resize)
 let GRID_COLS = GRID_SIZE; // dynamic grid width in cells
 let GRID_ROWS = GRID_SIZE; // dynamic grid height in cells
