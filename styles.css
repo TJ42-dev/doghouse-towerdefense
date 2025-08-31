@@ -32,3 +32,13 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   height: 100vh;
   display: none;
 }
+
+#quitGameBtn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  display: none;
+  padding: .5rem .75rem;
+  font-size: .8rem;
+  z-index: 10;
+}
