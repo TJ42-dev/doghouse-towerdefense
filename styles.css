@@ -30,7 +30,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   left: 0;
   width: 100vw;
   height: 100vh;
-  cursor: none;
+    cursor: pointer;
   display: none;
   background: url("./assets/backyard.svg") center/cover no-repeat;
 }

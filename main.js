@@ -29,7 +29,7 @@ let selectedBuild = null;
 let towers = [];
 let bullets = [];
 
-const CANNON_BASE = { damage: 60, fireRate: 0.5, range: 4, bulletSpeed: 5 };
+const CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
 function cannonDamage() { return CANNON_BASE.damage / (waveIndex + 1); }
 
 function isWallAt(gx, gy) {
@@ -171,6 +171,8 @@ const DOG_TYPES = [
   { name: 'bulldog', src: 'assets/animals/dogs/bulldog.png', baseHealth: 150, baseSpeed: 0.7 }, // tough but slow
 ];
 const CAT_SRC = 'assets/animals/cat.png';
+const CANNON_SRC = 'assets/cannon.svg';
+const WALL_SRC = 'assets/wall.svg';
 
 function loadImage(src) {
   return new Promise((resolve) => {
@@ -187,15 +189,20 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [], cat: null };
+let ASSETS = { dogs: [], cat: null, cannon: null, wall: null };
 let assetsReady; // Promise
 
 async function ensureAssets() {
   if (!assetsReady) {
     assetsReady = (async () => {
-      const dogImgs = await Promise.all(DOG_TYPES.map(t => loadImage(t.src)));
-      dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
-      ASSETS = { dogs: DOG_TYPES, cat: await loadImage(CAT_SRC) };
+        const dogImgs = await Promise.all(DOG_TYPES.map(t => loadImage(t.src)));
+        dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
+        ASSETS = {
+          dogs: DOG_TYPES,
+          cat: await loadImage(CAT_SRC),
+          cannon: await loadImage(CANNON_SRC),
+          wall: await loadImage(WALL_SRC)
+        };
     })();
   }
   return assetsReady;
@@ -223,7 +230,7 @@ let enemiesSpawnedInWave = 0;
 let spawnTimer = 0; // secs until next spawn
 let spawnInterval = SPAWN_INTERVAL;
 
-const player = { x: 0, y: 0, r: 18 };
+const player = { x: 0, y: 0, r: 0 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 const INITIAL_LIVES = 9;
@@ -243,14 +250,14 @@ function resetGame() {
   spawnInterval = SPAWN_INTERVAL;
   spawnTimer = 0;
   const c = cssCenter();
-  player.x = c.x; player.y = c.y; player.r = CELL / 2;
+    player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
 
-  // place cat head lives near the bottom-left, shifted 10% from the edge
+  // place cat head lives near the bottom-right, about 9 cells from the edge
   catLives = [];
   const cols = 3, rows = 3;
-  const shiftCells = Math.floor(GRID_COLS * 0.1);
-  const startCellX = shiftCells;
+  const margin = 9; // cells from right edge
+  const startCellX = Math.max(0, GRID_COLS - cols - margin);
   const startCellY = GRID_ROWS - rows - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
@@ -358,9 +365,6 @@ function update(dt) {
       e.path = findPath(curCell, goalCell);
     }
 
-    const dp = Math.hypot(player.x - e.x, player.y - e.y);
-    if (dp < player.r + e.r) { sfx(200, 0.1, 0.05, 'sawtooth'); return false; }
-
     const dtgt = Math.hypot(e.target.x - e.x, e.target.y - e.y);
     if (dtgt < e.r + e.target.r) { e.target.alive = false; sfx(160, 0.15, 0.06, 'sawtooth'); return false; }
 
@@ -368,9 +372,8 @@ function update(dt) {
   });
 
   // Tower behavior
-  for (const t of towers) {
-    t.cooldown -= dt;
-    if (t.cooldown <= 0) {
+    for (const t of towers) {
+      t.cooldown -= dt;
       const rangePx = t.range * CELL;
       let target = null;
       let closest = rangePx;
@@ -378,13 +381,13 @@ function update(dt) {
         const d = Math.hypot(e.x - t.x, e.y - t.y);
         if (d <= closest) { target = e; closest = d; }
       }
-      if (target) {
+      t.target = target;
+      if (t.cooldown <= 0 && target) {
         bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: cannonDamage() });
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       }
     }
-  }
 
   // Bullets
   bullets = bullets.filter(b => {
@@ -424,10 +427,14 @@ function drawBG() {
     ctx.beginPath();
     ctx.moveTo(0, i * CELL); ctx.lineTo(GRID_COLS * CELL, i * CELL); ctx.stroke();
   }
-  ctx.fillStyle = 'rgba(120,120,120,0.5)';
-  for (const wObj of walls) {
-    ctx.fillRect(wObj.x * CELL, wObj.y * CELL, CELL, CELL);
-  }
+    for (const wObj of walls) {
+      if (imgReady(ASSETS.wall)) {
+        ctx.drawImage(ASSETS.wall, wObj.x * CELL, wObj.y * CELL, CELL, CELL);
+      } else {
+        ctx.fillStyle = 'rgba(120,120,120,0.5)';
+        ctx.fillRect(wObj.x * CELL, wObj.y * CELL, CELL, CELL);
+      }
+    }
 }
 function drawHUD() {
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -444,11 +451,20 @@ function drawHUD() {
 function render() {
   drawBG();
 
-  // Towers
-  for (const t of towers) {
-    ctx.fillStyle = '#888';
-    ctx.fillRect(t.gx * CELL, t.gy * CELL, CELL, CELL);
-  }
+    // Towers
+    for (const t of towers) {
+      if (imgReady(ASSETS.cannon)) {
+        const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(angle);
+        ctx.drawImage(ASSETS.cannon, -CELL / 2, -CELL / 2, CELL, CELL);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#888';
+        ctx.fillRect(t.gx * CELL, t.gy * CELL, CELL, CELL);
+      }
+    }
 
   // Cat lives
   for (const life of catLives) {
@@ -482,18 +498,8 @@ function render() {
     ctx.fill();
   }
 
-  // Player (safe draw)
-  if (imgReady(ASSETS.cat)) {
-    ctx.drawImage(ASSETS.cat, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
-  } else {
-    ctx.beginPath();
-    ctx.fillStyle = '#5bd9ff';
-    ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
-    ctx.fill();
+    drawHUD();
   }
-
-  drawHUD();
-}
 
 function loop(ts) {
   if (!running) return;
@@ -534,16 +540,17 @@ function onCanvasClick(e) {
     }
   } else if (selectedBuild === 'cannon') {
     if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-      towers.push({
-        gx,
-        gy,
-        x: (gx + 0.5) * CELL,
-        y: (gy + 0.5) * CELL,
-        cooldown: 0,
-        damage: CANNON_BASE.damage,
-        fireRate: CANNON_BASE.fireRate,
-        range: CANNON_BASE.range
-      });
+        towers.push({
+          gx,
+          gy,
+          x: (gx + 0.5) * CELL,
+          y: (gy + 0.5) * CELL,
+          cooldown: 0,
+          damage: CANNON_BASE.damage,
+          fireRate: CANNON_BASE.fireRate,
+          range: CANNON_BASE.range,
+          target: null
+        });
     }
   }
 }
