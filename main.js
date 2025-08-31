@@ -4,6 +4,7 @@ const startBtn = document.getElementById('startBtn');
 const optionsBtn = document.getElementById('optionsBtn');
 const quitBtn = document.getElementById('quitBtn');         // main page "Quit"
 const quitGameBtn = document.getElementById('quitGameBtn'); // in-game "Quit"
+const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
@@ -78,6 +79,11 @@ function sfx(freq = 440, dur = 0.07, vol = 0.03, type = 'square') {
   o.connect(g); g.connect(audioCtx.destination);
   o.start(); o.stop(audioCtx.currentTime + dur);
   o.onended = () => { o.disconnect(); g.disconnect(); };
+}
+
+function horn() {
+  sfx(350, 0.25, 0.08, 'square');
+  setTimeout(() => sfx(220, 0.35, 0.09, 'sawtooth'), 200);
 }
 
 // -------------------- Options helpers --------------------
@@ -195,15 +201,19 @@ function imgReady(img) {
 // -------------------- Tiny Dodge Game --------------------
 const WAVE_TIME = 60; // seconds per wave
 const ENEMIES_PER_WAVE = 10;
+const START_DELAY = 10; // secs before first wave
+const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
 let rafId = null;
 let lastT = 0;
 let running = false;
 
+let waveActive = false;
+let preWaveTimer = START_DELAY;
 let waveElapsed = 0; // time into current wave
 let waveIndex = 0;
 let enemiesSpawnedInWave = 0;
 let spawnTimer = 0; // secs until next spawn
-let spawnInterval = WAVE_TIME / ENEMIES_PER_WAVE;
+let spawnInterval = SPAWN_INTERVAL;
 
 const player = { x: 0, y: 0, r: 18 };
 let mouse = { x: 0, y: 0, active: false };
@@ -215,10 +225,12 @@ function resetGame() {
   enemies = [];
   walls = [];
   selectedBuild = null;
+  waveActive = false;
+  preWaveTimer = START_DELAY;
   waveElapsed = 0;
   waveIndex = 0;
   enemiesSpawnedInWave = 0;
-  spawnInterval = WAVE_TIME / ENEMIES_PER_WAVE;
+  spawnInterval = SPAWN_INTERVAL;
   spawnTimer = 0;
   const c = cssCenter();
   player.x = c.x; player.y = c.y; player.r = CELL / 2;
@@ -257,10 +269,31 @@ function spawnEnemy() {
   enemiesSpawnedInWave++;
 }
 
+function startWave() {
+  waveActive = true;
+  preWaveTimer = 0;
+  waveElapsed = 0;
+  enemiesSpawnedInWave = 0;
+  spawnTimer = 0;
+  spawnInterval = SPAWN_INTERVAL;
+  horn();
+}
+
+function nextWave() {
+  waveIndex++;
+  startWave();
+}
+
 function update(dt) {
   if (mouse.active) {
     player.x += (mouse.x - player.x) * Math.min(1, dt*8);
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
+  }
+
+  if (!waveActive) {
+    preWaveTimer -= dt;
+    if (preWaveTimer <= 0) startWave();
+    return;
   }
 
   waveElapsed += dt;
@@ -327,11 +360,7 @@ function update(dt) {
   if (catLives.every(l => !l.alive)) { endGame(); return; }
 
   if (waveElapsed >= WAVE_TIME) {
-    waveIndex++;
-    waveElapsed = 0;
-    enemiesSpawnedInWave = 0;
-    spawnInterval = WAVE_TIME / ENEMIES_PER_WAVE;
-    spawnTimer = 0;
+    nextWave();
   }
 }
 
@@ -354,10 +383,15 @@ function drawBG() {
 }
 function drawHUD() {
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.fillText(`Wave: ${waveIndex + 1}`, 12, 12);
-  ctx.fillText(`Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s`, 12, 32);
-  ctx.fillText(`Enemies: ${enemies.length}`, 12, 52);
-  ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 72);
+  if (!waveActive && preWaveTimer > 0) {
+    ctx.fillText(`Next wave in: ${preWaveTimer.toFixed(1)}s`, 12, 12);
+    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 32);
+  } else {
+    ctx.fillText(`Wave: ${waveIndex + 1}`, 12, 12);
+    ctx.fillText(`Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s`, 12, 32);
+    ctx.fillText(`Enemies: ${enemies.length}`, 12, 52);
+    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 72);
+  }
 }
 function render() {
   drawBG();
@@ -441,6 +475,7 @@ async function startGame() {
   container && (container.style.display = 'none');
   menu && (menu.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'inline-block');
+  nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
 
   // Canvas
   ensureCanvas();
@@ -484,6 +519,7 @@ function endGame() {
   // UI restore
   gameCanvas && (gameCanvas.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'none');
+  nextWaveBtn && (nextWaveBtn.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
 
@@ -495,3 +531,8 @@ function endGame() {
 startBtn?.addEventListener('click', () => { startGame(); });
 quitGameBtn?.addEventListener('click', () => endGame());
 quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));
+nextWaveBtn?.addEventListener('click', () => {
+  if (!running) return;
+  if (!waveActive) startWave();
+  else nextWave();
+});
