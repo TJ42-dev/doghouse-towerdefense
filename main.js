@@ -18,6 +18,8 @@ const towerMenu = document.getElementById('towerMenu');
 const upgradeBtn = document.getElementById('upgradeTower');
 const sellBtn = document.getElementById('sellTower');
 const closeTowerMenuBtn = document.getElementById('closeTowerMenu');
+
+const contextMenu = document.getElementById('contextMenu');
 let selectedTower = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
@@ -579,14 +581,18 @@ function loop(ts) {
 function bindInputs() {
   gameCanvas.addEventListener('mousemove', onMouseMove);
   gameCanvas.addEventListener('click', onCanvasClick);
+  gameCanvas.addEventListener('contextmenu', onCanvasContext);
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('keydown', onKey);
+  window.addEventListener('click', hideContextMenu);
 }
 function unbindInputs() {
   gameCanvas.removeEventListener('mousemove', onMouseMove);
   gameCanvas.removeEventListener('click', onCanvasClick);
+  gameCanvas.removeEventListener('contextmenu', onCanvasContext);
   window.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKey);
+  window.removeEventListener('click', hideContextMenu);
 }
 function onMouseMove(e) {
   const r = gameCanvas.getBoundingClientRect();
@@ -628,6 +634,20 @@ function onCanvasClick(e) {
     }
   }
 }
+function onCanvasContext(e) {
+  e.preventDefault();
+  selectedBuild = null;
+  hideTowerMenu();
+  if (contextMenu) {
+    contextMenu.style.left = e.clientX + 'px';
+    contextMenu.style.top = e.clientY + 'px';
+    contextMenu.style.display = 'block';
+  }
+}
+function hideContextMenu() {
+  if (contextMenu) contextMenu.style.display = 'none';
+}
+
 function onKey(e) { if (e.key === 'Escape') endGame(); }
 
 async function startGame() {
@@ -683,6 +703,7 @@ function endGame() {
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
   hideTowerMenu();
+  hideContextMenu();
 
   const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
   alert(msg);
