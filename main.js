@@ -14,8 +14,11 @@ const container = document.querySelector('.container');
 const hoverMenu = document.getElementById('hoverMenu');
 const wallBtn = document.getElementById('wallBtn');
 const cannonBtn = document.getElementById('cannonBtn');
+const lazerBtn = document.getElementById('lazerBtn');
 const cancelBuildBtn = document.getElementById('cancelBuildBtn');
-const upgradeBtn = document.getElementById('upgradeTower');
+const upgradeDamageBtn = document.getElementById('upgradeDamage');
+const upgradeSpeedBtn = document.getElementById('upgradeSpeed');
+const upgradeRangeBtn = document.getElementById('upgradeRange');
 const sellBtn = document.getElementById('sellTower');
 const upgradeInfo = document.getElementById('upgradeInfo');
 const statWave = document.getElementById('statWave');
@@ -41,10 +44,12 @@ let walls = [];
 let selectedBuild = null;
 let towers = [];
 let bullets = [];
+let beams = [];
 let money = 0;
 
 const CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
-function cannonDamage() { return CANNON_BASE.damage / (waveIndex + 1); }
+const LAZER_BASE = { damage: 120, fireRate: 0.4, range: 5 };
+function towerDamage(t) { return t.damage / (waveIndex + 1); }
 
 function isWallAt(gx, gy) {
   return walls.some(w => w.x === gx && w.y === gy) || towers.some(t => t.gx === gx && t.gy === gy);
@@ -111,6 +116,10 @@ function bark() {
   setTimeout(() => sfx(400, 0.1, 0.05, 'square'), 70);
 }
 
+function zap() {
+  sfx(1000, 0.05, 0.04, 'sawtooth');
+}
+
 function rankUp() {
   sfx(1200, 0.15, 0.05, 'sine');
   setTimeout(() => sfx(1500, 0.2, 0.05, 'sine'), 120);
@@ -138,6 +147,7 @@ saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fu
 // ----- Hover Menu -----
 wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
 cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
+lazerBtn?.addEventListener('click', () => { selectedBuild = 'lazer'; });
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 if (hoverMenu) {
   let drag = null;
@@ -165,8 +175,16 @@ tabButtons.forEach(btn => {
 
 switchTab('build');
 
-upgradeBtn?.addEventListener('click', () => {
-  if (selectedTower) { upgradeTower(selectedTower); rankUp(); }
+upgradeDamageBtn?.addEventListener('click', () => {
+  if (selectedTower) { selectedTower.damage += selectedTower.baseDamage * 0.25; rankUp(); }
+  updateUpgradeTab();
+});
+upgradeSpeedBtn?.addEventListener('click', () => {
+  if (selectedTower) { selectedTower.fireRate += selectedTower.baseFireRate * 0.15; rankUp(); }
+  updateUpgradeTab();
+});
+upgradeRangeBtn?.addEventListener('click', () => {
+  if (selectedTower) { selectedTower.range += selectedTower.baseRange * 0.2; rankUp(); }
   updateUpgradeTab();
 });
 
@@ -189,20 +207,18 @@ function switchTab(name) {
 function updateUpgradeTab() {
   if (!upgradeInfo) return;
   if (selectedTower) {
-    upgradeInfo.textContent = `Tower Level ${selectedTower.level || 1}`;
-    upgradeBtn.disabled = false;
+    upgradeInfo.textContent = `DMG ${selectedTower.damage.toFixed(0)} FR ${selectedTower.fireRate.toFixed(2)} RNG ${selectedTower.range.toFixed(1)}`;
+    upgradeDamageBtn.disabled = false;
+    upgradeSpeedBtn.disabled = false;
+    upgradeRangeBtn.disabled = false;
     sellBtn.disabled = false;
   } else {
     upgradeInfo.textContent = 'Select a tower';
-    upgradeBtn.disabled = true;
+    upgradeDamageBtn.disabled = true;
+    upgradeSpeedBtn.disabled = true;
+    upgradeRangeBtn.disabled = true;
     sellBtn.disabled = true;
   }
-}
-function upgradeTower(t) {
-  t.level = (t.level || 1) + 1;
-  t.damage *= 1.25;
-  t.fireRate *= 1.1;
-  t.range *= 1.1;
 }
 
 // -------------------- Canvas setup --------------------
@@ -248,6 +264,7 @@ const DOG_TYPES = [
 ];
 const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_SRC = 'assets/cannon.svg';
+const LAZER_SRC = 'assets/lazer.svg';
 const WALL_SRC = 'assets/wall.svg';
 
 function loadImage(src) {
@@ -265,7 +282,7 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [], cat: null, cannon: null, wall: null };
+let ASSETS = { dogs: [], cat: null, cannon: null, lazer: null, wall: null };
 let assetsReady; // Promise
 
 async function ensureAssets() {
@@ -277,6 +294,7 @@ async function ensureAssets() {
           dogs: DOG_TYPES,
           cat: await loadImage(CAT_SRC),
           cannon: await loadImage(CANNON_SRC),
+          lazer: await loadImage(LAZER_SRC),
           wall: await loadImage(WALL_SRC)
         };
     })();
@@ -451,22 +469,33 @@ function update(dt) {
   });
 
   // Tower behavior
-    for (const t of towers) {
-      t.cooldown -= dt;
-      const rangePx = t.range * CELL;
-      let target = null;
-      let closest = rangePx;
-      for (const e of enemies) {
-        const d = Math.hypot(e.x - t.x, e.y - t.y);
-        if (d <= closest) { target = e; closest = d; }
-      }
-      t.target = target;
-      if (t.cooldown <= 0 && target) {
-        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: cannonDamage() });
-        t.cooldown = 1 / t.fireRate;
-        sfx(880, 0.07, 0.03, 'square');
-      }
+  for (const t of towers) {
+    t.cooldown -= dt;
+    const rangePx = t.range * CELL;
+    let target = null;
+    let closest = rangePx;
+    for (const e of enemies) {
+      const d = Math.hypot(e.x - t.x, e.y - t.y);
+      if (d <= closest) { target = e; closest = d; }
     }
+    t.target = target;
+    if (t.cooldown <= 0 && target) {
+      if (t.type === 'cannon') {
+        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: towerDamage(t) });
+        sfx(880, 0.07, 0.03, 'square');
+      } else if (t.type === 'lazer') {
+        beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, ttl: 0.1 });
+        target.health -= towerDamage(t);
+        zap();
+        bark();
+        if (target.health <= 0) {
+          enemies.splice(enemies.indexOf(target), 1);
+          money += 10;
+        }
+      }
+      t.cooldown = 1 / t.fireRate;
+    }
+  }
 
   // Bullets
   bullets = bullets.filter(b => {
@@ -487,6 +516,11 @@ function update(dt) {
     b.x += (dx / dist) * move;
     b.y += (dy / dist) * move;
     return true;
+  });
+
+  beams = beams.filter(b => {
+    b.ttl -= dt;
+    return b.ttl > 0;
   });
 
   if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= ENEMIES_PER_WAVE) {
@@ -544,17 +578,36 @@ function render() {
 
     // Towers
     for (const t of towers) {
-      if (imgReady(ASSETS.cannon)) {
-        const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
-        ctx.save();
-        ctx.translate(t.x, t.y);
-        ctx.rotate(angle);
-        ctx.drawImage(ASSETS.cannon, -CELL / 2, -CELL / 2, CELL, CELL);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = '#888';
-        ctx.fillRect(t.gx * CELL, t.gy * CELL, CELL, CELL);
+      const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
+      ctx.save();
+      ctx.translate(t.x, t.y);
+      ctx.rotate(angle);
+      if (t.type === 'cannon') {
+        if (imgReady(ASSETS.cannon)) {
+          ctx.drawImage(ASSETS.cannon, -CELL / 2, -CELL / 2, CELL, CELL);
+        } else {
+          ctx.fillStyle = '#888';
+          ctx.fillRect(-CELL / 2, -CELL / 2, CELL, CELL);
+        }
+      } else if (t.type === 'lazer') {
+        if (imgReady(ASSETS.lazer)) {
+          ctx.drawImage(ASSETS.lazer, -CELL / 2, -CELL / 2, CELL, CELL);
+        } else {
+          ctx.fillStyle = '#ccf';
+          ctx.fillRect(-CELL / 2, -CELL / 2, CELL, CELL);
+        }
       }
+      ctx.restore();
+    }
+
+    // Beams
+    ctx.strokeStyle = '#0ff';
+    ctx.lineWidth = 2;
+    for (const b of beams) {
+      ctx.beginPath();
+      ctx.moveTo(b.x1, b.y1);
+      ctx.lineTo(b.x2, b.y2);
+      ctx.stroke();
     }
 
   // Cat lives
@@ -639,17 +692,39 @@ function onCanvasClick(e) {
     }
   } else if (selectedBuild === 'cannon') {
     if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-        towers.push({
-          gx,
-          gy,
-          x: (gx + 0.5) * CELL,
-          y: (gy + 0.5) * CELL,
-          cooldown: 0,
-          damage: CANNON_BASE.damage,
-          fireRate: CANNON_BASE.fireRate,
-          range: CANNON_BASE.range,
-          target: null
-        });
+      towers.push({
+        type: 'cannon',
+        gx,
+        gy,
+        x: (gx + 0.5) * CELL,
+        y: (gy + 0.5) * CELL,
+        cooldown: 0,
+        baseDamage: CANNON_BASE.damage,
+        baseFireRate: CANNON_BASE.fireRate,
+        baseRange: CANNON_BASE.range,
+        damage: CANNON_BASE.damage,
+        fireRate: CANNON_BASE.fireRate,
+        range: CANNON_BASE.range,
+        target: null
+      });
+    }
+  } else if (selectedBuild === 'lazer') {
+    if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
+      towers.push({
+        type: 'lazer',
+        gx,
+        gy,
+        x: (gx + 0.5) * CELL,
+        y: (gy + 0.5) * CELL,
+        cooldown: 0,
+        baseDamage: LAZER_BASE.damage,
+        baseFireRate: LAZER_BASE.fireRate,
+        baseRange: LAZER_BASE.range,
+        damage: LAZER_BASE.damage,
+        fireRate: LAZER_BASE.fireRate,
+        range: LAZER_BASE.range,
+        target: null
+      });
     }
   }
 }
