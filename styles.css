@@ -44,3 +44,19 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   font-size: .8rem;
   z-index: 10;
 }
+
+.build-menu {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(0,0,0,0.4);
+  padding: .5rem;
+  border-radius: 8px;
+  cursor: move;
+  z-index: 20;
+}
+.build-menu .btn {
+  display: block;
+  margin: 0;
+  cursor: pointer;
+}
