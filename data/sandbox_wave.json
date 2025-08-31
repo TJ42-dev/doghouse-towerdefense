@@ -1,0 +1,5 @@
+{
+  "waves": [
+    {"monsters": [{"type": "MonsterAegis", "count": 1}, {"type": "Grunt", "count": 5}]}
+  ]
+}

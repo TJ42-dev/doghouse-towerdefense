@@ -1,0 +1,8 @@
+[
+  {
+    "id": "shield_corps",
+    "name": "Shield Corps",
+    "modifiers": { "front_arc_reflect_pct": 0.5, "armor_pct_add": 0.1 },
+    "ui_color": "#5ac1ff"
+  }
+]

@@ -20,3 +20,15 @@ The menu saves simple options in `localStorage` and forwards them to the game vi
 ## Deployment
 
 Connect the repository to Vercel with the **Other** framework preset. Leave the build command blank and use `/` as the output directory. Vercel will serve the menu at `/` and the game at `/game/`.
+
+## Innovation Mode
+
+Set `INNOVATION_MODE` in `scripts/config.gd` to `true` to enable experimental features:
+- Overcharger tower and Backshot targeting
+- Aegis monster with reflective shield
+- Event cards at wave start
+
+Run the sandbox simulation:
+```
+python scripts/tests/headless_sim.py
+```
