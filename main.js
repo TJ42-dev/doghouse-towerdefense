@@ -10,9 +10,21 @@ const optFullscreen = document.getElementById('optFullscreen');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
+const buildMenu = document.getElementById('buildMenu');
+const wallBtn = document.getElementById('wallBtn');
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
+
+// -------------------- Grid & Build --------------------
+const GRID_SIZE = 30;
+let CELL = 20; // size of one grid cell in pixels (computed on resize)
+let walls = [];
+let selectedBuild = null;
+
+function isWallAt(gx, gy) {
+  return walls.some(w => w.x === gx && w.y === gy);
+}
 
 // -------------------- Small SFX (respects "Mute") --------------------
 let audioCtx = null;
@@ -43,6 +55,28 @@ function syncUI() {
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
 saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fullscreen: optFullscreen?.checked }); });
 
+// ----- Build Menu -----
+wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
+if (buildMenu) {
+  let drag = null;
+  buildMenu.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    drag = { x: e.offsetX, y: e.offsetY };
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', stopDrag);
+  });
+  function onDrag(e) {
+    if (!drag) return;
+    buildMenu.style.left = (e.pageX - drag.x) + 'px';
+    buildMenu.style.top = (e.pageY - drag.y) + 'px';
+  }
+  function stopDrag() {
+    drag = null;
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', stopDrag);
+  }
+}
+
 // -------------------- Canvas setup --------------------
 function ensureCanvas() {
   if (!gameCanvas) {
@@ -65,6 +99,7 @@ function resizeCanvas() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
+  CELL = Math.floor(Math.min(gameCanvas.clientWidth, gameCanvas.clientHeight) / GRID_SIZE);
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -132,34 +167,37 @@ const player = { x: 0, y: 0, r: 18 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 let spawnTimer = 0; // secs until next spawn
-const INITIAL_LIVES = 5;
+const INITIAL_LIVES = 9;
 let catLives = [];
 
 function resetGame() {
   enemies = [];
+  walls = [];
+  selectedBuild = null;
   elapsed = 0;
   spawnTimer = 0.5;
   const c = cssCenter();
-  player.x = c.x; player.y = c.y;
+  player.x = c.x; player.y = c.y; player.r = CELL / 2;
   mouse = { x: c.x, y: c.y, active: false };
 
   // place cat head lives in the bottom-right kennel area
-  const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
   catLives = [];
-  const startX = w - 150;
-  const startY = h - 80;
-  const spacing = 30;
+  const cols = 3, rows = 3;
+  const shiftCells = Math.floor(GRID_SIZE * 0.1);
+  const startCellX = GRID_SIZE - cols - shiftCells;
+  const startCellY = GRID_SIZE - rows - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
-    catLives.push({ x: startX + i * spacing, y: startY, r: 12, alive: true });
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    catLives.push({ x: (startCellX + col + 0.5) * CELL, y: (startCellY + row + 0.5) * CELL, r: CELL / 2, alive: true });
   }
 }
 
 function spawnEnemy() {
-  const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
-  const x = w / 2;
-  const y = -20;
-  const r = 12 + Math.random()*10;
-  const base = 70, scale = 1 + (elapsed / TIME_LIMIT) * 1.6;
+  const x = Math.floor(GRID_SIZE / 2) * CELL + CELL / 2;
+  const y = -CELL;
+  const r = CELL / 2;
+  const base = CELL * 2.5, scale = 1 + (elapsed / TIME_LIMIT) * 1.6;
   const speed = base * (0.9 + Math.random()*0.4) * scale; // px/sec
 
   // Choose only from loaded/valid images
@@ -188,8 +226,12 @@ function update(dt) {
     const dx = e.target.x - e.x;
     const dy = e.target.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
+    const prevX = e.x, prevY = e.y;
     e.x += (dx / d) * e.speed * dt;
     e.y += (dy / d) * e.speed * dt;
+    const gx = Math.floor(e.x / CELL);
+    const gy = Math.floor(e.y / CELL);
+    if (isWallAt(gx, gy)) { e.x = prevX; e.y = prevY; }
 
     const dp = Math.hypot(player.x - e.x, player.y - e.y);
     if (dp < player.r + e.r) { sfx(200, 0.1, 0.05, 'sawtooth'); return false; }
@@ -211,6 +253,17 @@ function update(dt) {
 function drawBG() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  for (let i = 0; i <= GRID_SIZE; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, GRID_SIZE * CELL); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, i * CELL); ctx.lineTo(GRID_SIZE * CELL, i * CELL); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(120,120,120,0.5)';
+  for (const wObj of walls) {
+    ctx.fillRect(wObj.x * CELL, wObj.y * CELL, CELL, CELL);
+  }
 }
 function drawHUD() {
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -273,17 +326,26 @@ function loop(ts) {
 // -------------------- Lifecycle --------------------
 function bindInputs() {
   gameCanvas.addEventListener('mousemove', onMouseMove);
+  gameCanvas.addEventListener('click', onCanvasClick);
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('keydown', onKey);
 }
 function unbindInputs() {
   gameCanvas.removeEventListener('mousemove', onMouseMove);
+  gameCanvas.removeEventListener('click', onCanvasClick);
   window.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKey);
 }
 function onMouseMove(e) {
   const r = gameCanvas.getBoundingClientRect();
   mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.active = true;
+}
+function onCanvasClick(e) {
+  if (selectedBuild !== 'wall') return;
+  const r = gameCanvas.getBoundingClientRect();
+  const gx = Math.floor((e.clientX - r.left) / CELL);
+  const gy = Math.floor((e.clientY - r.top) / CELL);
+  if (!walls.some(w => w.x === gx && w.y === gy)) walls.push({ x: gx, y: gy });
 }
 function onKey(e) { if (e.key === 'Escape') endGame(false); }
 
