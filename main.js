@@ -90,6 +90,16 @@ let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 let spawnTimer = 0; // secs until next spawn
 
+// Load sprites
+const dogSources = [
+  'assets/animals/dogs/beagle.png',
+  'assets/animals/dogs/labrador.png',
+  'assets/animals/dogs/bulldog.png'
+];
+const dogImages = dogSources.map(src => { const i = new Image(); i.src = src; return i; });
+const catImage = new Image();
+catImage.src = 'assets/animals/cat.png';
+
 function resetGame() {
   enemies = [];
   elapsed = 0;
@@ -112,7 +122,8 @@ function spawnEnemy() {
   // speed scales with time survived
   const base = 70, scale = 1 + (elapsed / TIME_LIMIT) * 1.6; // gets harder
   const speed = base * (0.9 + Math.random()*0.4) * scale; // px/sec
-  enemies.push({ x, y, r, speed, hue: Math.floor(0 + Math.random()*12)*30 });
+  const img = dogImages[Math.floor(Math.random()*dogImages.length)];
+  enemies.push({ x, y, r, speed, img });
 }
 
 function update(dt) {
@@ -183,17 +194,25 @@ function render() {
 
   // Enemies
   for (const e of enemies) {
-    ctx.beginPath();
-    ctx.fillStyle = `hsl(${e.hue}deg 80% 55%)`;
-    ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
-    ctx.fill();
+    if (e.img && e.img.complete) {
+      ctx.drawImage(e.img, e.x - e.r, e.y - e.r, e.r*2, e.r*2);
+    } else {
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
   }
 
   // Player
-  ctx.beginPath();
-  ctx.fillStyle = '#5bd9ff';
-  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
-  ctx.fill();
+  if (catImage.complete) {
+    ctx.drawImage(catImage, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
+  } else {
+    ctx.beginPath();
+    ctx.fillStyle = '#000';
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+    ctx.fill();
+  }
 
   // Crosshair on mouse
   if (mouse.active) {
