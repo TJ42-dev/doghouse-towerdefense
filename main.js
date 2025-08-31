@@ -11,15 +11,21 @@ const optFullscreen = document.getElementById('optFullscreen');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
-const buildMenu = document.getElementById('buildMenu');
+const hoverMenu = document.getElementById('hoverMenu');
 const wallBtn = document.getElementById('wallBtn');
 const cannonBtn = document.getElementById('cannonBtn');
-const towerMenu = document.getElementById('towerMenu');
+const cancelBuildBtn = document.getElementById('cancelBuildBtn');
 const upgradeBtn = document.getElementById('upgradeTower');
 const sellBtn = document.getElementById('sellTower');
-const closeTowerMenuBtn = document.getElementById('closeTowerMenu');
-
-const contextMenu = document.getElementById('contextMenu');
+const upgradeInfo = document.getElementById('upgradeInfo');
+const statWave = document.getElementById('statWave');
+const statTime = document.getElementById('statTime');
+const statEnemies = document.getElementById('statEnemies');
+const statLives = document.getElementById('statLives');
+const statMoney = document.getElementById('statMoney');
+const optionsQuitBtn = document.getElementById('optionsQuitBtn');
+const tabButtons = document.querySelectorAll('#hoverMenu .tab-btn');
+const tabPanes = document.querySelectorAll('#hoverMenu .tab-pane');
 let selectedTower = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
@@ -129,21 +135,22 @@ function syncUI() {
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
 saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fullscreen: optFullscreen?.checked }); });
 
-// ----- Build Menu -----
+// ----- Hover Menu -----
 wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
 cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
-if (buildMenu) {
+cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
+if (hoverMenu) {
   let drag = null;
-  buildMenu.addEventListener('mousedown', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
+  hoverMenu.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.classList.contains('tab-btn')) return;
     drag = { x: e.offsetX, y: e.offsetY };
     document.addEventListener('mousemove', onDrag);
     document.addEventListener('mouseup', stopDrag);
   });
   function onDrag(e) {
     if (!drag) return;
-    buildMenu.style.left = (e.pageX - drag.x) + 'px';
-    buildMenu.style.top = (e.pageY - drag.y) + 'px';
+    hoverMenu.style.left = (e.pageX - drag.x) + 'px';
+    hoverMenu.style.top = (e.pageY - drag.y) + 'px';
   }
   function stopDrag() {
     drag = null;
@@ -152,29 +159,44 @@ if (buildMenu) {
   }
 }
 
-if (towerMenu) {
-  upgradeBtn?.addEventListener('click', () => {
-    if (selectedTower) { upgradeTower(selectedTower); rankUp(); }
-    hideTowerMenu();
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+switchTab('build');
+
+upgradeBtn?.addEventListener('click', () => {
+  if (selectedTower) { upgradeTower(selectedTower); rankUp(); }
+  updateUpgradeTab();
+});
+
+sellBtn?.addEventListener('click', () => {
+  if (selectedTower) {
+    towers = towers.filter(t => t !== selectedTower);
+    selectedTower = null;
+  }
+  updateUpgradeTab();
+});
+
+optionsQuitBtn?.addEventListener('click', () => endGame());
+
+function switchTab(name) {
+  tabPanes.forEach(p => {
+    p.classList.toggle('active', p.id === `tab-${name}`);
   });
-  sellBtn?.addEventListener('click', () => {
-    if (selectedTower) {
-      towers = towers.filter(t => t !== selectedTower);
-    }
-    hideTowerMenu();
-  });
-  closeTowerMenuBtn?.addEventListener('click', hideTowerMenu);
 }
 
-function showTowerMenu(t, x, y) {
-  selectedTower = t;
-  towerMenu.style.left = x + 'px';
-  towerMenu.style.top = y + 'px';
-  towerMenu.style.display = 'block';
-}
-function hideTowerMenu() {
-  towerMenu.style.display = 'none';
-  selectedTower = null;
+function updateUpgradeTab() {
+  if (!upgradeInfo) return;
+  if (selectedTower) {
+    upgradeInfo.textContent = `Tower Level ${selectedTower.level || 1}`;
+    upgradeBtn.disabled = false;
+    sellBtn.disabled = false;
+  } else {
+    upgradeInfo.textContent = 'Select a tower';
+    upgradeBtn.disabled = true;
+    sellBtn.disabled = true;
+  }
 }
 function upgradeTower(t) {
   t.level = (t.level || 1) + 1;
@@ -297,7 +319,8 @@ function resetGame() {
   towers = [];
   bullets = [];
   money = 0;
-  hideTowerMenu();
+  selectedTower = null;
+  updateUpgradeTab();
   waveActive = false;
   preWaveTimer = START_DELAY;
   waveElapsed = 0;
@@ -500,18 +523,20 @@ function drawBG() {
       }
     }
 }
-function drawHUD() {
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+function updateStatsUI() {
+  if (!statWave) return;
   if (!waveActive && preWaveTimer > 0) {
-    ctx.fillText(`Next wave in: ${preWaveTimer.toFixed(1)}s`, 12, 12);
-    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 32);
-    ctx.fillText(`Money: $${money}`, 12, 52);
+    statWave.textContent = `Next wave in: ${preWaveTimer.toFixed(1)}s`;
+    statTime.textContent = '';
+    statEnemies.textContent = '';
+    statLives.textContent = `Lives: ${catLives.filter(l => l.alive).length}`;
+    statMoney.textContent = `Money: $${money}`;
   } else {
-    ctx.fillText(`Wave: ${waveIndex + 1}`, 12, 12);
-    ctx.fillText(`Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s`, 12, 32);
-    ctx.fillText(`Enemies: ${enemies.length}`, 12, 52);
-    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 72);
-    ctx.fillText(`Money: $${money}`, 12, 92);
+    statWave.textContent = `Wave: ${waveIndex + 1}`;
+    statTime.textContent = `Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s`;
+    statEnemies.textContent = `Enemies: ${enemies.length}`;
+    statLives.textContent = `Lives: ${catLives.filter(l => l.alive).length}`;
+    statMoney.textContent = `Money: $${money}`;
   }
 }
 function render() {
@@ -564,7 +589,7 @@ function render() {
     ctx.fill();
   }
 
-    drawHUD();
+    updateStatsUI();
   }
 
 function loop(ts) {
@@ -581,18 +606,14 @@ function loop(ts) {
 function bindInputs() {
   gameCanvas.addEventListener('mousemove', onMouseMove);
   gameCanvas.addEventListener('click', onCanvasClick);
-  gameCanvas.addEventListener('contextmenu', onCanvasContext);
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('keydown', onKey);
-  window.addEventListener('click', hideContextMenu);
 }
 function unbindInputs() {
   gameCanvas.removeEventListener('mousemove', onMouseMove);
   gameCanvas.removeEventListener('click', onCanvasClick);
-  gameCanvas.removeEventListener('contextmenu', onCanvasContext);
   window.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKey);
-  window.removeEventListener('click', hideContextMenu);
 }
 function onMouseMove(e) {
   const r = gameCanvas.getBoundingClientRect();
@@ -606,11 +627,9 @@ function onCanvasClick(e) {
 
   if (!selectedBuild) {
     const t = towers.find(t => t.gx === gx && t.gy === gy);
-    if (t) {
-      showTowerMenu(t, e.clientX, e.clientY);
-    } else {
-      hideTowerMenu();
-    }
+    selectedTower = t || null;
+    updateUpgradeTab();
+    if (t) switchTab('upgrade');
     return;
   }
 
@@ -634,20 +653,6 @@ function onCanvasClick(e) {
     }
   }
 }
-function onCanvasContext(e) {
-  e.preventDefault();
-  selectedBuild = null;
-  hideTowerMenu();
-  if (contextMenu) {
-    contextMenu.style.left = e.clientX + 'px';
-    contextMenu.style.top = e.clientY + 'px';
-    contextMenu.style.display = 'block';
-  }
-}
-function hideContextMenu() {
-  if (contextMenu) contextMenu.style.display = 'none';
-}
-
 function onKey(e) { if (e.key === 'Escape') endGame(); }
 
 async function startGame() {
@@ -702,8 +707,9 @@ function endGame() {
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
-  hideTowerMenu();
-  hideContextMenu();
+  selectedTower = null;
+  updateUpgradeTab();
+  switchTab('build');
 
   const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
   alert(msg);

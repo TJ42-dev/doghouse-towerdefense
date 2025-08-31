@@ -41,19 +41,37 @@
   <canvas id="gameCanvas"></canvas>
   <button id="nextWaveBtn" class="btn">Next Wave</button>
   <button id="quitGameBtn" class="btn">Quit Game</button>
-  <div id="buildMenu" class="build-menu">
-    <h3>Build Menu</h3>
-    <button id="wallBtn" class="btn">Wall</button>
-    <button id="cannonBtn" class="btn">Cannon</button>
-  </div>
 
-  <div id="towerMenu" class="tower-menu">
-    <button id="closeTowerMenu" class="close-btn">✖</button>
-    <button id="upgradeTower" class="btn">Upgrade</button>
-    <button id="sellTower" class="btn">Sell</button>
+  <div id="hoverMenu" class="hover-menu">
+    <div class="tabs">
+      <button class="tab-btn" data-tab="build">Build</button>
+      <button class="tab-btn" data-tab="upgrade">Upgrade</button>
+      <button class="tab-btn" data-tab="stats">Stats</button>
+      <button class="tab-btn" data-tab="options">Options</button>
+    </div>
+    <div class="tab-content">
+      <div id="tab-build" class="tab-pane active">
+        <button id="wallBtn" class="btn">Wall</button>
+        <button id="cannonBtn" class="btn">Cannon</button>
+        <button id="cancelBuildBtn" class="btn ghost">Cancel</button>
+      </div>
+      <div id="tab-upgrade" class="tab-pane">
+        <p id="upgradeInfo">Select a tower</p>
+        <button id="upgradeTower" class="btn" disabled>Upgrade</button>
+        <button id="sellTower" class="btn" disabled>Sell</button>
+      </div>
+      <div id="tab-stats" class="tab-pane">
+        <p id="statWave"></p>
+        <p id="statTime"></p>
+        <p id="statEnemies"></p>
+        <p id="statLives"></p>
+        <p id="statMoney"></p>
+      </div>
+      <div id="tab-options" class="tab-pane">
+        <button id="optionsQuitBtn" class="btn">Quit</button>
+      </div>
+    </div>
   </div>
-
-  <div id="contextMenu" class="context-menu"></div>
 
   <script src="./main.js" defer></script>
 </body>
