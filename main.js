@@ -14,8 +14,11 @@ const container = document.querySelector('.container');
 const buildMenu = document.getElementById('buildMenu');
 const wallBtn = document.getElementById('wallBtn');
 const cannonBtn = document.getElementById('cannonBtn');
+const laserBtn = document.getElementById('laserBtn');
 const towerMenu = document.getElementById('towerMenu');
-const upgradeBtn = document.getElementById('upgradeTower');
+const upgradeDamageBtn = document.getElementById('upgradeDamage');
+const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
+const upgradeRangeBtn = document.getElementById('upgradeRange');
 const sellBtn = document.getElementById('sellTower');
 const closeTowerMenuBtn = document.getElementById('closeTowerMenu');
 let selectedTower = null;
@@ -33,12 +36,13 @@ let walls = [];
 let selectedBuild = null;
 let towers = [];
 let bullets = [];
+let beams = [];
 let money = 0;
 
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
+let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4 };
 let TOWER_TYPES = [];
-function cannonDamage() { return CANNON_BASE.damage / (waveIndex + 1); }
 
 function isWallAt(gx, gy) {
   return walls.some(w => w.x === gx && w.y === gy) || towers.some(t => t.gx === gx && t.gy === gy);
@@ -132,6 +136,7 @@ saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fu
 // ----- Build Menu -----
 wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
 cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
+laserBtn?.addEventListener('click', () => { selectedBuild = 'laser'; });
 if (buildMenu) {
   let drag = null;
   buildMenu.addEventListener('mousedown', (e) => {
@@ -153,8 +158,16 @@ if (buildMenu) {
 }
 
 if (towerMenu) {
-  upgradeBtn?.addEventListener('click', () => {
-    if (selectedTower) { upgradeTower(selectedTower); rankUp(); }
+  upgradeDamageBtn?.addEventListener('click', () => {
+    if (selectedTower) { upgradeTower(selectedTower, 'damage'); rankUp(); }
+    hideTowerMenu();
+  });
+  upgradeFireRateBtn?.addEventListener('click', () => {
+    if (selectedTower) { upgradeTower(selectedTower, 'fireRate'); rankUp(); }
+    hideTowerMenu();
+  });
+  upgradeRangeBtn?.addEventListener('click', () => {
+    if (selectedTower) { upgradeTower(selectedTower, 'range'); rankUp(); }
     hideTowerMenu();
   });
   sellBtn?.addEventListener('click', () => {
@@ -176,11 +189,19 @@ function hideTowerMenu() {
   towerMenu.style.display = 'none';
   selectedTower = null;
 }
-function upgradeTower(t) {
+function upgradeTower(t, stat) {
   t.level = (t.level || 1) + 1;
-  t.damage *= 1.25;
-  t.fireRate *= 1.1;
-  t.range *= 1.1;
+  switch (stat) {
+    case 'damage':
+      t.damage += 20;
+      break;
+    case 'fireRate':
+      t.fireRate += 0.1;
+      break;
+    case 'range':
+      t.range += 1;
+      break;
+  }
 }
 
 // -------------------- Canvas setup --------------------
@@ -222,7 +243,10 @@ let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
 let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_SRC = 'assets/cannon.svg';
+const LASER_SRC = 'assets/laser.svg';
 const WALL_SRC = 'assets/wall.svg';
+const BOSS_SRC = 'assets/animals/dogs/german.png';
+const BOSS_STATS = { baseHealth: 500, baseSpeed: 1.2 };
 
 let DATA_LOADED = false;
 async function loadData() {
@@ -236,6 +260,8 @@ async function loadData() {
       TOWER_TYPES = towerJson;
       const cannon = TOWER_TYPES.find(t => t.id === 'cannon');
       if (cannon) CANNON_BASE = { ...CANNON_BASE, ...cannon };
+      const laser = TOWER_TYPES.find(t => t.id === 'laser');
+      if (laser) LASER_BASE = { ...LASER_BASE, ...laser };
     }
     if (dogJson) {
       DEFAULT_DOG_STATS = { ...DEFAULT_DOG_STATS, ...(dogJson.default || {}) };
@@ -262,7 +288,7 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [], cat: null, cannon: null, wall: null };
+let ASSETS = { dogs: [], boss: null, cat: null, cannon: null, laser: null, wall: null };
 let assetsReady; // Promise
 
 async function ensureAssets() {
@@ -273,8 +299,10 @@ async function ensureAssets() {
         dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
         ASSETS = {
           dogs: DOG_TYPES,
+          boss: await loadImage(BOSS_SRC),
           cat: await loadImage(CAT_SRC),
           cannon: await loadImage(CANNON_SRC),
+          laser: await loadImage(LASER_SRC),
           wall: await loadImage(WALL_SRC)
         };
     })();
@@ -292,6 +320,8 @@ const WAVE_TIME = 60; // seconds per wave
 const ENEMIES_PER_WAVE = 10;
 const START_DELAY = 10; // secs before first wave
 const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
+const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
+const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
 let rafId = null;
 let lastT = 0;
 let running = false;
@@ -346,13 +376,23 @@ function spawnEnemy() {
   const x = Math.floor(GRID_COLS / 2) * CELL + CELL / 2;
   const y = -CELL;
   const r = CELL / 2;
-  const type = ASSETS.dogs[waveIndex % ASSETS.dogs.length] || {};
-  const stats = { ...DEFAULT_DOG_STATS, ...type };
+  let stats;
+  let img;
+  if (waveIndex === BOSS_WAVE_INDEX) {
+    stats = BOSS_STATS;
+    img = imgReady(ASSETS.boss) ? ASSETS.boss : null;
+  } else {
+    const type = ASSETS.dogs[waveIndex % ASSETS.dogs.length] || {};
+    stats = { ...DEFAULT_DOG_STATS, ...type };
+    img = imgReady(type.img) ? type.img : null;
+  }
   const baseSpeed = CELL * 2.5 * stats.baseSpeed;
   const speed = baseSpeed * (0.9 + Math.random()*0.4); // px/sec
-  const health = stats.baseHealth;
-
-  const img = imgReady(type.img) ? type.img : null;
+  let health = stats.baseHealth;
+  if (waveIndex > BOSS_WAVE_INDEX) {
+    const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
+    health = Math.round(health * scale);
+  }
   const target = catLives.find(l => l.alive) || null;
   const startCell = { x: Math.floor(x / CELL), y: 0 };
   const goalCell = target ? { x: Math.floor(target.x / CELL), y: Math.floor(target.y / CELL) } : null;
@@ -391,7 +431,8 @@ function update(dt) {
 
   waveElapsed += dt;
   spawnTimer -= dt;
-  while (spawnTimer <= 0 && enemiesSpawnedInWave < ENEMIES_PER_WAVE) {
+  const enemiesPerWave = waveIndex === BOSS_WAVE_INDEX ? 1 : ENEMIES_PER_WAVE;
+  while (spawnTimer <= 0 && enemiesSpawnedInWave < enemiesPerWave) {
     spawnEnemy();
     spawnTimer += spawnInterval;
   }
@@ -448,22 +489,34 @@ function update(dt) {
   });
 
   // Tower behavior
-    for (const t of towers) {
-      t.cooldown -= dt;
-      const rangePx = t.range * CELL;
-      let target = null;
-      let closest = rangePx;
-      for (const e of enemies) {
-        const d = Math.hypot(e.x - t.x, e.y - t.y);
-        if (d <= closest) { target = e; closest = d; }
-      }
-      t.target = target;
-      if (t.cooldown <= 0 && target) {
-        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: cannonDamage() });
+  for (const t of towers) {
+    t.cooldown -= dt;
+    const rangePx = t.range * CELL;
+    let target = null;
+    let closest = rangePx;
+    for (const e of enemies) {
+      const d = Math.hypot(e.x - t.x, e.y - t.y);
+      if (d <= closest) { target = e; closest = d; }
+    }
+    t.target = target;
+    if (t.cooldown <= 0 && target) {
+      if (t.type === 'laser') {
+        target.health -= t.damage;
+        bark();
+        beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, time: 0.05 });
+        t.cooldown = 1 / t.fireRate;
+        sfx(1200, 0.05, 0.04, 'sine');
+        if (target.health <= 0) {
+          enemies.splice(enemies.indexOf(target), 1);
+          money += 10;
+        }
+      } else {
+        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: t.damage });
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       }
     }
+  }
 
   // Bullets
   bullets = bullets.filter(b => {
@@ -486,7 +539,12 @@ function update(dt) {
     return true;
   });
 
-  if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= ENEMIES_PER_WAVE) {
+  beams = beams.filter(b => {
+    b.time -= dt;
+    return b.time > 0;
+  });
+
+  if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
     money += 50;
     victory();
     nextWave();
@@ -539,12 +597,13 @@ function render() {
 
     // Towers
     for (const t of towers) {
-      if (imgReady(ASSETS.cannon)) {
+      const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
+      if (imgReady(img)) {
         const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.rotate(angle);
-        ctx.drawImage(ASSETS.cannon, -CELL / 2, -CELL / 2, CELL, CELL);
+        ctx.drawImage(img, -CELL / 2, -CELL / 2, CELL, CELL);
         ctx.restore();
       } else {
         ctx.fillStyle = '#888';
@@ -574,6 +633,16 @@ function render() {
       ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
       ctx.fillStyle = '#fff'; ctx.fill();
     }
+  }
+
+  // Beams
+  ctx.strokeStyle = '#0ff';
+  ctx.lineWidth = 2;
+  for (const beam of beams) {
+    ctx.beginPath();
+    ctx.moveTo(beam.x1, beam.y1);
+    ctx.lineTo(beam.x2, beam.y2);
+    ctx.stroke();
   }
 
   // Bullets
@@ -641,10 +710,26 @@ function onCanvasClick(e) {
           gy,
           x: (gx + 0.5) * CELL,
           y: (gy + 0.5) * CELL,
+          type: 'cannon',
           cooldown: 0,
           damage: CANNON_BASE.damage,
           fireRate: CANNON_BASE.fireRate,
           range: CANNON_BASE.range,
+          target: null
+        });
+    }
+  } else if (selectedBuild === 'laser') {
+    if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
+        towers.push({
+          gx,
+          gy,
+          x: (gx + 0.5) * CELL,
+          y: (gy + 0.5) * CELL,
+          type: 'laser',
+          cooldown: 0,
+          damage: LASER_BASE.damage,
+          fireRate: LASER_BASE.fireRate,
+          range: LASER_BASE.range,
           target: null
         });
     }
