@@ -13,6 +13,7 @@ const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
 const buildMenu = document.getElementById('buildMenu');
 const wallBtn = document.getElementById('wallBtn');
+const cannonBtn = document.getElementById('cannonBtn');
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
@@ -25,9 +26,14 @@ let GRID_COLS = GRID_SIZE; // dynamic grid width in cells
 let GRID_ROWS = GRID_SIZE; // dynamic grid height in cells
 let walls = [];
 let selectedBuild = null;
+let towers = [];
+let bullets = [];
+
+const CANNON_BASE = { damage: 60, fireRate: 0.5, range: 4, bulletSpeed: 5 };
+function cannonDamage() { return CANNON_BASE.damage / (waveIndex + 1); }
 
 function isWallAt(gx, gy) {
-  return walls.some(w => w.x === gx && w.y === gy);
+  return walls.some(w => w.x === gx && w.y === gy) || towers.some(t => t.gx === gx && t.gy === gy);
 }
 
 // Basic BFS pathfinding to navigate around walls
@@ -102,6 +108,7 @@ saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fu
 
 // ----- Build Menu -----
 wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
+cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
 if (buildMenu) {
   let drag = null;
   buildMenu.addEventListener('mousedown', (e) => {
@@ -147,6 +154,7 @@ function resizeCanvas() {
   CELL = Math.floor(Math.min(gameCanvas.clientWidth, gameCanvas.clientHeight) / GRID_SIZE);
   GRID_COLS = Math.floor(gameCanvas.clientWidth / CELL);
   GRID_ROWS = Math.floor(gameCanvas.clientHeight / CELL);
+  towers.forEach(t => { t.x = (t.gx + 0.5) * CELL; t.y = (t.gy + 0.5) * CELL; });
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -225,6 +233,8 @@ function resetGame() {
   enemies = [];
   walls = [];
   selectedBuild = null;
+  towers = [];
+  bullets = [];
   waveActive = false;
   preWaveTimer = START_DELAY;
   waveElapsed = 0;
@@ -357,6 +367,44 @@ function update(dt) {
     return true;
   });
 
+  // Tower behavior
+  for (const t of towers) {
+    t.cooldown -= dt;
+    if (t.cooldown <= 0) {
+      const rangePx = t.range * CELL;
+      let target = null;
+      let closest = rangePx;
+      for (const e of enemies) {
+        const d = Math.hypot(e.x - t.x, e.y - t.y);
+        if (d <= closest) { target = e; closest = d; }
+      }
+      if (target) {
+        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: cannonDamage() });
+        t.cooldown = 1 / t.fireRate;
+        sfx(880, 0.07, 0.03, 'square');
+      }
+    }
+  }
+
+  // Bullets
+  bullets = bullets.filter(b => {
+    if (!b.target || !enemies.includes(b.target)) return false;
+    const dx = b.target.x - b.x;
+    const dy = b.target.y - b.y;
+    const dist = Math.hypot(dx, dy);
+    const move = b.speed * dt;
+    if (dist <= move) {
+      b.target.health -= b.damage;
+      if (b.target.health <= 0) {
+        enemies.splice(enemies.indexOf(b.target), 1);
+      }
+      return false;
+    }
+    b.x += (dx / dist) * move;
+    b.y += (dy / dist) * move;
+    return true;
+  });
+
   if (catLives.every(l => !l.alive)) { endGame(); return; }
 
   if (waveElapsed >= WAVE_TIME) {
@@ -396,6 +444,12 @@ function drawHUD() {
 function render() {
   drawBG();
 
+  // Towers
+  for (const t of towers) {
+    ctx.fillStyle = '#888';
+    ctx.fillRect(t.gx * CELL, t.gy * CELL, CELL, CELL);
+  }
+
   // Cat lives
   for (const life of catLives) {
     if (!life.alive) continue;
@@ -418,6 +472,14 @@ function render() {
       ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
       ctx.fillStyle = '#fff'; ctx.fill();
     }
+  }
+
+  // Bullets
+  for (const b of bullets) {
+    ctx.beginPath();
+    ctx.fillStyle = '#ff0';
+    ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
+    ctx.fill();
   }
 
   // Player (safe draw)
@@ -461,12 +523,29 @@ function onMouseMove(e) {
   mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.active = true;
 }
 function onCanvasClick(e) {
-  if (selectedBuild !== 'wall') return;
+  if (!selectedBuild) return;
   const r = gameCanvas.getBoundingClientRect();
   const gx = Math.floor((e.clientX - r.left) / CELL);
   const gy = Math.floor((e.clientY - r.top) / CELL);
   if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
-  if (!walls.some(w => w.x === gx && w.y === gy)) walls.push({ x: gx, y: gy });
+  if (selectedBuild === 'wall') {
+    if (!walls.some(w => w.x === gx && w.y === gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
+      walls.push({ x: gx, y: gy });
+    }
+  } else if (selectedBuild === 'cannon') {
+    if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
+      towers.push({
+        gx,
+        gy,
+        x: (gx + 0.5) * CELL,
+        y: (gy + 0.5) * CELL,
+        cooldown: 0,
+        damage: CANNON_BASE.damage,
+        fireRate: CANNON_BASE.fireRate,
+        range: CANNON_BASE.range
+      });
+    }
+  }
 }
 function onKey(e) { if (e.key === 'Escape') endGame(); }
 
