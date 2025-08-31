@@ -4,6 +4,7 @@ const startBtn = document.getElementById('startBtn');
 const optionsBtn = document.getElementById('optionsBtn');
 const quitBtn = document.getElementById('quitBtn');         // main page "Quit"
 const quitGameBtn = document.getElementById('quitGameBtn'); // in-game "Quit"
+const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
@@ -80,6 +81,11 @@ function sfx(freq = 440, dur = 0.07, vol = 0.03, type = 'square') {
   o.onended = () => { o.disconnect(); g.disconnect(); };
 }
 
+function horn() {
+  sfx(350, 0.25, 0.08, 'square');
+  setTimeout(() => sfx(220, 0.35, 0.09, 'sawtooth'), 200);
+}
+
 // -------------------- Options helpers --------------------
 function loadOpts() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:false }; }
@@ -148,15 +154,15 @@ function cssCenter() {
   return { x: w / 2, y: h / 2 };
 }
 
-// -------------------- Asset loader (FIX) --------------------
-const SPRITES = {
-  dogs: [
-    'assets/animals/dogs/beagle.png',
-    'assets/animals/dogs/labrador.png',
-    'assets/animals/dogs/bulldog.png'
-  ],
-  cat: 'assets/animals/cat.png'
-};
+// -------------------- Enemy definitions & asset loader --------------------
+// Add new dog heads here. Omit baseHealth/baseSpeed to use balanced defaults.
+const DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
+const DOG_TYPES = [
+  { name: 'beagle', src: 'assets/animals/dogs/beagle.png', baseHealth: 60, baseSpeed: 1.3 }, // fast but weak
+  { name: 'labrador', src: 'assets/animals/dogs/labrador.png' }, // balanced
+  { name: 'bulldog', src: 'assets/animals/dogs/bulldog.png', baseHealth: 150, baseSpeed: 0.7 }, // tough but slow
+];
+const CAT_SRC = 'assets/animals/cat.png';
 
 function loadImage(src) {
   return new Promise((resolve) => {
@@ -179,13 +185,9 @@ let assetsReady; // Promise
 async function ensureAssets() {
   if (!assetsReady) {
     assetsReady = (async () => {
-      const results = await Promise.all([
-        ...SPRITES.dogs.map(loadImage),
-        loadImage(SPRITES.cat)
-      ]);
-      const cat = results.at(-1);
-      const dogs = results.slice(0, SPRITES.dogs.length).filter(Boolean);
-      ASSETS = { dogs, cat };
+      const dogImgs = await Promise.all(DOG_TYPES.map(t => loadImage(t.src)));
+      dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
+      ASSETS = { dogs: DOG_TYPES, cat: await loadImage(CAT_SRC) };
     })();
   }
   return assetsReady;
@@ -197,17 +199,25 @@ function imgReady(img) {
 }
 
 // -------------------- Tiny Dodge Game --------------------
-const TIME_LIMIT = 30; // seconds
+const WAVE_TIME = 60; // seconds per wave
+const ENEMIES_PER_WAVE = 10;
+const START_DELAY = 10; // secs before first wave
+const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
 let rafId = null;
-let loopStart = 0;
 let lastT = 0;
-let elapsed = 0;
 let running = false;
+
+let waveActive = false;
+let preWaveTimer = START_DELAY;
+let waveElapsed = 0; // time into current wave
+let waveIndex = 0;
+let enemiesSpawnedInWave = 0;
+let spawnTimer = 0; // secs until next spawn
+let spawnInterval = SPAWN_INTERVAL;
 
 const player = { x: 0, y: 0, r: 18 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
-let spawnTimer = 0; // secs until next spawn
 const INITIAL_LIVES = 9;
 let catLives = [];
 
@@ -215,8 +225,13 @@ function resetGame() {
   enemies = [];
   walls = [];
   selectedBuild = null;
-  elapsed = 0;
-  spawnTimer = 0.5;
+  waveActive = false;
+  preWaveTimer = START_DELAY;
+  waveElapsed = 0;
+  waveIndex = 0;
+  enemiesSpawnedInWave = 0;
+  spawnInterval = SPAWN_INTERVAL;
+  spawnTimer = 0;
   const c = cssCenter();
   player.x = c.x; player.y = c.y; player.r = CELL / 2;
   mouse = { x: c.x, y: c.y, active: false };
@@ -238,18 +253,35 @@ function spawnEnemy() {
   const x = Math.floor(GRID_COLS / 2) * CELL + CELL / 2;
   const y = -CELL;
   const r = CELL / 2;
-  const base = CELL * 2.5, scale = 1 + (elapsed / TIME_LIMIT) * 1.6;
-  const speed = base * (0.9 + Math.random()*0.4) * scale; // px/sec
+  const type = ASSETS.dogs[waveIndex % ASSETS.dogs.length] || {};
+  const stats = { ...DEFAULT_DOG_STATS, ...type };
+  const baseSpeed = CELL * 2.5 * stats.baseSpeed;
+  const speed = baseSpeed * (0.9 + Math.random()*0.4); // px/sec
+  const health = stats.baseHealth;
 
-  // Choose only from loaded/valid images
-  const pool = ASSETS.dogs.filter(imgReady);
-  const img = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+  const img = imgReady(type.img) ? type.img : null;
   const target = catLives.find(l => l.alive) || null;
   const startCell = { x: Math.floor(x / CELL), y: 0 };
   const goalCell = target ? { x: Math.floor(target.x / CELL), y: Math.floor(target.y / CELL) } : null;
   const path = goalCell ? findPath(startCell, goalCell) : [];
 
-  enemies.push({ x, y, r, speed, img, target, path, goalCell });
+  enemies.push({ x, y, r, speed, img, target, path, goalCell, health });
+  enemiesSpawnedInWave++;
+}
+
+function startWave() {
+  waveActive = true;
+  preWaveTimer = 0;
+  waveElapsed = 0;
+  enemiesSpawnedInWave = 0;
+  spawnTimer = 0;
+  spawnInterval = SPAWN_INTERVAL;
+  horn();
+}
+
+function nextWave() {
+  waveIndex++;
+  startWave();
 }
 
 function update(dt) {
@@ -258,10 +290,18 @@ function update(dt) {
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
   }
 
+  if (!waveActive) {
+    preWaveTimer -= dt;
+    if (preWaveTimer <= 0) startWave();
+    return;
+  }
+
+  waveElapsed += dt;
   spawnTimer -= dt;
-  const minCadence = 0.25;
-  const cadence = Math.max(minCadence, 1.0 - elapsed * 0.02);
-  while (spawnTimer <= 0) { spawnEnemy(); spawnTimer += cadence; }
+  while (spawnTimer <= 0 && enemiesSpawnedInWave < ENEMIES_PER_WAVE) {
+    spawnEnemy();
+    spawnTimer += spawnInterval;
+  }
 
   const liveTargets = catLives.filter(l => l.alive);
   enemies = enemies.filter(e => {
@@ -317,11 +357,10 @@ function update(dt) {
     return true;
   });
 
-  if (catLives.every(l => !l.alive)) { endGame(false); return; }
+  if (catLives.every(l => !l.alive)) { endGame(); return; }
 
-  if (elapsed >= TIME_LIMIT) {
-    endGame(true);
-    sfx(880, 0.2, 0.05, 'triangle'); sfx(1320, 0.2, 0.04, 'triangle');
+  if (waveElapsed >= WAVE_TIME) {
+    nextWave();
   }
 }
 
@@ -344,9 +383,15 @@ function drawBG() {
 }
 function drawHUD() {
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.fillText(`Time: ${Math.max(0, TIME_LIMIT - elapsed).toFixed(1)}s`, 12, 12);
-  ctx.fillText(`Enemies: ${enemies.length}`, 12, 32);
-  ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 52);
+  if (!waveActive && preWaveTimer > 0) {
+    ctx.fillText(`Next wave in: ${preWaveTimer.toFixed(1)}s`, 12, 12);
+    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 32);
+  } else {
+    ctx.fillText(`Wave: ${waveIndex + 1}`, 12, 12);
+    ctx.fillText(`Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s`, 12, 32);
+    ctx.fillText(`Enemies: ${enemies.length}`, 12, 52);
+    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 72);
+  }
 }
 function render() {
   drawBG();
@@ -390,11 +435,9 @@ function render() {
 
 function loop(ts) {
   if (!running) return;
-  if (!loopStart) loopStart = ts;
   if (!lastT) lastT = ts;
   const dt = Math.min(0.033, (ts - lastT) / 1000); // clamp for tab-jumps
   lastT = ts;
-  elapsed = (ts - loopStart) / 1000;
   update(dt);
   render();
   rafId = requestAnimationFrame(loop);
@@ -425,13 +468,14 @@ function onCanvasClick(e) {
   if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
   if (!walls.some(w => w.x === gx && w.y === gy)) walls.push({ x: gx, y: gy });
 }
-function onKey(e) { if (e.key === 'Escape') endGame(false); }
+function onKey(e) { if (e.key === 'Escape') endGame(); }
 
 async function startGame() {
   // UI
   container && (container.style.display = 'none');
   menu && (menu.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'inline-block');
+  nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
 
   // Canvas
   ensureCanvas();
@@ -460,12 +504,12 @@ async function startGame() {
   // Reset state & go
   resetGame();
   bindInputs();
-  running = true; loopStart = 0; lastT = 0; elapsed = 0;
+  running = true; lastT = 0;
   sfx(520, 0.07, 0.04, 'square');
   rafId = requestAnimationFrame(loop);
 }
 
-function endGame(won) {
+function endGame() {
   if (!ctx) return;
   running = false;
   if (rafId) cancelAnimationFrame(rafId);
@@ -475,14 +519,20 @@ function endGame(won) {
   // UI restore
   gameCanvas && (gameCanvas.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'none');
+  nextWaveBtn && (nextWaveBtn.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
 
-  const msg = won ? `Victory! You survived ${TIME_LIMIT}s.` : `Game Over at ${elapsed.toFixed(1)}s.`;
+  const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
   alert(msg);
 }
 
 // -------------------- Hooks --------------------
 startBtn?.addEventListener('click', () => { startGame(); });
-quitGameBtn?.addEventListener('click', () => endGame(false));
+quitGameBtn?.addEventListener('click', () => endGame());
 quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));
+nextWaveBtn?.addEventListener('click', () => {
+  if (!running) return;
+  if (!waveActive) startWave();
+  else nextWave();
+});
