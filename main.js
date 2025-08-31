@@ -3,6 +3,7 @@ const LS_KEY = 'godot_web_options';
 const startBtn = document.getElementById('startBtn');
 const optionsBtn = document.getElementById('optionsBtn');
 const quitBtn = document.getElementById('quitBtn');
+const quitGameBtn = document.getElementById('quitGameBtn');
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
@@ -83,9 +84,9 @@ function bindMouseOnce() {
 
 // ---------- Game loop ----------
 function draw() {
-  // spring toward target
-  posX += (targetX - posX) * 0.1;
-  posY += (targetY - posY) * 0.1;
+  // follow target directly
+  posX = targetX;
+  posY = targetY;
 
   ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
 
@@ -111,6 +112,7 @@ function startGame() {
 
   ensureCanvas();
   gameCanvas.style.display = 'block';
+  if (quitGameBtn) quitGameBtn.style.display = 'block';
   resizeCanvas();
   bindMouseOnce();
   window.addEventListener('resize', resizeCanvas);
@@ -141,12 +143,15 @@ function endGame() {
   if (gameCanvas) gameCanvas.style.display = 'none';
   if (container) container.style.display = 'block';
   if (menu) menu.style.display = '';
+  if (quitGameBtn) quitGameBtn.style.display = 'none';
 
   alert(caught ? 'You were caught!' : 'You escaped!');
 }
 
 // ---------- Hooks ----------
 startBtn.addEventListener('click', startGame);
+
+quitGameBtn?.addEventListener('click', endGame);
 
 quitBtn.addEventListener('click', () => {
   alert('Thanks for stopping by! You can close this tab any time.');
