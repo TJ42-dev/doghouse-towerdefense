@@ -50,7 +50,7 @@ function ensureCanvas() {
     gameCanvas.id = 'gameCanvas';
     document.body.appendChild(gameCanvas);
   }
-  if (!ctx) ctx = gameCanvas.getContext('2d', { alpha: false });
+  if (!ctx) ctx = gameCanvas.getContext('2d');
   return gameCanvas;
 }
 function resizeCanvas() {
@@ -192,9 +192,7 @@ function update(dt) {
 
 function drawBG() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, '#0f1222'); g.addColorStop(1, '#1d2450');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.clearRect(0, 0, w, h);
 }
 function drawHUD() {
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
