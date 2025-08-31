@@ -245,6 +245,8 @@ const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_SRC = 'assets/cannon.svg';
 const LASER_SRC = 'assets/laser.svg';
 const WALL_SRC = 'assets/wall.svg';
+const BOSS_SRC = 'assets/animals/dogs/german.png';
+const BOSS_STATS = { baseHealth: 500, baseSpeed: 1.2 };
 
 let DATA_LOADED = false;
 async function loadData() {
@@ -286,7 +288,7 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [], cat: null, cannon: null, laser: null, wall: null };
+let ASSETS = { dogs: [], boss: null, cat: null, cannon: null, laser: null, wall: null };
 let assetsReady; // Promise
 
 async function ensureAssets() {
@@ -297,6 +299,7 @@ async function ensureAssets() {
         dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
         ASSETS = {
           dogs: DOG_TYPES,
+          boss: await loadImage(BOSS_SRC),
           cat: await loadImage(CAT_SRC),
           cannon: await loadImage(CANNON_SRC),
           laser: await loadImage(LASER_SRC),
@@ -317,6 +320,8 @@ const WAVE_TIME = 60; // seconds per wave
 const ENEMIES_PER_WAVE = 10;
 const START_DELAY = 10; // secs before first wave
 const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
+const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
+const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
 let rafId = null;
 let lastT = 0;
 let running = false;
@@ -371,13 +376,23 @@ function spawnEnemy() {
   const x = Math.floor(GRID_COLS / 2) * CELL + CELL / 2;
   const y = -CELL;
   const r = CELL / 2;
-  const type = ASSETS.dogs[waveIndex % ASSETS.dogs.length] || {};
-  const stats = { ...DEFAULT_DOG_STATS, ...type };
+  let stats;
+  let img;
+  if (waveIndex === BOSS_WAVE_INDEX) {
+    stats = BOSS_STATS;
+    img = imgReady(ASSETS.boss) ? ASSETS.boss : null;
+  } else {
+    const type = ASSETS.dogs[waveIndex % ASSETS.dogs.length] || {};
+    stats = { ...DEFAULT_DOG_STATS, ...type };
+    img = imgReady(type.img) ? type.img : null;
+  }
   const baseSpeed = CELL * 2.5 * stats.baseSpeed;
   const speed = baseSpeed * (0.9 + Math.random()*0.4); // px/sec
-  const health = stats.baseHealth;
-
-  const img = imgReady(type.img) ? type.img : null;
+  let health = stats.baseHealth;
+  if (waveIndex > BOSS_WAVE_INDEX) {
+    const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
+    health = Math.round(health * scale);
+  }
   const target = catLives.find(l => l.alive) || null;
   const startCell = { x: Math.floor(x / CELL), y: 0 };
   const goalCell = target ? { x: Math.floor(target.x / CELL), y: Math.floor(target.y / CELL) } : null;
@@ -416,7 +431,8 @@ function update(dt) {
 
   waveElapsed += dt;
   spawnTimer -= dt;
-  while (spawnTimer <= 0 && enemiesSpawnedInWave < ENEMIES_PER_WAVE) {
+  const enemiesPerWave = waveIndex === BOSS_WAVE_INDEX ? 1 : ENEMIES_PER_WAVE;
+  while (spawnTimer <= 0 && enemiesSpawnedInWave < enemiesPerWave) {
     spawnEnemy();
     spawnTimer += spawnInterval;
   }
@@ -528,7 +544,7 @@ function update(dt) {
     return b.time > 0;
   });
 
-  if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= ENEMIES_PER_WAVE) {
+  if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
     money += 50;
     victory();
     nextWave();

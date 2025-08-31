@@ -1,8 +1,8 @@
 {
   "default": { "baseHealth": 100, "baseSpeed": 1.0 },
   "types": [
-    { "name": "beagle", "src": "assets/animals/dogs/beagle.png", "baseHealth": 60, "baseSpeed": 1.3 },
+    { "name": "beagle", "src": "assets/animals/dogs/beagle.png", "baseSpeed": 1.3 },
     { "name": "labrador", "src": "assets/animals/dogs/labrador.png" },
-    { "name": "bulldog", "src": "assets/animals/dogs/bulldog.png", "baseHealth": 150, "baseSpeed": 0.7 }
+    { "name": "bulldog", "src": "assets/animals/dogs/bulldog.png", "baseSpeed": 0.7 }
   ]
 }
