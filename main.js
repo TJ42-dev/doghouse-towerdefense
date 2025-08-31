@@ -8,8 +8,21 @@ const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
-let gameCanvas = document.getElementById('gameCanvas'); // may be null if not in DOM
+const container = document.querySelector('.container');
 
+let gameCanvas = document.getElementById('gameCanvas'); // may be null if not in DOM yet
+let ctx = null;
+
+// --- Game state ---
+let targetX = 0, targetY = 0;
+let posX = 0, posY = 0;
+const radius = 20;
+let animId = null;
+let timerId = null;
+let caught = false;
+let mouseBound = false;
+
+// ---------- Options ----------
 function loadOpts() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:false }; }
   catch { return { mute:false, fullscreen:false }; }
@@ -17,7 +30,6 @@ function loadOpts() {
 function saveOpts(o) {
   localStorage.setItem(LS_KEY, JSON.stringify(o));
 }
-
 function syncUI() {
   const o = loadOpts();
   optMute.checked = !!o.mute;
@@ -33,23 +45,19 @@ saveBtn.addEventListener('click', () => {
   saveOpts({ mute: optMute.checked, fullscreen: optFullscreen.checked });
 });
 
-// ---------------- Game bootstrap (merged + optimized) ----------------
-let rafId = null;
-let onEndHandler = null;
-let player = null;
-let startTime = 0;
-
+// ---------- Canvas / sizing ----------
 function ensureCanvas() {
   if (!gameCanvas) {
     gameCanvas = document.createElement('canvas');
     gameCanvas.id = 'gameCanvas';
     document.body.appendChild(gameCanvas);
   }
-  gameCanvas.style.display = 'block';
+  if (!ctx) ctx = gameCanvas.getContext('2d', { alpha: false });
   return gameCanvas;
 }
 
-function resizeCanvas(ctx) {
+function resizeCanvas() {
+  if (!gameCanvas) return;
   const ratio = window.devicePixelRatio || 1;
   const w = Math.floor(window.innerWidth);
   const h = Math.floor(window.innerHeight);
@@ -62,72 +70,84 @@ function resizeCanvas(ctx) {
   ctx.textBaseline = 'top';
 }
 
-function endGame() {
-  if (rafId) cancelAnimationFrame(rafId);
-  rafId = null;
-  window.removeEventListener('resize', _onResize);
-  if (onEndHandler) window.removeEventListener('gameEnded', onEndHandler), onEndHandler = null;
-
-  if (gameCanvas) gameCanvas.style.display = 'none';
-  if (menu) menu.style.display = ''; // show menu again
+// ---------- Input ----------
+function bindMouseOnce() {
+  if (mouseBound || !gameCanvas) return;
+  gameCanvas.addEventListener('mousemove', (e) => {
+    const rect = gameCanvas.getBoundingClientRect();
+    targetX = e.clientX - rect.left;
+    targetY = e.clientY - rect.top;
+  });
+  mouseBound = true;
 }
 
-function _onResize() {
-  const ctx = gameCanvas.getContext('2d');
-  resizeCanvas(ctx);
+// ---------- Game loop ----------
+function draw() {
+  // spring toward target
+  posX += (targetX - posX) * 0.1;
+  posY += (targetY - posY) * 0.1;
+
+  ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+  // player circle
+  ctx.beginPath();
+  ctx.arc(posX, posY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = 'blue';
+  ctx.fill();
+
+  // win/lose condition
+  if (Math.hypot(targetX - posX, targetY - posY) < radius) {
+    caught = true;
+  }
+
+  animId = requestAnimationFrame(draw);
 }
 
+// ---------- Flow ----------
 function startGame() {
-  // Hide the menu UI
+  // Hide UI, show canvas
+  if (container) container.style.display = 'none';
   if (menu) menu.style.display = 'none';
 
-  // Prepare canvas and context
-  const canvas = ensureCanvas();
-  const ctx = canvas.getContext('2d', { alpha: false });
+  ensureCanvas();
+  gameCanvas.style.display = 'block';
+  resizeCanvas();
+  bindMouseOnce();
+  window.addEventListener('resize', resizeCanvas);
 
-  // Apply fullscreen if requested
+  // Fullscreen if requested
   const opts = loadOpts();
   if (opts.fullscreen && !document.fullscreenElement && document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(() => {/* ignore */});
   }
 
-  // Init game state
-  player = { x: canvas.width / 2, y: canvas.height / 2, radius: 20 };
-  startTime = performance.now();
+  // Reset state
+  targetX = posX = gameCanvas.width / (window.devicePixelRatio || 1) / 2;
+  targetY = posY = gameCanvas.height / (window.devicePixelRatio || 1) / 2;
+  caught = false;
 
-  // Size & events
-  resizeCanvas(ctx);
-  window.addEventListener('resize', _onResize);
-
-  // Allow other code to end the game by dispatching: window.dispatchEvent(new Event('gameEnded'))
-  onEndHandler = () => endGame();
-  window.addEventListener('gameEnded', onEndHandler);
-
-  // Main loop (single RAF)
-  function loop(t) {
-    // simple demo scene
-    const elapsed = (t - startTime) / 1000;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // player
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'blue';
-    ctx.fill();
-
-    // HUD
-    ctx.fillStyle = 'black';
-    ctx.fillText(`Time: ${elapsed.toFixed(1)}s`, 12, 12);
-
-    rafId = requestAnimationFrame(loop);
-  }
-  rafId = requestAnimationFrame(loop);
+  // Start loop & timer
+  animId = requestAnimationFrame(draw);
+  timerId = setTimeout(endGame, 10_000);
 }
 
+function endGame() {
+  if (animId) cancelAnimationFrame(animId);
+  animId = null;
+  if (timerId) clearTimeout(timerId);
+  timerId = null;
+  window.removeEventListener('resize', resizeCanvas);
+
+  if (gameCanvas) gameCanvas.style.display = 'none';
+  if (container) container.style.display = 'block';
+  if (menu) menu.style.display = '';
+
+  alert(caught ? 'You were caught!' : 'You escaped!');
+}
+
+// ---------- Hooks ----------
 startBtn.addEventListener('click', startGame);
 
-// ---------------- Misc ----------------
 quitBtn.addEventListener('click', () => {
   alert('Thanks for stopping by! You can close this tab any time.');
 });
