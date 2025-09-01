@@ -27,6 +27,7 @@ const damageBar = document.getElementById('damageBar');
 const fireRateBar = document.getElementById('fireRateBar');
 const rangeBar = document.getElementById('rangeBar');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
+const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
 let selectedTower = null;
 
@@ -36,7 +37,8 @@ let ctx = null;
 // -------------------- Grid & Build --------------------
 // Fixed logical grid
 const GRID_COLS = 36;
-const GRID_ROWS = 26;
+// Trim top and bottom rows so only the visible play area is usable
+const GRID_ROWS = 24;
 let CELL_PX = 22; // pixel size of a cell (computed on resize)
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
@@ -50,8 +52,8 @@ let beams = [];
 let money = 0;
 
 // Landmarks
-const DOGHOUSE_DOOR_CELL = { x: 28, y: 21 };
-const DOGHOUSE_SPAWN_CELL = { x: 27, y: 21 };
+const DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
+const DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
 
 // Entry points for enemies (top-left only)
 const ENTRIES = [ { x: 0, y: 0 } ];
@@ -204,8 +206,8 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:false }; }
-  catch { return { mute:false, fullscreen:false }; }
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:true }; }
+  catch { return { mute:false, fullscreen:true }; }
 }
 function saveOpts(o) { localStorage.setItem(LS_KEY, JSON.stringify(o)); }
 function syncUI() {
@@ -266,6 +268,20 @@ sellBtn?.addEventListener('click', () => {
 });
 quitInMenuBtn?.addEventListener('click', () => endGame());
 
+pauseBtn?.addEventListener('click', () => {
+  if (running) {
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    pauseBtn.textContent = 'Resume';
+  } else {
+    running = true;
+    lastT = 0;
+    rafId = requestAnimationFrame(loop);
+    pauseBtn.textContent = 'Pause';
+  }
+});
+
 function updateSelectedTowerInfo() {
   if (!selectedTowerInfo) return;
   if (selectedTower) {
@@ -323,7 +339,8 @@ function resizeCanvas() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
-  CELL_PX = Math.floor(Math.min(w / GRID_COLS, h / GRID_ROWS) * 1.1);
+  // Base cell size strictly within the visible canvas to avoid clipping
+  CELL_PX = Math.floor(Math.min(w / GRID_COLS, h / GRID_ROWS));
   const playW = CELL_PX * GRID_COLS;
   const playH = CELL_PX * GRID_ROWS;
   originPx = {
@@ -472,9 +489,9 @@ function resetGame() {
 
   // place nine cat heads inside the doghouse just to the right of the door
   catLives = [];
-  const cols = 3, rows = 3;
-  const startCellX = DOGHOUSE_DOOR_CELL.x + 1;
-  const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
+    const cols = 3, rows = 3;
+    const startCellX = DOGHOUSE_DOOR_CELL.x + 2;
+    const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -943,14 +960,15 @@ function endGame() {
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   hoverMenu && (hoverMenu.style.display = 'none');
   container && (container.style.display = 'block');
-  menu && (menu.style.display = '');
-  selectedTower = null;
-  updateSelectedTowerInfo();
-  contextMenu && (contextMenu.style.display = 'none');
+    menu && (menu.style.display = '');
+    selectedTower = null;
+    updateSelectedTowerInfo();
+    contextMenu && (contextMenu.style.display = 'none');
+    pauseBtn && (pauseBtn.textContent = 'Pause');
 
-  const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
-  alert(msg);
-}
+    const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
+    alert(msg);
+  }
 
 // -------------------- Hooks --------------------
 startBtn?.addEventListener('click', () => { startGame(); });
