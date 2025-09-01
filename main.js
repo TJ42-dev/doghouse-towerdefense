@@ -119,7 +119,8 @@ const SPECIALIZATION_COSTS = {
 const DIFFICULTY_SETTINGS = {
   easy: { startingCash: 500, killReward: 15, waveReward: 75, healthMultiplier: 0.8 },
   medium: { startingCash: 350, killReward: 10, waveReward: 50, healthMultiplier: 1 },
-  hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 }
+  hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 },
+  free: { startingCash: 99999, killReward: 10, waveReward: 50, healthMultiplier: 1 }
 };
 let difficulty = 'medium';
 let difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
@@ -228,7 +229,7 @@ function recalcEnemyPaths() {
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
-let ROCKET_BASE = { damage: 200, fireRate: 0.3, range: 5.5, bulletSpeed: 3, cost: 175 };
+let ROCKET_BASE = { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4, cost: 175 };
 let TOWER_TYPES = [];
 
 function updateBuildButtonLabels() {
@@ -973,7 +974,6 @@ function startWave() {
   enemiesSpawnedInWave = 0;
   spawnTimer = 0;
   spawnInterval = SPAWN_INTERVAL;
-  bullets = [];
   beams = [];
   horn();
 }
@@ -990,9 +990,41 @@ function nextWave() {
 
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
-    const move = b.speed * dt;
     if (b.type === 'rocket') {
-      if (!b.target || !enemies.includes(b.target)) return false;
+      b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
+      const move = b.speed * dt;
+      if (!b.target || !enemies.includes(b.target)) {
+        let closest = null;
+        let closestDist = Infinity;
+        for (const e of enemies) {
+          const d = Math.hypot(e.x - b.x, e.y - b.y);
+          if (d < closestDist) {
+            closestDist = d;
+            closest = e;
+          }
+        }
+        b.target = closest;
+        if (!b.target) {
+          const src = b.source || { x: b.x, y: b.y, range: 0 };
+          if (b.orbitR === undefined) {
+            const dist = Math.hypot(b.x - src.x, b.y - src.y);
+            b.orbitR = Math.min(dist, src.range * CELL_PX * 0.9);
+            b.orbitAng = Math.atan2(b.y - src.y, b.x - src.x);
+          }
+          const maxR = src.range * CELL_PX * 0.9;
+          b.orbitR = Math.min(maxR, b.orbitR + b.speed * dt);
+          b.orbitAng += (b.speed / b.orbitR) * dt;
+          b.x = src.x + Math.cos(b.orbitAng) * b.orbitR;
+          b.y = src.y + Math.sin(b.orbitAng) * b.orbitR;
+          b.angle = b.orbitAng + Math.PI / 2;
+          b.smoke -= dt;
+          if (b.smoke <= 0) {
+            smokes.push({ x: b.x, y: b.y, life: 0.5 });
+            b.smoke = 0.05;
+          }
+          return true;
+        }
+      }
       const desired = Math.atan2(b.target.y - b.y, b.target.x - b.x);
       let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
       const maxTurn = b.turnRate * dt;
@@ -1016,17 +1048,10 @@ function updateProjectiles(dt) {
         }
         return false;
       }
-      if (
-        b.x < originPx.x ||
-        b.x > originPx.x + GRID_COLS * CELL_PX ||
-        b.y < originPx.y ||
-        b.y > originPx.y + GRID_ROWS * CELL_PX
-      ) {
-        return false;
-      }
       return true;
     }
     if (b.straight) {
+      const move = b.speed * dt;
       b.x += b.dx * move;
       b.y += b.dy * move;
       for (const e of enemies) {
@@ -1052,6 +1077,7 @@ function updateProjectiles(dt) {
       return true;
     }
     if (!b.target || !enemies.includes(b.target)) return false;
+    const move = b.speed * dt;
     const dx = b.target.x - b.x;
     const dy = b.target.y - b.y;
     const dist = Math.hypot(dx, dy);
@@ -1087,20 +1113,15 @@ function update(dt) {
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
   }
 
-  if (!waveActive) {
-    updateProjectiles(dt);
-    if (!firstPlacementDone) return;
-    preWaveTimer -= dt;
-    if (preWaveTimer <= 0) startWave();
-    return;
-  }
-
-  waveElapsed += dt;
-  spawnTimer -= dt;
   const enemiesPerWave = waveIndex === BOSS_WAVE_INDEX ? 1 : ENEMIES_PER_WAVE;
-  while (spawnTimer <= 0 && enemiesSpawnedInWave < enemiesPerWave) {
-    spawnEnemy();
-    spawnTimer += spawnInterval;
+
+  if (waveActive) {
+    waveElapsed += dt;
+    spawnTimer -= dt;
+    while (spawnTimer <= 0 && enemiesSpawnedInWave < enemiesPerWave) {
+      spawnEnemy();
+      spawnTimer += spawnInterval;
+    }
   }
 
   const liveTargets = catLives.filter(l => l.alive);
@@ -1176,7 +1197,53 @@ function update(dt) {
     if (target) {
       t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     }
-    if (t.cooldown <= 0 && target) {
+    if (t.type === 'rocket') {
+      const hasCap = t.upgrades.range >= 5 && t.upgrades.fireRate >= 3;
+      const cap = hasCap ? 3 : 0;
+      const existing = bullets.filter(b => b.type === 'rocket' && b.source === t && b.sentinel).length;
+      const maxSpeed = ROCKET_BASE.bulletSpeed * CELL_PX;
+      const baseAngle = t.angle || 0;
+      const sx = t.x + Math.cos(baseAngle) * (CELL_PX / 2);
+      const sy = t.y + Math.sin(baseAngle) * (CELL_PX / 2);
+      if (hasCap && existing < cap && t.cooldown <= 0) {
+        bullets.push({
+          x: sx,
+          y: sy,
+          target,
+          speed: maxSpeed * 0.2,
+          maxSpeed,
+          accel: maxSpeed,
+          damage: t.damage,
+          source: t,
+          type: 'rocket',
+          angle: baseAngle,
+          turnRate: Math.PI,
+          smoke: 0,
+          sentinel: true
+        });
+        t.cooldown = 1 / t.fireRate;
+        t.anim = 0.1;
+        sfx(200, 0.2, 0.04, 'sawtooth');
+      } else if (t.cooldown <= 0 && target) {
+        bullets.push({
+          x: sx,
+          y: sy,
+          target,
+          speed: maxSpeed * 0.2,
+          maxSpeed,
+          accel: maxSpeed,
+          damage: t.damage,
+          source: t,
+          type: 'rocket',
+          angle: baseAngle,
+          turnRate: Math.PI,
+          smoke: 0
+        });
+        t.cooldown = 1 / t.fireRate;
+        t.anim = 0.1;
+        sfx(200, 0.2, 0.04, 'sawtooth');
+      }
+    } else if (t.cooldown <= 0 && target) {
       const angle = t.angle;
       if (t.type === 'laser' || t.type === 'dualLaser') {
         target.health -= t.damage;
@@ -1238,13 +1305,6 @@ function update(dt) {
         beams.push({ x1: sx, y1: sy, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
         sfx(300, 0.2, 0.04, 'sawtooth');
-      } else if (t.type === 'rocket') {
-        const sx = t.x + Math.cos(angle) * (CELL_PX / 2);
-        const sy = t.y + Math.sin(angle) * (CELL_PX / 2);
-        bullets.push({ x: sx, y: sy, target, speed: ROCKET_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t, type: 'rocket', angle, turnRate: Math.PI, smoke: 0 });
-        t.cooldown = 1 / t.fireRate;
-        t.anim = 0.1;
-        sfx(200, 0.2, 0.04, 'sawtooth');
       } else if (t.type === 'shotgun') {
         const angle = t.angle;
         const spread = Math.PI / 12;
@@ -1268,6 +1328,12 @@ function update(dt) {
   }
 
   updateProjectiles(dt);
+  if (!waveActive) {
+    if (!firstPlacementDone) return;
+    preWaveTimer -= dt;
+    if (preWaveTimer <= 0) startWave();
+    return;
+  }
 
   if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
     money += difficultySettings.waveReward;
