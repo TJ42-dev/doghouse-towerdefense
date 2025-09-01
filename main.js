@@ -683,13 +683,19 @@ function cssCenter() {
 let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
 let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
-const CANNON_SRC = 'assets/pistol_cat.svg';
-const LASER_SRC = 'assets/laser.svg';
-const DUAL_LASER_SRC = 'assets/laser-dual.svg';
-const RAILGUN_SRC = 'assets/railgun.svg';
+const CANNON_BASE_SRC = 'assets/cannon_base.svg';
+const CANNON_TURRET_SRC = 'assets/cannon_turret.svg';
+const LASER_BASE_SRC = 'assets/laser_base.svg';
+const LASER_TURRET_SRC = 'assets/laser_turret.svg';
+const DUAL_LASER_BASE_SRC = 'assets/laser_dual_base.svg';
+const DUAL_LASER_TURRET_SRC = 'assets/laser_dual_turret.svg';
+const RAILGUN_BASE_SRC = 'assets/railgun_base.svg';
+const RAILGUN_TURRET_SRC = 'assets/railgun_turret.svg';
 const WALL_SRC = 'assets/wall.svg';
-const SNIPER_SRC = 'assets/sniper.svg';
-const SHOTGUN_SRC = 'assets/shotgun.svg';
+const SNIPER_BASE_SRC = 'assets/sniper_base.svg';
+const SNIPER_TURRET_SRC = 'assets/sniper_turret.svg';
+const SHOTGUN_BASE_SRC = 'assets/shotgun_base.svg';
+const SHOTGUN_TURRET_SRC = 'assets/shotgun_turret.svg';
 const BOSS_SRC = 'assets/animals/dogs/german.png';
 const BOSS_STATS = { baseHealth: 500, baseSpeed: 1.2 };
 
@@ -734,7 +740,18 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [], boss: null, cat: null, cannon: null, laser: null, dualLaser: null, railgun: null, wall: null, sniper: null, shotgun: null };
+let ASSETS = {
+  dogs: [],
+  boss: null,
+  cat: null,
+  wall: null,
+  cannon: { base: null, turret: null },
+  laser: { base: null, turret: null },
+  dualLaser: { base: null, turret: null },
+  railgun: { base: null, turret: null },
+  sniper: { base: null, turret: null },
+  shotgun: { base: null, turret: null }
+};
 let assetsReady; // Promise
 
 async function ensureAssets() {
@@ -747,13 +764,13 @@ async function ensureAssets() {
           dogs: DOG_TYPES,
           boss: await loadImage(BOSS_SRC),
           cat: await loadImage(CAT_SRC),
-          cannon: await loadImage(CANNON_SRC),
-          laser: await loadImage(LASER_SRC),
-          dualLaser: await loadImage(DUAL_LASER_SRC),
-          railgun: await loadImage(RAILGUN_SRC),
           wall: await loadImage(WALL_SRC),
-          sniper: await loadImage(SNIPER_SRC),
-          shotgun: await loadImage(SHOTGUN_SRC)
+          cannon: { base: await loadImage(CANNON_BASE_SRC), turret: await loadImage(CANNON_TURRET_SRC) },
+          laser: { base: await loadImage(LASER_BASE_SRC), turret: await loadImage(LASER_TURRET_SRC) },
+          dualLaser: { base: await loadImage(DUAL_LASER_BASE_SRC), turret: await loadImage(DUAL_LASER_TURRET_SRC) },
+          railgun: { base: await loadImage(RAILGUN_BASE_SRC), turret: await loadImage(RAILGUN_TURRET_SRC) },
+          sniper: { base: await loadImage(SNIPER_BASE_SRC), turret: await loadImage(SNIPER_TURRET_SRC) },
+          shotgun: { base: await loadImage(SHOTGUN_BASE_SRC), turret: await loadImage(SHOTGUN_TURRET_SRC) }
         };
     })();
   }
@@ -866,6 +883,8 @@ function startWave() {
   enemiesSpawnedInWave = 0;
   spawnTimer = 0;
   spawnInterval = SPAWN_INTERVAL;
+  bullets = [];
+  beams = [];
   horn();
 }
 
@@ -876,6 +895,59 @@ function nextWave() {
   waveElapsed = 0;
 }
 
+function updateProjectiles(dt) {
+  bullets = bullets.filter(b => {
+    const move = b.speed * dt;
+    if (b.straight) {
+      b.x += b.dx * move;
+      b.y += b.dy * move;
+      for (const e of enemies) {
+        if (Math.hypot(e.x - b.x, e.y - b.y) <= e.r) {
+          e.health -= b.damage;
+          bark();
+          if (e.health <= 0) {
+            enemies.splice(enemies.indexOf(e), 1);
+            money += 10;
+            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+          }
+          return false;
+        }
+      }
+      if (
+        b.x < originPx.x ||
+        b.x > originPx.x + GRID_COLS * CELL_PX ||
+        b.y < originPx.y ||
+        b.y > originPx.y + GRID_ROWS * CELL_PX
+      ) {
+        return false;
+      }
+      return true;
+    }
+    if (!b.target || !enemies.includes(b.target)) return false;
+    const dx = b.target.x - b.x;
+    const dy = b.target.y - b.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= move) {
+      b.target.health -= b.damage;
+      bark();
+      if (b.target.health <= 0) {
+        enemies.splice(enemies.indexOf(b.target), 1);
+        money += 10;
+        if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+      }
+      return false;
+    }
+    b.x += (dx / dist) * move;
+    b.y += (dy / dist) * move;
+    return true;
+  });
+
+  beams = beams.filter(b => {
+    b.time -= dt;
+    return b.time > 0;
+  });
+}
+
 function update(dt) {
   if (mouse.active) {
     player.x += (mouse.x - player.x) * Math.min(1, dt*8);
@@ -883,6 +955,7 @@ function update(dt) {
   }
 
   if (!waveActive) {
+    updateProjectiles(dt);
     if (!firstPlacementDone) return;
     preWaveTimer -= dt;
     if (preWaveTimer <= 0) startWave();
@@ -966,20 +1039,25 @@ function update(dt) {
       if (d <= closest) { target = e; closest = d; }
     }
     t.target = target;
+    if (target) {
+      t.angle = Math.atan2(target.y - t.y, target.x - t.x);
+    }
     if (t.cooldown <= 0 && target) {
+      const angle = t.angle;
       if (t.type === 'laser' || t.type === 'dualLaser') {
         target.health -= t.damage;
         bark();
         if (t.type === 'dualLaser') {
-          const angle = Math.atan2(target.y - t.y, target.x - t.x);
           const perp = angle + Math.PI / 2;
           const offset = t.alt ? 5 : -5;
-          const x1 = t.x + Math.cos(perp) * offset;
-          const y1 = t.y + Math.sin(perp) * offset;
+          const x1 = t.x + Math.cos(perp) * offset + Math.cos(angle) * (CELL_PX / 2);
+          const y1 = t.y + Math.sin(perp) * offset + Math.sin(angle) * (CELL_PX / 2);
           t.alt = !t.alt;
           beams.push({ x1, y1, x2: target.x, y2: target.y, time: 0.05 });
         } else {
-          beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, time: 0.05 });
+          const x1 = t.x + Math.cos(angle) * (CELL_PX / 2);
+          const y1 = t.y + Math.sin(angle) * (CELL_PX / 2);
+          beams.push({ x1, y1, x2: target.x, y2: target.y, time: 0.05 });
         }
         t.cooldown = 1 / t.fireRate;
         sfx(1200, 0.05, 0.04, 'sine');
@@ -989,25 +1067,27 @@ function update(dt) {
           t.kills = (t.kills || 0) + 1;
         }
       } else if (t.type === 'railgun') {
-        const angle = Math.atan2(target.y - t.y, target.x - t.x);
+        const angle = t.angle;
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
+        const sx = t.x + dx * (CELL_PX / 2);
+        const sy = t.y + dy * (CELL_PX / 2);
         // Determine where the beam hits the edge of the grid
         const minX = originPx.x;
         const maxX = originPx.x + GRID_COLS * CELL_PX;
         const minY = originPx.y;
         const maxY = originPx.y + GRID_ROWS * CELL_PX;
         let edgeT = Infinity;
-        if (dx > 0) edgeT = Math.min(edgeT, (maxX - t.x) / dx);
-        else if (dx < 0) edgeT = Math.min(edgeT, (minX - t.x) / dx);
-        if (dy > 0) edgeT = Math.min(edgeT, (maxY - t.y) / dy);
-        else if (dy < 0) edgeT = Math.min(edgeT, (minY - t.y) / dy);
-        const endX = t.x + dx * edgeT;
-        const endY = t.y + dy * edgeT;
+        if (dx > 0) edgeT = Math.min(edgeT, (maxX - sx) / dx);
+        else if (dx < 0) edgeT = Math.min(edgeT, (minX - sx) / dx);
+        if (dy > 0) edgeT = Math.min(edgeT, (maxY - sy) / dy);
+        else if (dy < 0) edgeT = Math.min(edgeT, (minY - sy) / dy);
+        const endX = sx + dx * edgeT;
+        const endY = sy + dy * edgeT;
         // Damage every enemy intersected by the beam up to the edge
         for (const e of [...enemies]) {
-          const ex = e.x - t.x;
-          const ey = e.y - t.y;
+          const ex = e.x - sx;
+          const ey = e.y - sy;
           const along = ex * dx + ey * dy;
           const perp = Math.abs(ex * dy - ey * dx);
           if (along > 0 && along <= edgeT && perp <= e.r) {
@@ -1021,72 +1101,32 @@ function update(dt) {
           }
         }
         // Railgun beam is wider for a more powerful visual effect
-        beams.push({ x1: t.x, y1: t.y, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
+        beams.push({ x1: sx, y1: sy, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
         sfx(300, 0.2, 0.04, 'sawtooth');
       } else if (t.type === 'shotgun') {
-        const angle = Math.atan2(target.y - t.y, target.x - t.x);
+        const angle = t.angle;
         const spread = Math.PI / 12;
         for (let i = -1; i <= 1; i++) {
           const ang = angle + i * spread;
-          bullets.push({ x: t.x, y: t.y, dx: Math.cos(ang), dy: Math.sin(ang), speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t, straight: true });
+          const sx = t.x + Math.cos(ang) * (CELL_PX / 2);
+          const sy = t.y + Math.sin(ang) * (CELL_PX / 2);
+          bullets.push({ x: sx, y: sy, dx: Math.cos(ang), dy: Math.sin(ang), speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t, straight: true });
         }
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       } else {
-        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t });
+        const angle = t.angle;
+        const sx = t.x + Math.cos(angle) * (CELL_PX / 2);
+        const sy = t.y + Math.sin(angle) * (CELL_PX / 2);
+        bullets.push({ x: sx, y: sy, target, speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t });
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       }
     }
   }
 
-  // Bullets
-  bullets = bullets.filter(b => {
-    const move = b.speed * dt;
-    if (b.straight) {
-      b.x += b.dx * move;
-      b.y += b.dy * move;
-      for (const e of enemies) {
-        if (Math.hypot(e.x - b.x, e.y - b.y) <= e.r) {
-          e.health -= b.damage;
-          bark();
-          if (e.health <= 0) {
-            enemies.splice(enemies.indexOf(e), 1);
-            money += 10;
-            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-          }
-          return false;
-        }
-      }
-      if (b.x < originPx.x || b.x > originPx.x + GRID_COLS * CELL_PX || b.y < originPx.y || b.y > originPx.y + GRID_ROWS * CELL_PX) {
-        return false;
-      }
-      return true;
-    }
-    if (!b.target || !enemies.includes(b.target)) return false;
-    const dx = b.target.x - b.x;
-    const dy = b.target.y - b.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist <= move) {
-      b.target.health -= b.damage;
-      bark();
-      if (b.target.health <= 0) {
-        enemies.splice(enemies.indexOf(b.target), 1);
-        money += 10;
-        if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-      }
-      return false;
-    }
-    b.x += (dx / dist) * move;
-    b.y += (dy / dist) * move;
-    return true;
-  });
-
-  beams = beams.filter(b => {
-    b.time -= dt;
-    return b.time > 0;
-  });
+  updateProjectiles(dt);
 
   if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
     money += 50;
@@ -1172,17 +1212,18 @@ function render() {
 
     // Towers
     for (const t of towers) {
-      const img = t.type === 'laser' ? ASSETS.laser :
+      const art = t.type === 'laser' ? ASSETS.laser :
         t.type === 'dualLaser' ? ASSETS.dualLaser :
         t.type === 'railgun' ? ASSETS.railgun :
         t.type === 'sniper' ? ASSETS.sniper :
         t.type === 'shotgun' ? ASSETS.shotgun : ASSETS.cannon;
-      if (imgReady(img)) {
-        const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
+      if (imgReady(art.base) && imgReady(art.turret)) {
+        const angle = t.angle || 0;
         ctx.save();
         ctx.translate(t.x, t.y);
+        ctx.drawImage(art.base, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
         ctx.rotate(angle);
-        ctx.drawImage(img, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
+        ctx.drawImage(art.turret, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
         ctx.restore();
       } else {
         ctx.fillStyle = '#888';
@@ -1329,6 +1370,7 @@ function onCanvasClick(e) {
         y: p.y,
         type: 'cannon',
         cooldown: 0,
+        angle: 0,
         base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
         damage: CANNON_BASE.damage,
         fireRate: CANNON_BASE.fireRate,
@@ -1354,6 +1396,7 @@ function onCanvasClick(e) {
         y: p.y,
         type: 'laser',
         cooldown: 0,
+        angle: 0,
         base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
         damage: LASER_BASE.damage,
         fireRate: LASER_BASE.fireRate,
