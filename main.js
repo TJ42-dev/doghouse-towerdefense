@@ -228,7 +228,7 @@ function recalcEnemyPaths() {
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
-let ROCKET_BASE = { damage: 200, fireRate: 0.3, range: 5.5, bulletSpeed: 3, cost: 175 };
+let ROCKET_BASE = { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4, cost: 175 };
 let TOWER_TYPES = [];
 
 function updateBuildButtonLabels() {
@@ -973,7 +973,6 @@ function startWave() {
   enemiesSpawnedInWave = 0;
   spawnTimer = 0;
   spawnInterval = SPAWN_INTERVAL;
-  bullets = [];
   beams = [];
   horn();
 }
@@ -990,9 +989,32 @@ function nextWave() {
 
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
-    const move = b.speed * dt;
     if (b.type === 'rocket') {
-      if (!b.target || !enemies.includes(b.target)) return false;
+      b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
+      const move = b.speed * dt;
+      if (!b.target || !enemies.includes(b.target)) {
+        let closest = null;
+        let closestDist = Infinity;
+        for (const e of enemies) {
+          const d = Math.hypot(e.x - b.x, e.y - b.y);
+          if (d < closestDist) {
+            closestDist = d;
+            closest = e;
+          }
+        }
+        b.target = closest;
+        if (!b.target) {
+          b.angle += dt * 0.5;
+          b.x += Math.cos(b.angle) * move;
+          b.y += Math.sin(b.angle) * move;
+          b.smoke -= dt;
+          if (b.smoke <= 0) {
+            smokes.push({ x: b.x, y: b.y, life: 0.5 });
+            b.smoke = 0.05;
+          }
+          return true;
+        }
+      }
       const desired = Math.atan2(b.target.y - b.y, b.target.x - b.x);
       let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
       const maxTurn = b.turnRate * dt;
@@ -1016,17 +1038,10 @@ function updateProjectiles(dt) {
         }
         return false;
       }
-      if (
-        b.x < originPx.x ||
-        b.x > originPx.x + GRID_COLS * CELL_PX ||
-        b.y < originPx.y ||
-        b.y > originPx.y + GRID_ROWS * CELL_PX
-      ) {
-        return false;
-      }
       return true;
     }
     if (b.straight) {
+      const move = b.speed * dt;
       b.x += b.dx * move;
       b.y += b.dy * move;
       for (const e of enemies) {
@@ -1052,6 +1067,7 @@ function updateProjectiles(dt) {
       return true;
     }
     if (!b.target || !enemies.includes(b.target)) return false;
+    const move = b.speed * dt;
     const dx = b.target.x - b.x;
     const dy = b.target.y - b.y;
     const dist = Math.hypot(dx, dy);
@@ -1241,7 +1257,21 @@ function update(dt) {
       } else if (t.type === 'rocket') {
         const sx = t.x + Math.cos(angle) * (CELL_PX / 2);
         const sy = t.y + Math.sin(angle) * (CELL_PX / 2);
-        bullets.push({ x: sx, y: sy, target, speed: ROCKET_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t, type: 'rocket', angle, turnRate: Math.PI, smoke: 0 });
+        const maxSpeed = ROCKET_BASE.bulletSpeed * CELL_PX;
+        bullets.push({
+          x: sx,
+          y: sy,
+          target,
+          speed: maxSpeed * 0.2,
+          maxSpeed,
+          accel: maxSpeed,
+          damage: t.damage,
+          source: t,
+          type: 'rocket',
+          angle,
+          turnRate: Math.PI,
+          smoke: 0
+        });
         t.cooldown = 1 / t.fireRate;
         t.anim = 0.1;
         sfx(200, 0.2, 0.04, 'sawtooth');
