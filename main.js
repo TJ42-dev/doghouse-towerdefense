@@ -34,11 +34,17 @@ let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
 
 // -------------------- Grid & Build --------------------
-// Base grid resolution. Lower numbers mean larger cells.
-const GRID_SIZE = 15;
+// Fixed playfield grid (green area inside 800x600 background)
+const GRID_COLS = 36;
+const GRID_ROWS = 26;
+const PLAYFIELD_ORIGIN_X = 40;
+const PLAYFIELD_ORIGIN_Y = 40;
+const PLAYFIELD_WIDTH = 720;
+const PLAYFIELD_HEIGHT = 520;
+
 let CELL = 20; // size of one grid cell in pixels (computed on resize)
-let GRID_COLS = GRID_SIZE; // dynamic grid width in cells
-let GRID_ROWS = GRID_SIZE; // dynamic grid height in cells
+let OFFSET_X = 0; // playfield offset from canvas top-left in pixels
+let OFFSET_Y = 0;
 let walls = [];
 let selectedBuild = null;
 let towers = [];
@@ -53,6 +59,18 @@ let TOWER_TYPES = [];
 
 function isWallAt(gx, gy) {
   return walls.some(w => w.x === gx && w.y === gy) || towers.some(t => t.gx === gx && t.gy === gy);
+}
+
+function cellToPixel(cx, cy) {
+  return { x: OFFSET_X + cx * CELL, y: OFFSET_Y + cy * CELL };
+}
+
+function cellCenterToPixel(gx, gy) {
+  return cellToPixel(gx + 0.5, gy + 0.5);
+}
+
+function pixelToCell(px, py) {
+  return { x: (px - OFFSET_X) / CELL, y: (py - OFFSET_Y) / CELL };
 }
 
 // Basic BFS pathfinding to navigate around walls
@@ -245,10 +263,13 @@ function resizeCanvas() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
-  CELL = Math.floor(Math.min(gameCanvas.clientWidth, gameCanvas.clientHeight) / GRID_SIZE);
-  GRID_COLS = Math.floor(gameCanvas.clientWidth / CELL);
-  GRID_ROWS = Math.floor(gameCanvas.clientHeight / CELL);
-  towers.forEach(t => { t.x = (t.gx + 0.5) * CELL; t.y = (t.gy + 0.5) * CELL; });
+  const scale = Math.min(gameCanvas.clientWidth / (PLAYFIELD_WIDTH + PLAYFIELD_ORIGIN_X * 2),
+                        gameCanvas.clientHeight / (PLAYFIELD_HEIGHT + PLAYFIELD_ORIGIN_Y * 2));
+  CELL = Math.floor((PLAYFIELD_WIDTH * scale) / GRID_COLS);
+  const pfW = CELL * GRID_COLS;
+  const pfH = CELL * GRID_ROWS;
+  OFFSET_X = Math.floor((gameCanvas.clientWidth - pfW) / 2);
+  OFFSET_Y = Math.floor((gameCanvas.clientHeight - pfH) / 2);
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -389,14 +410,14 @@ function resetGame() {
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
-    catLives.push({ x: (startCellX + col + 0.5) * CELL, y: (startCellY + row + 0.5) * CELL, r: CELL / 2, alive: true });
+    catLives.push({ gx: startCellX + col, gy: startCellY + row, r: 0.5, alive: true });
   }
 }
 
 function spawnEnemy() {
-  const x = Math.floor(GRID_COLS / 2) * CELL + CELL / 2;
-  const y = -CELL;
-  const r = CELL / 2;
+  const x = Math.floor(GRID_COLS / 2) + 0.5;
+  const y = -0.5;
+  const r = 0.5;
   let stats;
   let img;
   if (waveIndex === BOSS_WAVE_INDEX) {
@@ -407,16 +428,16 @@ function spawnEnemy() {
     stats = { ...DEFAULT_DOG_STATS, ...type };
     img = imgReady(type.img) ? type.img : null;
   }
-  const baseSpeed = CELL * 2.5 * stats.baseSpeed;
-  const speed = baseSpeed * (0.9 + Math.random()*0.4); // px/sec
+  const baseSpeed = 2.5 * stats.baseSpeed;
+  const speed = baseSpeed * (0.9 + Math.random()*0.4); // cells/sec
   let health = stats.baseHealth;
   if (waveIndex > BOSS_WAVE_INDEX) {
     const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
     health = Math.round(health * scale);
   }
   const target = catLives.find(l => l.alive) || null;
-  const startCell = { x: Math.floor(x / CELL), y: 0 };
-  const goalCell = target ? { x: Math.floor(target.x / CELL), y: Math.floor(target.y / CELL) } : null;
+  const startCell = { x: Math.floor(x), y: 0 };
+  const goalCell = target ? { x: target.gx, y: target.gy } : null;
   const path = goalCell ? findPath(startCell, goalCell) : [];
 
   enemies.push({ x, y, r, speed, img, target, path, goalCell, health });
@@ -463,9 +484,9 @@ function update(dt) {
     if (!e.target || !e.target.alive) e.target = liveTargets[0];
     if (!e.target) return false;
 
-    const goalCell = { x: Math.floor(e.target.x / CELL), y: Math.floor(e.target.y / CELL) };
-    const curCell = { x: Math.min(Math.max(Math.floor(e.x / CELL), 0), GRID_COLS-1),
-                      y: Math.min(Math.max(Math.floor(e.y / CELL), 0), GRID_ROWS-1) };
+    const goalCell = { x: e.target.gx, y: e.target.gy };
+    const curCell = { x: Math.min(Math.max(Math.floor(e.x), 0), GRID_COLS-1),
+                      y: Math.min(Math.max(Math.floor(e.y), 0), GRID_ROWS-1) };
 
     if (!e.path || !e.path.length || !e.goalCell || e.goalCell.x !== goalCell.x || e.goalCell.y !== goalCell.y) {
       e.path = findPath(curCell, goalCell);
@@ -476,11 +497,11 @@ function update(dt) {
       e.path = findPath(curCell, goalCell);
     }
 
-    let destX = e.target.x, destY = e.target.y;
+    let destX = e.target.gx + 0.5, destY = e.target.gy + 0.5;
     if (e.path && e.path.length) {
       const step = e.path[0];
-      destX = (step.x + 0.5) * CELL;
-      destY = (step.y + 0.5) * CELL;
+      destX = step.x + 0.5;
+      destY = step.y + 0.5;
     }
 
     const prevX = e.x, prevY = e.y;
@@ -496,14 +517,14 @@ function update(dt) {
       e.x += (dx / d) * move;
       e.y += (dy / d) * move;
     }
-    const gx = Math.floor(e.x / CELL);
-    const gy = Math.floor(e.y / CELL);
+    const gx = Math.floor(e.x);
+    const gy = Math.floor(e.y);
     if (isWallAt(gx, gy)) {
       e.x = prevX; e.y = prevY;
       e.path = findPath(curCell, goalCell);
     }
 
-    const dtgt = Math.hypot(e.target.x - e.x, e.target.y - e.y);
+    const dtgt = Math.hypot((e.target.gx + 0.5) - e.x, (e.target.gy + 0.5) - e.y);
     if (dtgt < e.r + e.target.r) { e.target.alive = false; sfx(160, 0.15, 0.06, 'sawtooth'); return false; }
 
     return true;
@@ -512,11 +533,13 @@ function update(dt) {
   // Tower behavior
   for (const t of towers) {
     t.cooldown -= dt;
-    const rangePx = t.range * CELL;
+    const tx = t.gx + 0.5;
+    const ty = t.gy + 0.5;
+    const range = t.range;
     let target = null;
-    let closest = rangePx;
+    let closest = range;
     for (const e of enemies) {
-      const d = Math.hypot(e.x - t.x, e.y - t.y);
+      const d = Math.hypot(e.x - tx, e.y - ty);
       if (d <= closest) { target = e; closest = d; }
     }
     t.target = target;
@@ -524,7 +547,7 @@ function update(dt) {
       if (t.type === 'laser') {
         target.health -= t.damage;
         bark();
-        beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, time: 0.05 });
+        beams.push({ x1: tx, y1: ty, x2: target.x, y2: target.y, time: 0.05 });
         t.cooldown = 1 / t.fireRate;
         sfx(1200, 0.05, 0.04, 'sine');
         if (target.health <= 0) {
@@ -532,7 +555,7 @@ function update(dt) {
           money += 10;
         }
       } else {
-        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: t.damage });
+        bullets.push({ x: tx, y: ty, target, speed: CANNON_BASE.bulletSpeed, damage: t.damage });
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       }
@@ -584,20 +607,27 @@ function drawBG() {
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   for (let i = 0; i <= GRID_COLS; i++) {
     ctx.beginPath();
-    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, GRID_ROWS * CELL); ctx.stroke();
+    const x = OFFSET_X + i * CELL;
+    ctx.moveTo(x, OFFSET_Y);
+    ctx.lineTo(x, OFFSET_Y + GRID_ROWS * CELL);
+    ctx.stroke();
   }
   for (let i = 0; i <= GRID_ROWS; i++) {
     ctx.beginPath();
-    ctx.moveTo(0, i * CELL); ctx.lineTo(GRID_COLS * CELL, i * CELL); ctx.stroke();
+    const y = OFFSET_Y + i * CELL;
+    ctx.moveTo(OFFSET_X, y);
+    ctx.lineTo(OFFSET_X + GRID_COLS * CELL, y);
+    ctx.stroke();
   }
-    for (const wObj of walls) {
-      if (imgReady(ASSETS.wall)) {
-        ctx.drawImage(ASSETS.wall, wObj.x * CELL, wObj.y * CELL, CELL, CELL);
-      } else {
-        ctx.fillStyle = 'rgba(120,120,120,0.5)';
-        ctx.fillRect(wObj.x * CELL, wObj.y * CELL, CELL, CELL);
-      }
+  for (const wObj of walls) {
+    const pos = cellToPixel(wObj.x, wObj.y);
+    if (imgReady(ASSETS.wall)) {
+      ctx.drawImage(ASSETS.wall, pos.x, pos.y, CELL, CELL);
+    } else {
+      ctx.fillStyle = 'rgba(120,120,120,0.5)';
+      ctx.fillRect(pos.x, pos.y, CELL, CELL);
     }
+  }
 }
 function drawHUD() {
   const statsEl = document.getElementById('gameStats');
@@ -619,42 +649,48 @@ function drawHUD() {
 function render() {
   drawBG();
 
-    // Towers
-    for (const t of towers) {
-      const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
-      if (imgReady(img)) {
-        const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
-        ctx.save();
-        ctx.translate(t.x, t.y);
-        ctx.rotate(angle);
-        ctx.drawImage(img, -CELL / 2, -CELL / 2, CELL, CELL);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = '#888';
-        ctx.fillRect(t.gx * CELL, t.gy * CELL, CELL, CELL);
-      }
+  // Towers
+  for (const t of towers) {
+    const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
+    const center = cellCenterToPixel(t.gx, t.gy);
+    if (imgReady(img)) {
+      const angle = t.target ? Math.atan2(t.target.y - (t.gy + 0.5), t.target.x - (t.gx + 0.5)) : 0;
+      ctx.save();
+      ctx.translate(center.x, center.y);
+      ctx.rotate(angle);
+      ctx.drawImage(img, -CELL / 2, -CELL / 2, CELL, CELL);
+      ctx.restore();
+    } else {
+      const pos = cellToPixel(t.gx, t.gy);
+      ctx.fillStyle = '#888';
+      ctx.fillRect(pos.x, pos.y, CELL, CELL);
     }
+  }
 
   // Cat lives
   for (const life of catLives) {
     if (!life.alive) continue;
+    const pos = cellCenterToPixel(life.gx, life.gy);
+    const rPx = life.r * CELL;
     if (imgReady(ASSETS.cat)) {
-      ctx.drawImage(ASSETS.cat, life.x - life.r, life.y - life.r, life.r*2, life.r*2);
+      ctx.drawImage(ASSETS.cat, pos.x - rPx, pos.y - rPx, rPx*2, rPx*2);
     } else {
       ctx.beginPath();
       ctx.fillStyle = '#5bd9ff';
-      ctx.arc(life.x, life.y, life.r, 0, Math.PI*2);
+      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI*2);
       ctx.fill();
     }
   }
 
   // Enemies (safe draw)
   for (const e of enemies) {
+    const pos = cellToPixel(e.x, e.y);
+    const rPx = e.r * CELL;
     if (imgReady(e.img)) {
-      ctx.drawImage(e.img, e.x - e.r, e.y - e.r, e.r*2, e.r*2);
+      ctx.drawImage(e.img, pos.x - rPx, pos.y - rPx, rPx*2, rPx*2);
     } else {
       ctx.beginPath();
-      ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI*2);
       ctx.fillStyle = '#fff'; ctx.fill();
     }
   }
@@ -663,22 +699,25 @@ function render() {
   ctx.strokeStyle = '#0ff';
   ctx.lineWidth = 2;
   for (const beam of beams) {
+    const p1 = cellToPixel(beam.x1, beam.y1);
+    const p2 = cellToPixel(beam.x2, beam.y2);
     ctx.beginPath();
-    ctx.moveTo(beam.x1, beam.y1);
-    ctx.lineTo(beam.x2, beam.y2);
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
   }
 
   // Bullets
   for (const b of bullets) {
+    const pos = cellToPixel(b.x, b.y);
     ctx.beginPath();
     ctx.fillStyle = '#ff0';
-    ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
+    ctx.arc(pos.x, pos.y, CELL / 6, 0, Math.PI*2);
     ctx.fill();
   }
 
-    drawHUD();
-  }
+  drawHUD();
+}
 
 function loop(ts) {
   if (!running) return;
@@ -709,8 +748,9 @@ function onMouseMove(e) {
 }
 function onCanvasClick(e) {
   const r = gameCanvas.getBoundingClientRect();
-  const gx = Math.floor((e.clientX - r.left) / CELL);
-  const gy = Math.floor((e.clientY - r.top) / CELL);
+  const cell = pixelToCell(e.clientX - r.left, e.clientY - r.top);
+  const gx = Math.floor(cell.x);
+  const gy = Math.floor(cell.y);
   if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
 
   if (!selectedBuild) {
@@ -735,8 +775,6 @@ function onCanvasClick(e) {
         towers.push({
           gx,
           gy,
-          x: (gx + 0.5) * CELL,
-          y: (gy + 0.5) * CELL,
           type: 'cannon',
           cooldown: 0,
           base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
@@ -752,8 +790,6 @@ function onCanvasClick(e) {
         towers.push({
           gx,
           gy,
-          x: (gx + 0.5) * CELL,
-          y: (gy + 0.5) * CELL,
           type: 'laser',
           cooldown: 0,
           base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
