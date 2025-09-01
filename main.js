@@ -53,6 +53,13 @@ const contextMenu = document.getElementById('contextMenu');
 const contextSellBtn = document.getElementById('contextSell');
 const contextStats = document.getElementById('contextStats');
 const bestWaveSpan = document.getElementById('bestWave');
+const battlefieldBtn = document.getElementById('battlefieldBtn');
+const battlefieldDlg = document.getElementById('battlefieldDialog');
+const saveBattlefieldBtn = document.getElementById('saveBattlefield');
+const MAP_KEY = 'godot_web_battlefield';
+const MAPS = {
+  backyard: { name: 'Backyard', img: './assets/maps/backyard/backyard.png' }
+};
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
@@ -318,9 +325,26 @@ function syncBestWave() {
   if (bestWaveSpan) bestWaveSpan.textContent = loadBestWave();
 }
 
+function loadBattlefield() {
+  try {
+    return localStorage.getItem(MAP_KEY) || 'backyard';
+  } catch {
+    return 'backyard';
+  }
+}
+function saveBattlefield(v) { localStorage.setItem(MAP_KEY, v); }
+function setBattlefield(map) {
+  const m = MAPS[map] || MAPS.backyard;
+  if (gameCanvas) {
+    gameCanvas.style.background = `url('${m.img}') center/cover no-repeat`;
+  }
+}
+
 ensureCanvas();
+setBattlefield(loadBattlefield());
 applyGridSize(loadOpts().gridSize);
 syncBestWave();
+
 
 // ----- Hover Menu -----
 function activateTab(name) {
@@ -1423,7 +1447,9 @@ async function startGame() {
   hoverMenu && (hoverMenu.style.display = 'block');
 
   // Canvas
-  ensureCanvas();
+  
+ensureCanvas();
+  setBattlefield(loadBattlefield());
   gameCanvas.style.display = 'block';
   resizeCanvas();
 
@@ -1481,6 +1507,21 @@ function endGame() {
 }
 
 // -------------------- Hooks --------------------
+
+battlefieldBtn?.addEventListener('click', () => {
+  const current = loadBattlefield();
+  if (battlefieldDlg) {
+    const radios = battlefieldDlg.querySelectorAll('input[name="battlefield"]');
+    radios.forEach(r => { r.checked = (r.value === current); });
+    battlefieldDlg.showModal();
+  }
+});
+saveBattlefieldBtn?.addEventListener('click', () => {
+  const selected = battlefieldDlg?.querySelector('input[name="battlefield"]:checked')?.value || 'backyard';
+  saveBattlefield(selected);
+  setBattlefield(selected);
+});
+
 startBtn?.addEventListener('click', () => { startGame(); });
 quitGameBtn?.addEventListener('click', () => endGame());
 quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));

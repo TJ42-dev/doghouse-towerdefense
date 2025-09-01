@@ -210,7 +210,7 @@ html { background: #070a10; } /* safety net */
   height: 100vh;
     cursor: pointer;
   display: none;
-  background: url("./assets/backyard.png") center/cover no-repeat;
+  background: url("./assets/maps/backyard/backyard.png") center/cover no-repeat;
 }
 
 #quitGameBtn {
@@ -335,4 +335,33 @@ html { background: #070a10; } /* safety net */
 
 #contextStats {
   margin-bottom: 0.25rem;
+}
+/* Battlefield selector */
+#battlefieldDialog .maps {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+#battlefieldDialog .map-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+#battlefieldDialog .map-choice input {
+  display: none;
+}
+#battlefieldDialog .map-choice img {
+  width: 160px;
+  height: 90px;
+  object-fit: cover;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+#battlefieldDialog .map-choice span {
+  margin-top: 0.25rem;
+}
+#battlefieldDialog .map-choice input:checked + img {
+  border-color: #fff;
 }
