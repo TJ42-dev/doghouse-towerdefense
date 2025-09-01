@@ -38,6 +38,10 @@ let ctx = null;
 const GRID_COLS = 36;
 const GRID_ROWS = 26;
 
+const DOGHOUSE_DOOR_CELL = { x: 28, y: 21 };
+const DOGHOUSE_SPAWN_CELL = { x: 27, y: 21 };
+const DOOR_TARGET = { gx: DOGHOUSE_SPAWN_CELL.x, gy: DOGHOUSE_SPAWN_CELL.y, r: 0.5 };
+
 let CELL_PX = 20; // size of one grid cell in pixels (computed on resize)
 let originPxX = 0; // playfield offset from canvas top-left in pixels
 let originPxY = 0;
@@ -78,6 +82,9 @@ function pxToCell(px) {
     y: Math.min(GRID_ROWS - 1, Math.max(0, Math.floor((px.y - originPxY) / CELL_PX))),
   };
 }
+
+function doorPx() { return cellToPx(DOGHOUSE_DOOR_CELL); }
+function doorSpawnPx() { return cellToPx(DOGHOUSE_SPAWN_CELL); }
 
 // Basic BFS pathfinding to navigate around walls
 function findPath(start, goal) {
@@ -414,13 +421,11 @@ function resetGame() {
     for (let y = 0; y < 8; y++) addWall(dogX0 + x, dogY0 + y);
   }
 
-  // place cat head lives near the bottom-right, about 9 cells from the edge,
-  // then offset them down 4 cells and right 2 cells
+  // place cat head lives anchored around the doghouse door
   catLives = [];
   const cols = 3, rows = 3;
-  const margin = 9; // cells from right edge
-  const startCellX = Math.max(0, GRID_COLS - cols - margin) + 2;
-  const startCellY = GRID_ROWS - rows - 1 + 4;
+  const startCellX = DOGHOUSE_SPAWN_CELL.x - 2;
+  const startCellY = DOGHOUSE_SPAWN_CELL.y - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -449,12 +454,11 @@ function spawnEnemy() {
     const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
     health = Math.round(health * scale);
   }
-  const target = catLives.find(l => l.alive) || null;
   const startCell = { x: Math.floor(x), y: 0 };
-  const goalCell = target ? { x: target.gx, y: target.gy } : null;
-  const path = goalCell ? findPath(startCell, goalCell) : [];
+  const goalCell = { x: DOOR_TARGET.gx, y: DOOR_TARGET.gy };
+  const path = findPath(startCell, goalCell);
 
-  enemies.push({ x, y, r, speed, img, target, path, goalCell, health });
+  enemies.push({ x, y, r, speed, img, path, goalCell, health });
   enemiesSpawnedInWave++;
 }
 
@@ -493,12 +497,9 @@ function update(dt) {
     spawnTimer += spawnInterval;
   }
 
-  const liveTargets = catLives.filter(l => l.alive);
   enemies = enemies.filter(e => {
-    if (!e.target || !e.target.alive) e.target = liveTargets[0];
-    if (!e.target) return false;
-
-    const goalCell = { x: e.target.gx, y: e.target.gy };
+    const goal = DOOR_TARGET;
+    const goalCell = { x: goal.gx, y: goal.gy };
     const curCell = { x: Math.min(Math.max(Math.floor(e.x), 0), GRID_COLS-1),
                       y: Math.min(Math.max(Math.floor(e.y), 0), GRID_ROWS-1) };
 
@@ -511,7 +512,7 @@ function update(dt) {
       e.path = findPath(curCell, goalCell);
     }
 
-    let destX = e.target.gx + 0.5, destY = e.target.gy + 0.5;
+    let destX = goalCell.x + 0.5, destY = goalCell.y + 0.5;
     if (e.path && e.path.length) {
       const step = e.path[0];
       destX = step.x + 0.5;
@@ -538,8 +539,13 @@ function update(dt) {
       e.path = findPath(curCell, goalCell);
     }
 
-    const dtgt = Math.hypot((e.target.gx + 0.5) - e.x, (e.target.gy + 0.5) - e.y);
-    if (dtgt < e.r + e.target.r) { e.target.alive = false; sfx(160, 0.15, 0.06, 'sawtooth'); return false; }
+    const dtgt = Math.hypot((goalCell.x + 0.5) - e.x, (goalCell.y + 0.5) - e.y);
+    if (dtgt < e.r + goal.r) {
+      const life = catLives.find(l => l.alive);
+      if (life) life.alive = false;
+      sfx(160, 0.15, 0.06, 'sawtooth');
+      return false;
+    }
 
     return true;
   });
