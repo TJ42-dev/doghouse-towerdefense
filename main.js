@@ -1285,16 +1285,15 @@ function update(dt) {
     }
     if (t.type === 'rocket' || t.type === 'hellfire' || t.type === 'nuke') {
       const isHellfire = t.type === 'hellfire';
-      const isRocket = t.type === 'rocket';
-      const hasCap = isHellfire ? true : t.upgrades.range >= 5 && t.upgrades.fireRate >= 3;
-      const cap = isHellfire ? 5 : (isRocket && hasCap ? 3 : 0);
+      const isNuke = t.type === 'nuke';
+      const cap = isHellfire ? 5 : (t.type === 'rocket' ? 3 : 0);
       const existing = bullets.filter(b => b.type === 'rocket' && b.source === t).length;
       const maxSpeed = ROCKET_BASE.bulletSpeed * CELL_PX;
-      const baseAngle = t.type === 'nuke' ? -Math.PI / 2 : (t.angle || 0);
+      const baseAngle = isNuke ? -Math.PI / 2 : (t.angle || 0);
       const sx = t.x + Math.cos(baseAngle) * (CELL_PX / 2);
       const sy = t.y + Math.sin(baseAngle) * (CELL_PX / 2);
       if (cap > 0) {
-        if (existing < cap && t.cooldown <= 0) {
+        if (existing < cap) {
           bullets.push({
             x: sx,
             y: sy,
@@ -1310,7 +1309,6 @@ function update(dt) {
             smoke: 0,
             variant: t.type
           });
-          t.cooldown = 1 / t.fireRate;
           t.anim = 0.1;
           sfx(200, 0.2, 0.04, 'sawtooth');
         }
