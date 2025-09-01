@@ -974,7 +974,8 @@ function update(dt) {
             }
           }
         }
-        beams.push({ x1: t.x, y1: t.y, x2: endX, y2: endY, time: 0.1, width: 6, colors: ['#ff0','#f0f','#0ff'] });
+        // Railgun beam is wider for a more powerful visual effect
+        beams.push({ x1: t.x, y1: t.y, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
         sfx(300, 0.2, 0.04, 'sawtooth');
       } else if (t.type === 'shotgun') {
@@ -1058,6 +1059,8 @@ function drawBG() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  // Ensure grid lines stay consistent even after drawing wide beams
+  ctx.lineWidth = 1;
   for (let i = 0; i <= GRID_COLS; i++) {
     ctx.beginPath();
     const x = originPx.x + i * CELL_PX;
@@ -1177,6 +1180,8 @@ function render() {
     ctx.lineTo(beam.x2, beam.y2);
     ctx.stroke();
   }
+  // Reset line width after drawing beams to avoid affecting later strokes
+  ctx.lineWidth = 1;
 
   // Bullets
   for (const b of bullets) {
