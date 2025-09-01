@@ -714,7 +714,7 @@ function specializeTower(t, kind) {
   if (t.type === 'cannon') {
     if (kind === 'sniper') {
       const idx = 24; // wave 25 zero-based
-      const scale = 1 + (idx - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
+      const scale = 1 + idx * HEALTH_SCALE_PER_WAVE;
       t.type = 'sniper';
       t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
       t.fireRate = 0.6;
@@ -740,7 +740,7 @@ function specializeTower(t, kind) {
   } else if (t.type === 'rocket') {
     if (kind === 'nuke') {
       const idx = 24; // wave 25 zero-based
-      const scale = 1 + (idx - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
+      const scale = 1 + idx * HEALTH_SCALE_PER_WAVE;
       removeTowerProjectiles(t);
       t.type = 'nuke';
       t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
@@ -838,8 +838,6 @@ const SNIPER_BASE_SRC = 'assets/towers/bases/sniper.svg';
 const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper.svg';
 const SHOTGUN_BASE_SRC = 'assets/towers/bases/shotgun.svg';
 const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun.svg';
-const BOSS_SRC = 'assets/animals/dogs/german.png';
-const BOSS_STATS = { baseHealth: 500, baseSpeed: 1.2 };
 const TOWER_CONFIG_IDS = ['cannon', 'laser', 'rocket'];
 
 let DATA_LOADED = false;
@@ -851,7 +849,7 @@ async function loadData() {
     );
     const [towerJson, dogJson] = await Promise.all([
       Promise.all(towerPromises),
-      fetch('data/dogs.json').then(r => r.json())
+      fetch('assets/enemies/enemies.json').then(r => r.json())
     ]);
     if (Array.isArray(towerJson)) {
       TOWER_TYPES = towerJson;
@@ -890,7 +888,6 @@ function loadImage(src) {
 
 let ASSETS = {
   dogs: [],
-  boss: null,
   cat: null,
   wall: null,
   cannon: { base: null, turret: null },
@@ -913,7 +910,6 @@ async function ensureAssets() {
         dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
         ASSETS = {
           dogs: DOG_TYPES,
-          boss: await loadImage(BOSS_SRC),
           cat: await loadImage(CAT_SRC),
           wall: await loadImage(WALL_SRC),
           cannon: { base: await loadImage(CANNON_BASE_SRC), turret: await loadImage(CANNON_TURRET_SRC) },
@@ -941,10 +937,7 @@ const WAVE_TIME = 60; // seconds per wave
 const ENEMIES_PER_WAVE = 10;
 const START_DELAY = 15; // secs before first wave
 const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
-const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
-const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
 const POST_WAVE_DELAY = 5; // delay after a wave clears
-const KILL_REWARD_SCALE_AFTER_BOSS = 1.1; // 10% more cash per kill after boss waves
 let rafId = null;
 let lastT = 0;
 let running = false;
@@ -962,6 +955,8 @@ const player = { x: 0, y: 0, r: 0 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 const INITIAL_LIVES = 9;
+let killReward = 0;
+let healthBuffMultiplier = 1;
 
 function resetGame() {
   enemies = [];
@@ -974,6 +969,8 @@ function resetGame() {
   difficulty = opts.difficulty || 'medium';
   difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
   money = difficultySettings.startingCash;
+  killReward = difficultySettings.killReward;
+  healthBuffMultiplier = 1;
   selectedTower = null;
   updateSelectedTowerInfo();
   initOccupancy();
@@ -1001,26 +998,19 @@ function spawnEnemy() {
   const entry = currentMap.entries[0];
   const p = cellToPx(entry);
   const r = CELL_PX / 2;
-  let stats;
-  let img;
-  if (waveIndex === BOSS_WAVE_INDEX) {
-    stats = BOSS_STATS;
-    img = imgReady(ASSETS.boss) ? ASSETS.boss : null;
+  const waveNum = waveIndex + 1;
+  let type;
+  if (waveNum % 5 === 0) {
+    type = ASSETS.dogs.find(t => t.id === 'boss') || {};
   } else {
-    const type = ASSETS.dogs[waveIndex % ASSETS.dogs.length] || {};
-    stats = { ...DEFAULT_DOG_STATS, ...type };
-    img = imgReady(type.img) ? type.img : null;
+    const nonBoss = ASSETS.dogs.filter(t => t.id !== 'boss');
+    const nonBossIndex = (waveNum - 1) - Math.floor((waveNum - 1) / 5);
+    type = nonBoss[nonBossIndex % nonBoss.length] || {};
   }
-  const baseSpeed = 2.5 * stats.baseSpeed; // cells per second
-  const speed = baseSpeed * (0.9 + Math.random()*0.4);
-  let health = stats.baseHealth * difficultySettings.healthMultiplier;
-  if (waveIndex < BOSS_WAVE_INDEX) {
-    const scale = 0.8 + waveIndex * 0.05;
-    health = Math.round(health * scale);
-  } else if (waveIndex > BOSS_WAVE_INDEX) {
-    const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
-    health = Math.round(health * scale);
-  }
+  const stats = { ...DEFAULT_DOG_STATS, ...type };
+  const img = imgReady(type.img) ? type.img : null;
+  const speed = 2.5 * stats.baseSpeed; // cells per second
+  let health = stats.baseHealth * difficultySettings.healthMultiplier * healthBuffMultiplier;
   const target = catLives.find(l => l.alive);
   const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const path = findPath(entry, goalCell);
@@ -1041,8 +1031,17 @@ function startWave() {
 }
 
 function nextWave() {
-  if ((waveIndex + 1) % (BOSS_WAVE_INDEX + 1) === 0) {
-    difficultySettings.killReward = Math.round(difficultySettings.killReward * KILL_REWARD_SCALE_AFTER_BOSS);
+  const completedWave = waveIndex + 1;
+  const nextWaveNum = waveIndex + 2;
+  const stageNext = nextWaveNum >= 30 ? 3 : nextWaveNum > 20 ? 2 : 1;
+  // increase kill reward slightly every wave
+  killReward += stageNext === 3 ? 3 : stageNext === 2 ? 2 : 1;
+  if (completedWave % 5 === 0) {
+    const stageCompleted = completedWave >= 30 ? 3 : completedWave > 20 ? 2 : 1;
+    const healthInc = stageCompleted === 3 ? 0.025 : stageCompleted === 2 ? 0.05 : 0.1;
+    healthBuffMultiplier *= 1 + healthInc;
+    killReward += stageCompleted === 3 ? 20 : stageCompleted === 2 ? 10 : 5;
+    money += stageCompleted === 3 ? 100 : stageCompleted === 2 ? 500 : 0;
   }
   waveIndex++;
   waveActive = false;
@@ -1141,12 +1140,12 @@ function updateProjectiles(dt) {
           for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
             if (e !== b.target && Math.hypot(e.x - targetX, e.y - targetY) <= NUKE_SPLASH_RADIUS) {
-              e.health -= b.damage * 0.8;
-              if (e.health <= 0) {
-                enemies.splice(i, 1);
-                money += difficultySettings.killReward;
-                if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-              }
+                e.health -= b.damage * 0.8;
+                if (e.health <= 0) {
+                  enemies.splice(i, 1);
+                  money += killReward;
+                  if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+                }
             }
           }
           explosions.push({ x: targetX, y: targetY, life: 0.3, max: 0.3 });
@@ -1155,7 +1154,7 @@ function updateProjectiles(dt) {
           const targetIndex = enemies.indexOf(b.target);
           if (targetIndex !== -1) {
             enemies.splice(targetIndex, 1);
-            money += difficultySettings.killReward;
+            money += killReward;
             if (b.source) b.source.kills = (b.source.kills || 0) + 1;
           }
         }
@@ -1173,7 +1172,7 @@ function updateProjectiles(dt) {
           bark();
           if (e.health <= 0) {
             enemies.splice(enemies.indexOf(e), 1);
-            money += difficultySettings.killReward;
+            money += killReward;
             if (b.source) b.source.kills = (b.source.kills || 0) + 1;
           }
           return false;
@@ -1199,7 +1198,7 @@ function updateProjectiles(dt) {
       bark();
       if (b.target.health <= 0) {
         enemies.splice(enemies.indexOf(b.target), 1);
-        money += difficultySettings.killReward;
+        money += killReward;
         if (b.source) b.source.kills = (b.source.kills || 0) + 1;
       }
       return false;
@@ -1231,7 +1230,7 @@ function update(dt) {
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
   }
 
-  const enemiesPerWave = waveIndex === BOSS_WAVE_INDEX ? 1 : ENEMIES_PER_WAVE;
+  const enemiesPerWave = ((waveIndex + 1) % 5 === 0) ? 1 : ENEMIES_PER_WAVE;
 
   if (waveActive) {
     waveElapsed += dt;
@@ -1389,9 +1388,9 @@ function update(dt) {
         t.cooldown = 1 / t.fireRate;
         sfx(1200, 0.05, 0.04, 'sine');
         if (target.health <= 0) {
-          enemies.splice(enemies.indexOf(target), 1);
-          money += difficultySettings.killReward;
-          t.kills = (t.kills || 0) + 1;
+            enemies.splice(enemies.indexOf(target), 1);
+            money += killReward;
+            t.kills = (t.kills || 0) + 1;
         }
       } else if (t.type === 'railgun') {
         const angle = t.angle;
@@ -1421,9 +1420,9 @@ function update(dt) {
             e.health -= t.damage;
             bark();
             if (e.health <= 0) {
-              enemies.splice(enemies.indexOf(e), 1);
-              money += difficultySettings.killReward;
-              t.kills = (t.kills || 0) + 1;
+                enemies.splice(enemies.indexOf(e), 1);
+                money += killReward;
+                t.kills = (t.kills || 0) + 1;
             }
           }
         }
@@ -1925,5 +1924,5 @@ quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can 
 nextWaveBtn?.addEventListener('click', () => {
   if (!running) return;
   if (!waveActive) startWave();
-  else { waveIndex++; startWave(); }
+  else { nextWave(); startWave(); }
 });
