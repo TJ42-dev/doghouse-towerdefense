@@ -386,8 +386,19 @@ function updateSelectedTowerInfo() {
       const curr = selectedTower[stat];
       const next = selectedTower.base[stat] * (1 + 0.1 * (lvl + 1));
       const inc = next - curr;
-      if (els.value) els.value.textContent = stat === 'fireRate' ? curr.toFixed(2) : Math.round(curr);
-      if (els.next) els.next.textContent = `(+${stat === 'fireRate' ? inc.toFixed(2) : Math.round(inc)})`;
+      if (els.value) {
+        els.value.textContent =
+          stat === 'fireRate' ? curr.toFixed(2) :
+          stat === 'range' ? curr.toFixed(1) :
+          Math.round(curr);
+      }
+      if (els.next) {
+        const incText =
+          stat === 'fireRate' ? inc.toFixed(2) :
+          stat === 'range' ? inc.toFixed(1) :
+          Math.round(inc);
+        els.next.textContent = `(+${incText})`;
+      }
       if (els.cost) els.cost.textContent = `$${getUpgradeCost(selectedTower, stat)}`;
       if (els.btn) els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
     }
