@@ -28,6 +28,7 @@ const fireRateBar = document.getElementById('fireRateBar');
 const rangeBar = document.getElementById('rangeBar');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const contextMenu = document.getElementById('contextMenu');
+const catLivesElm = document.getElementById('catLives');
 let selectedTower = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
@@ -85,6 +86,29 @@ function pxToCell(px) {
 
 function doorPx() { return cellToPx(DOGHOUSE_DOOR_CELL); }
 function doorSpawnPx() { return cellToPx(DOGHOUSE_SPAWN_CELL); }
+
+function positionCatLives() {
+  if (!catLivesElm || !gameCanvas) return;
+  const p = doorPx();
+  const rect = gameCanvas.getBoundingClientRect();
+  catLivesElm.style.left = (rect.left + p.x) + 'px';
+  catLivesElm.style.top = (rect.top + p.y) + 'px';
+}
+
+function updateCatLivesUI() {
+  if (!catLivesElm) return;
+  const count = catLives.filter(l => l.alive).length;
+  catLivesElm.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const img = document.createElement('img');
+    img.src = CAT_SRC;
+    img.width = CELL_PX;
+    img.height = CELL_PX;
+    catLivesElm.appendChild(img);
+  }
+  catLivesElm.style.width = (CELL_PX * 3) + 'px';
+  catLivesElm.style.height = (CELL_PX * 3) + 'px';
+}
 
 // Basic BFS pathfinding to navigate around walls
 function findPath(start, goal) {
@@ -281,6 +305,8 @@ function resizeCanvas() {
   const pfH = CELL_PX * GRID_ROWS;
   originPxX = Math.floor((gameCanvas.clientWidth - pfW) / 2);
   originPxY = Math.floor((gameCanvas.clientHeight - pfH) / 2);
+  positionCatLives();
+  updateCatLivesUI();
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -421,16 +447,18 @@ function resetGame() {
     for (let y = 0; y < 8; y++) addWall(dogX0 + x, dogY0 + y);
   }
 
-  // place cat head lives anchored around the doghouse door
+  // reset cat lives and position UI near the doghouse door
   catLives = [];
-  const cols = 3, rows = 3;
-  const startCellX = DOGHOUSE_SPAWN_CELL.x - 2;
-  const startCellY = DOGHOUSE_SPAWN_CELL.y - 1;
+  const cols = 3;
+  const startCellX = DOGHOUSE_DOOR_CELL.x - 1;
+  const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
     catLives.push({ gx: startCellX + col, gy: startCellY + row, r: 0.5, alive: true });
   }
+  updateCatLivesUI();
+  positionCatLives();
 }
 
 function spawnEnemy() {
@@ -543,6 +571,7 @@ function update(dt) {
     if (dtgt < e.r + goal.r) {
       const life = catLives.find(l => l.alive);
       if (life) life.alive = false;
+      updateCatLivesUI();
       sfx(160, 0.15, 0.06, 'sawtooth');
       return false;
     }
@@ -690,21 +719,6 @@ function render() {
     }
   }
 
-  // Cat lives
-  for (const life of catLives) {
-    if (!life.alive) continue;
-    const pos = cellToPx({ x: life.gx, y: life.gy });
-    const rPx = life.r * CELL_PX;
-    if (imgReady(ASSETS.cat)) {
-      ctx.drawImage(ASSETS.cat, pos.x - rPx, pos.y - rPx, rPx * 2, rPx * 2);
-    } else {
-      ctx.beginPath();
-      ctx.fillStyle = '#5bd9ff';
-      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
   // Enemies (safe draw)
   for (const e of enemies) {
     const pos = cellToPx({ x: e.x, y: e.y });
@@ -838,6 +852,7 @@ async function startGame() {
   quitGameBtn && (quitGameBtn.style.display = 'inline-block');
   nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
   hoverMenu && (hoverMenu.style.display = 'block');
+  catLivesElm && (catLivesElm.style.display = 'grid');
 
   // Canvas
   ensureCanvas();
@@ -883,6 +898,7 @@ function endGame() {
   quitGameBtn && (quitGameBtn.style.display = 'none');
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   hoverMenu && (hoverMenu.style.display = 'none');
+  catLivesElm && (catLivesElm.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
   selectedTower = null;
