@@ -8,6 +8,7 @@ const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
+const optGridSize = document.getElementById('optGridSize');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
@@ -47,9 +48,9 @@ let ctx = null;
 
 // -------------------- Grid & Build --------------------
 // Fixed logical grid
-const GRID_COLS = 36;
+let GRID_COLS = 36;
 // Trim top and bottom rows so only the visible play area is usable
-const GRID_ROWS = 24;
+let GRID_ROWS = 24;
 let CELL_PX = 22; // pixel size of a cell (computed on resize)
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
@@ -69,6 +70,20 @@ const DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
 
 // Entry points for enemies (top-left only)
 const ENTRIES = [ { x: 0, y: 0 } ];
+
+const GRID_SIZES = {
+  large: { cols: 36, rows: 24 },
+  medium: { cols: 30, rows: 20 },
+  small: { cols: 24, rows: 16 }
+};
+
+function applyGridSize(size) {
+  const g = GRID_SIZES[size] || GRID_SIZES.large;
+  GRID_COLS = g.cols;
+  GRID_ROWS = g.rows;
+  initOccupancy();
+  resizeCanvas();
+}
 
 // Pure helpers ------------------------------------------------------------
 const key = (x, y) => `${x},${y}`;
@@ -225,17 +240,25 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:true }; }
-  catch { return { mute:false, fullscreen:true }; }
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:true, gridSize:'large' }; }
+  catch { return { mute:false, fullscreen:true, gridSize:'large' }; }
 }
 function saveOpts(o) { localStorage.setItem(LS_KEY, JSON.stringify(o)); }
 function syncUI() {
   const o = loadOpts();
   if (optMute) optMute.checked = !!o.mute;
   if (optFullscreen) optFullscreen.checked = !!o.fullscreen;
+  if (optGridSize) optGridSize.value = o.gridSize || 'large';
 }
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
-saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fullscreen: optFullscreen?.checked }); });
+saveBtn?.addEventListener('click', () => {
+  const opts = { mute: optMute?.checked, fullscreen: optFullscreen?.checked, gridSize: optGridSize?.value };
+  saveOpts(opts);
+  applyGridSize(opts.gridSize);
+});
+
+ensureCanvas();
+applyGridSize(loadOpts().gridSize);
 
 // ----- Hover Menu -----
 function activateTab(name) {
