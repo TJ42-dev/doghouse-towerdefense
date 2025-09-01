@@ -1055,12 +1055,29 @@ function updateProjectiles(dt) {
     if (b.type === 'rocket') {
       b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
       const move = b.speed * dt;
-      if (!b.target || !enemies.includes(b.target)) {
+      const rangePx = (b.source?.range || Infinity) * CELL_PX;
+      const needsTarget =
+        !b.target ||
+        !enemies.includes(b.target) ||
+        (b.source &&
+          Math.hypot(b.target.x - b.source.x, b.target.y - b.source.y) >
+            rangePx);
+      if (needsTarget) {
         let closest = null;
         let closestDist = Infinity;
         for (const e of enemies) {
-          const d = Math.hypot(e.x - b.x, e.y - b.y);
-          if (d < closestDist) { closestDist = d; closest = e; }
+          if (b.source) {
+            const distToTower = Math.hypot(
+              e.x - b.source.x,
+              e.y - b.source.y
+            );
+            if (distToTower > rangePx) continue;
+          }
+          const distToRocket = Math.hypot(e.x - b.x, e.y - b.y);
+          if (distToRocket < closestDist) {
+            closestDist = distToRocket;
+            closest = e;
+          }
         }
         b.target = closest;
         if (b.target) {
