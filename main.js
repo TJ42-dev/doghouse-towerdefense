@@ -55,7 +55,7 @@ let ctx = null;
 let GRID_COLS = 36;
 // Trim top and bottom rows so only the visible play area is usable
 let GRID_ROWS = 24;
-let CELL_PX = 22; // fixed pixel size for each grid cell
+let CELL_PX = 26; // fixed pixel size for each grid cell
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
 // Occupancy map mirrors walls & towers
@@ -308,9 +308,15 @@ function activateTab(name) {
 }
 tabButtons.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
 
-wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
-cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
-laserBtn?.addEventListener('click', () => { selectedBuild = 'laser'; });
+wallBtn?.addEventListener('click', () => {
+  if (money >= WALL_COST) selectedBuild = 'wall';
+});
+cannonBtn?.addEventListener('click', () => {
+  if (money >= CANNON_BASE.cost) selectedBuild = 'cannon';
+});
+laserBtn?.addEventListener('click', () => {
+  if (money >= LASER_BASE.cost) selectedBuild = 'laser';
+});
 sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selectedTower = null; updateSelectedTowerInfo(); });
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 
@@ -342,6 +348,8 @@ upgradeRangeBtn?.addEventListener('click', () => {
 });
 sellBtn?.addEventListener('click', () => {
   if (selectedTower) {
+    const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
+    money += refund;
     removeOccupancy(selectedTower.gx, selectedTower.gy);
     towers = towers.filter(t => t !== selectedTower);
     selectedTower = null;
@@ -380,8 +388,19 @@ function updateSelectedTowerInfo() {
       const curr = selectedTower[stat];
       const next = selectedTower.base[stat] * (1 + 0.1 * (lvl + 1));
       const inc = next - curr;
-      if (els.value) els.value.textContent = stat === 'fireRate' ? curr.toFixed(2) : Math.round(curr);
-      if (els.next) els.next.textContent = `(+${stat === 'fireRate' ? inc.toFixed(2) : Math.round(inc)})`;
+      if (els.value) {
+        els.value.textContent =
+          stat === 'fireRate' ? curr.toFixed(2) :
+          stat === 'range' ? curr.toFixed(1) :
+          Math.round(curr);
+      }
+      if (els.next) {
+        const incText =
+          stat === 'fireRate' ? inc.toFixed(2) :
+          stat === 'range' ? inc.toFixed(1) :
+          Math.round(inc);
+        els.next.textContent = `(+${incText})`;
+      }
       if (els.cost) els.cost.textContent = `$${getUpgradeCost(selectedTower, stat)}`;
       if (els.btn) els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
     }
@@ -411,7 +430,8 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
   }
   contextTarget = { gx: cell.x, gy: cell.y };
   if (t) {
-    contextStats.innerHTML = `Damage: ${Math.round(t.damage)}<br>Kills: ${t.kills || 0}<br>Sell: $${t.cost || 0}`;
+    const sellVal = Math.floor((t.spent || t.cost || 0) * 0.8);
+    contextStats.innerHTML = `Damage: ${Math.round(t.damage)}<br>Kills: ${t.kills || 0}<br>Sell: $${sellVal}`;
     contextSellBtn.textContent = '$';
     rangePreview = { x: t.x, y: t.y, r: t.range * CELL_PX };
   } else {
@@ -437,9 +457,10 @@ contextSellBtn?.addEventListener('click', () => {
   const { gx, gy } = contextTarget;
   const t = towers.find(t => t.gx === gx && t.gy === gy);
   if (t) {
+    const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
+    money += refund;
     removeOccupancy(gx, gy);
     towers = towers.filter(tt => tt !== t);
-    money += t.cost || 0;
     selectedTower = null;
     updateSelectedTowerInfo();
   } else {
@@ -469,6 +490,7 @@ function upgradeTower(t, stat) {
   const cost = getUpgradeCost(t, stat);
   if (money < cost) return false;
   money -= cost;
+  t.spent = (t.spent || t.cost || 0) + cost;
   t.upgrades[stat]++;
   t[stat] = t.base[stat] * (1 + 0.1 * t.upgrades[stat]);
   if (stat === 'range' && rangePreview && selectedTower === t) {
@@ -612,7 +634,7 @@ function imgReady(img) {
 // -------------------- Tiny Dodge Game --------------------
 const WAVE_TIME = 60; // seconds per wave
 const ENEMIES_PER_WAVE = 10;
-const START_DELAY = 10; // secs before first wave
+const START_DELAY = 15; // secs before first wave
 const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
 const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
 const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
@@ -906,6 +928,9 @@ function drawHUD() {
     html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
     html += `Money: $${money}`;
   }
+  if (wallBtn) wallBtn.disabled = money < WALL_COST;
+  if (cannonBtn) cannonBtn.disabled = money < CANNON_BASE.cost;
+  if (laserBtn) laserBtn.disabled = money < LASER_BASE.cost;
   statsEl.innerHTML = html;
 }
 function render() {
@@ -1040,9 +1065,10 @@ function onCanvasClick(e) {
   if (selectedBuild === 'sell') {
     const t = towers.find(t => t.gx === gx && t.gy === gy);
     if (t) {
+      const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
+      money += refund;
       removeOccupancy(gx, gy);
       towers = towers.filter(tt => tt !== t);
-      money += t.cost || 0;
       selectedTower = null;
       updateSelectedTowerInfo();
     } else {
@@ -1058,14 +1084,16 @@ function onCanvasClick(e) {
   }
 
   if (selectedBuild === 'wall') {
-    if (canPlace(cell)) {
+    if (canPlace(cell) && money >= WALL_COST) {
+      money -= WALL_COST;
       addOccupancy(gx, gy);
       walls.push({ x: gx, y: gy });
       firstPlacementDone = true;
       recalcEnemyPaths();
     }
   } else if (selectedBuild === 'cannon') {
-    if (canPlace(cell)) {
+    if (canPlace(cell) && money >= CANNON_BASE.cost) {
+      money -= CANNON_BASE.cost;
       addOccupancy(gx, gy);
       const p = cellToPx(cell);
       towers.push({
@@ -1080,6 +1108,7 @@ function onCanvasClick(e) {
         fireRate: CANNON_BASE.fireRate,
         range: CANNON_BASE.range,
         cost: CANNON_BASE.cost,
+        spent: CANNON_BASE.cost,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null,
         kills: 0
@@ -1088,7 +1117,8 @@ function onCanvasClick(e) {
       recalcEnemyPaths();
     }
   } else if (selectedBuild === 'laser') {
-    if (canPlace(cell)) {
+    if (canPlace(cell) && money >= LASER_BASE.cost) {
+      money -= LASER_BASE.cost;
       addOccupancy(gx, gy);
       const p = cellToPx(cell);
       towers.push({
@@ -1103,6 +1133,7 @@ function onCanvasClick(e) {
         fireRate: LASER_BASE.fireRate,
         range: LASER_BASE.range,
         cost: LASER_BASE.cost,
+        spent: LASER_BASE.cost,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null,
         kills: 0
