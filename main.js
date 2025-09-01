@@ -111,6 +111,7 @@ let towers = [];
 let bullets = [];
 let smokes = [];
 let beams = [];
+let explosions = [];
 let catLives = [];
 let money = 0;
 const WALL_COST = 10;
@@ -210,6 +211,10 @@ function initOccupancy() {
   // are placed during gameplay.
   occupancy = new Set();
   walls = [];
+}
+
+function removeTowerProjectiles(t) {
+  bullets = bullets.filter(b => b.source !== t);
 }
 
 function canPlace(cell) {
@@ -480,6 +485,7 @@ sellBtn?.addEventListener('click', () => {
     const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
     money += refund;
     removeOccupancy(selectedTower.gx, selectedTower.gy);
+    removeTowerProjectiles(selectedTower);
     towers = towers.filter(t => t !== selectedTower);
     selectedTower = null;
     updateSelectedTowerInfo();
@@ -650,6 +656,7 @@ contextSellBtn?.addEventListener('click', () => {
     const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
     money += refund;
     removeOccupancy(gx, gy);
+    removeTowerProjectiles(t);
     towers = towers.filter(tt => tt !== t);
     selectedTower = null;
     updateSelectedTowerInfo();
@@ -733,6 +740,7 @@ function specializeTower(t, kind) {
     if (kind === 'nuke') {
       const idx = 24; // wave 25 zero-based
       const scale = 1 + (idx - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
+      removeTowerProjectiles(t);
       t.type = 'nuke';
       t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
       t.fireRate = 0.6;
@@ -956,6 +964,7 @@ function resetGame() {
   towers = [];
   bullets = [];
   smokes = [];
+  explosions = [];
   const opts = loadOpts();
   difficulty = opts.difficulty || 'medium';
   difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
@@ -1100,6 +1109,7 @@ function updateProjectiles(dt) {
               }
             }
           }
+          explosions.push({ x: b.target.x, y: b.target.y, life: 0.3, max: 0.3 });
         }
         if (b.target.health <= 0) {
           enemies.splice(enemies.indexOf(b.target), 1);
@@ -1159,6 +1169,11 @@ function updateProjectiles(dt) {
   smokes = smokes.filter(s => {
     s.life -= dt;
     return s.life > 0;
+  });
+
+  explosions = explosions.filter(e => {
+    e.life -= dt;
+    return e.life > 0;
   });
 
   beams = beams.filter(b => {
@@ -1562,6 +1577,19 @@ function render() {
     ctx.fill();
   }
 
+  // Explosions
+  for (const e of explosions) {
+    const alpha = e.life / e.max;
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(255,165,0,${alpha})`;
+    ctx.arc(e.x, e.y, NUKE_SPLASH_RADIUS, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(255,0,0,${alpha})`;
+    ctx.arc(e.x, e.y, NUKE_SPLASH_RADIUS / 2, 0, Math.PI*2);
+    ctx.fill();
+  }
+
   // Bullets
   for (const b of bullets) {
     if (b.type === 'rocket') {
@@ -1639,6 +1667,7 @@ function onCanvasClick(e) {
       const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
       money += refund;
       removeOccupancy(gx, gy);
+      removeTowerProjectiles(t);
       towers = towers.filter(tt => tt !== t);
       selectedTower = null;
       updateSelectedTowerInfo();
