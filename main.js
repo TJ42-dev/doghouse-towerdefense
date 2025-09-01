@@ -1056,57 +1056,54 @@ function updateProjectiles(dt) {
       b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
       const move = b.speed * dt;
       const rangePx = (b.source?.range || Infinity) * CELL_PX;
-      const needsTarget =
-        !b.target ||
-        !enemies.includes(b.target) ||
-        (b.source &&
-          Math.hypot(b.target.x - b.source.x, b.target.y - b.source.y) >
-            rangePx);
-      if (needsTarget) {
-        let closest = null;
-        let closestDist = Infinity;
-        for (const e of enemies) {
-          if (b.source) {
-            const distToTower = Math.hypot(
-              e.x - b.source.x,
-              e.y - b.source.y
-            );
-            if (distToTower > rangePx) continue;
-          }
-          const distToRocket = Math.hypot(e.x - b.x, e.y - b.y);
-          if (distToRocket < closestDist) {
-            closestDist = distToRocket;
-            closest = e;
-          }
+
+      // Always look for the closest enemy within the tower's range
+      let closest = null;
+      let closestDist = Infinity;
+      for (const e of enemies) {
+        if (b.source) {
+          const distToTower = Math.hypot(
+            e.x - b.source.x,
+            e.y - b.source.y
+          );
+          if (distToTower > rangePx) continue;
         }
-        b.target = closest;
-        if (b.target) {
-          b.orbitCenter = null;
-        } else {
-          if (!b.orbitCenter) {
-            b.orbitCenter = { x: b.x, y: b.y };
-            b.orbitAng = b.angle || 0;
-          }
-          b.orbitAng += (b.speed / STRAY_ROCKET_RADIUS) * dt;
-          b.x = b.orbitCenter.x + Math.cos(b.orbitAng) * STRAY_ROCKET_RADIUS;
-          b.y = b.orbitCenter.y + Math.sin(b.orbitAng) * STRAY_ROCKET_RADIUS;
-          b.angle = b.orbitAng + Math.PI / 2;
-          b.smoke -= dt;
-          if (b.smoke <= 0) {
-            smokes.push({ x: b.x, y: b.y, life: 0.5 });
-            b.smoke = 0.05;
-          }
-          if (
-            b.x < originPx.x ||
-            b.x > originPx.x + GRID_COLS * CELL_PX ||
-            b.y < originPx.y ||
-            b.y > originPx.y + GRID_ROWS * CELL_PX
-          ) {
-            return false;
-          }
-          return true;
+        const distToRocket = Math.hypot(e.x - b.x, e.y - b.y);
+        if (distToRocket < closestDist) {
+          closestDist = distToRocket;
+          closest = e;
         }
       }
+      b.target = closest;
+
+      // If no target is available, orbit idly
+      if (!b.target) {
+        if (!b.orbitCenter) {
+          b.orbitCenter = { x: b.x, y: b.y };
+          b.orbitAng = b.angle || 0;
+        }
+        b.orbitAng += (b.speed / STRAY_ROCKET_RADIUS) * dt;
+        b.x = b.orbitCenter.x + Math.cos(b.orbitAng) * STRAY_ROCKET_RADIUS;
+        b.y = b.orbitCenter.y + Math.sin(b.orbitAng) * STRAY_ROCKET_RADIUS;
+        b.angle = b.orbitAng + Math.PI / 2;
+        b.smoke -= dt;
+        if (b.smoke <= 0) {
+          smokes.push({ x: b.x, y: b.y, life: 0.5 });
+          b.smoke = 0.05;
+        }
+        if (
+          b.x < originPx.x ||
+          b.x > originPx.x + GRID_COLS * CELL_PX ||
+          b.y < originPx.y ||
+          b.y > originPx.y + GRID_ROWS * CELL_PX
+        ) {
+          return false;
+        }
+        return true;
+      }
+
+      // Chase the acquired target
+      b.orbitCenter = null;
       const desired = Math.atan2(b.target.y - b.y, b.target.x - b.x);
       let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
       const maxTurn = b.turnRate * dt;
@@ -1125,7 +1122,11 @@ function updateProjectiles(dt) {
         bark();
         if (b.variant === 'nuke') {
           for (const e of enemies.slice()) {
-            if (e !== b.target && Math.hypot(e.x - b.target.x, e.y - b.target.y) <= NUKE_SPLASH_RADIUS) {
+            if (
+              e !== b.target &&
+              Math.hypot(e.x - b.target.x, e.y - b.target.y) <=
+                NUKE_SPLASH_RADIUS
+            ) {
               e.health -= b.damage * 0.8;
               if (e.health <= 0) {
                 enemies.splice(enemies.indexOf(e), 1);
