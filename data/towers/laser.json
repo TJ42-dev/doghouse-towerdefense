@@ -1,0 +1,7 @@
+{
+  "id": "laser",
+  "damage": 120,
+  "fireRate": 0.4,
+  "range": 4,
+  "cost": 100
+}
