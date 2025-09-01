@@ -426,6 +426,7 @@ let waveIndex = 0;
 let enemiesSpawnedInWave = 0;
 let spawnTimer = 0; // secs until next spawn
 let spawnInterval = SPAWN_INTERVAL;
+let firstPlacementDone = false;
 
 const player = { x: 0, y: 0, r: 0 };
 let mouse = { x: 0, y: 0, active: false };
@@ -449,6 +450,7 @@ function resetGame() {
   enemiesSpawnedInWave = 0;
   spawnInterval = SPAWN_INTERVAL;
   spawnTimer = 0;
+  firstPlacementDone = false;
   const c = cssCenter();
   player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
@@ -518,6 +520,7 @@ function update(dt) {
   }
 
   if (!waveActive) {
+    if (!firstPlacementDone) return;
     preWaveTimer -= dt;
     if (preWaveTimer <= 0) startWave();
     return;
@@ -675,8 +678,10 @@ function drawHUD() {
   const statsEl = document.getElementById('gameStats');
   if (!statsEl) return;
   let html = '';
-  if (!waveActive && preWaveTimer > 0) {
-    html += `Next wave in: ${preWaveTimer.toFixed(1)}s<br>`;
+  if (!waveActive) {
+    if (firstPlacementDone && preWaveTimer > 0) {
+      html += `Next wave in: ${preWaveTimer.toFixed(1)}s<br>`;
+    }
     html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
     html += `Money: $${money}`;
   } else {
@@ -809,6 +814,7 @@ function onCanvasClick(e) {
     if (canPlace(cell)) {
       addOccupancy(gx, gy);
       walls.push({ x: gx, y: gy });
+      firstPlacementDone = true;
     }
   } else if (selectedBuild === 'cannon') {
     if (canPlace(cell)) {
@@ -828,6 +834,7 @@ function onCanvasClick(e) {
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null
       });
+      firstPlacementDone = true;
     }
   } else if (selectedBuild === 'laser') {
     if (canPlace(cell)) {
@@ -847,6 +854,7 @@ function onCanvasClick(e) {
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null
       });
+      firstPlacementDone = true;
     }
   }
 }
