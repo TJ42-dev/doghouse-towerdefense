@@ -62,6 +62,7 @@ let selectedBuild = null;
 let towers = [];
 let bullets = [];
 let beams = [];
+let catLives = [];
 let money = 0;
 const WALL_COST = 10;
 
@@ -241,8 +242,12 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:true, gridSize:'large' }; }
-  catch { return { mute:false, fullscreen:true, gridSize:'large' }; }
+  const defaults = { mute: false, fullscreen: true, gridSize: 'large' };
+  try {
+    return { ...defaults, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') };
+  } catch {
+    return { ...defaults };
+  }
 }
 function saveOpts(o) { localStorage.setItem(LS_KEY, JSON.stringify(o)); }
 function syncUI() {
@@ -585,7 +590,6 @@ const player = { x: 0, y: 0, r: 0 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 const INITIAL_LIVES = 9;
-let catLives = [];
 
 function resetGame() {
   enemies = [];
