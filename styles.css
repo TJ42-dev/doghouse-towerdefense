@@ -225,6 +225,7 @@ html { background: #070a10; } /* safety net */
   z-index: 20;
   min-width: 220px;
   user-select: none;
+  color: #fff;
 }
 .tab-buttons {
   display: flex;
@@ -307,6 +308,7 @@ html { background: #070a10; } /* safety net */
   border-radius: 4px;
   padding: 0.5rem;
   z-index: 40;
+  color: #fff;
 }
 
 #contextStats {
