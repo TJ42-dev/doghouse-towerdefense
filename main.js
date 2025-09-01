@@ -455,12 +455,22 @@ function ensureCanvas() {
 function resizeCanvas() {
   if (!gameCanvas || !ctx) return;
   const ratio = window.devicePixelRatio || 1;
-  const w = Math.max(320, Math.floor(window.innerWidth));
-  const h = Math.max(240, Math.floor(window.innerHeight));
+  const vp = window.visualViewport;
+  const scale = vp?.scale || 1;
+  const w = Math.max(
+    320,
+    Math.floor((vp ? vp.width * scale : window.innerWidth * scale))
+  );
+  const h = Math.max(
+    240,
+    Math.floor((vp ? vp.height * scale : window.innerHeight * scale))
+  );
   gameCanvas.style.width = w + 'px';
   gameCanvas.style.height = h + 'px';
   gameCanvas.width = Math.floor(w * ratio);
   gameCanvas.height = Math.floor(h * ratio);
+  gameCanvas.style.transformOrigin = '0 0';
+  gameCanvas.style.transform = `scale(${1 / scale})`;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
@@ -958,12 +968,14 @@ function bindInputs() {
   gameCanvas.addEventListener('mousemove', onMouseMove);
   gameCanvas.addEventListener('click', onCanvasClick);
   window.addEventListener('resize', resizeCanvas);
+  window.visualViewport?.addEventListener('resize', resizeCanvas);
   window.addEventListener('keydown', onKey);
 }
 function unbindInputs() {
   gameCanvas.removeEventListener('mousemove', onMouseMove);
   gameCanvas.removeEventListener('click', onCanvasClick);
   window.removeEventListener('resize', resizeCanvas);
+  window.visualViewport?.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKey);
 }
 function onMouseMove(e) {
