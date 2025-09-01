@@ -37,7 +37,7 @@ let ctx = null;
 // Fixed logical grid
 const GRID_COLS = 36;
 const GRID_ROWS = 26;
-let CELL_PX = 20; // pixel size of a cell (computed on resize)
+let CELL_PX = 22; // pixel size of a cell (computed on resize)
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
 // Occupancy map mirrors walls & towers
@@ -312,7 +312,7 @@ function resizeCanvas() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
-  CELL_PX = Math.floor(Math.min(w / GRID_COLS, h / GRID_ROWS));
+  CELL_PX = Math.floor(Math.min(w / GRID_COLS, h / GRID_ROWS) * 1.1);
   const playW = CELL_PX * GRID_COLS;
   const playH = CELL_PX * GRID_ROWS;
   originPx = {
