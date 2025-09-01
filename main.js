@@ -883,6 +883,8 @@ function startWave() {
   enemiesSpawnedInWave = 0;
   spawnTimer = 0;
   spawnInterval = SPAWN_INTERVAL;
+  bullets = [];
+  beams = [];
   horn();
 }
 
@@ -891,8 +893,59 @@ function nextWave() {
   waveActive = false;
   preWaveTimer = POST_WAVE_DELAY;
   waveElapsed = 0;
-  bullets = [];
-  beams = [];
+}
+
+function updateProjectiles(dt) {
+  bullets = bullets.filter(b => {
+    const move = b.speed * dt;
+    if (b.straight) {
+      b.x += b.dx * move;
+      b.y += b.dy * move;
+      for (const e of enemies) {
+        if (Math.hypot(e.x - b.x, e.y - b.y) <= e.r) {
+          e.health -= b.damage;
+          bark();
+          if (e.health <= 0) {
+            enemies.splice(enemies.indexOf(e), 1);
+            money += 10;
+            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+          }
+          return false;
+        }
+      }
+      if (
+        b.x < originPx.x ||
+        b.x > originPx.x + GRID_COLS * CELL_PX ||
+        b.y < originPx.y ||
+        b.y > originPx.y + GRID_ROWS * CELL_PX
+      ) {
+        return false;
+      }
+      return true;
+    }
+    if (!b.target || !enemies.includes(b.target)) return false;
+    const dx = b.target.x - b.x;
+    const dy = b.target.y - b.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= move) {
+      b.target.health -= b.damage;
+      bark();
+      if (b.target.health <= 0) {
+        enemies.splice(enemies.indexOf(b.target), 1);
+        money += 10;
+        if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+      }
+      return false;
+    }
+    b.x += (dx / dist) * move;
+    b.y += (dy / dist) * move;
+    return true;
+  });
+
+  beams = beams.filter(b => {
+    b.time -= dt;
+    return b.time > 0;
+  });
 }
 
 function update(dt) {
@@ -902,6 +955,7 @@ function update(dt) {
   }
 
   if (!waveActive) {
+    updateProjectiles(dt);
     if (!firstPlacementDone) return;
     preWaveTimer -= dt;
     if (preWaveTimer <= 0) startWave();
@@ -1072,52 +1126,7 @@ function update(dt) {
     }
   }
 
-  // Bullets
-  bullets = bullets.filter(b => {
-    const move = b.speed * dt;
-    if (b.straight) {
-      b.x += b.dx * move;
-      b.y += b.dy * move;
-      for (const e of enemies) {
-        if (Math.hypot(e.x - b.x, e.y - b.y) <= e.r) {
-          e.health -= b.damage;
-          bark();
-          if (e.health <= 0) {
-            enemies.splice(enemies.indexOf(e), 1);
-            money += 10;
-            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-          }
-          return false;
-        }
-      }
-      if (b.x < originPx.x || b.x > originPx.x + GRID_COLS * CELL_PX || b.y < originPx.y || b.y > originPx.y + GRID_ROWS * CELL_PX) {
-        return false;
-      }
-      return true;
-    }
-    if (!b.target || !enemies.includes(b.target)) return false;
-    const dx = b.target.x - b.x;
-    const dy = b.target.y - b.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist <= move) {
-      b.target.health -= b.damage;
-      bark();
-      if (b.target.health <= 0) {
-        enemies.splice(enemies.indexOf(b.target), 1);
-        money += 10;
-        if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-      }
-      return false;
-    }
-    b.x += (dx / dist) * move;
-    b.y += (dy / dist) * move;
-    return true;
-  });
-
-  beams = beams.filter(b => {
-    b.time -= dt;
-    return b.time > 0;
-  });
+  updateProjectiles(dt);
 
   if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
     money += 50;
