@@ -52,7 +52,7 @@ let ctx = null;
 let GRID_COLS = 36;
 // Trim top and bottom rows so only the visible play area is usable
 let GRID_ROWS = 24;
-let CELL_PX = 22; // pixel size of a cell (computed on resize)
+let CELL_PX = 22; // fixed pixel size for each grid cell
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
 // Occupancy map mirrors walls & towers
@@ -464,8 +464,6 @@ function resizeCanvas() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
-  // Base cell size strictly within the visible canvas to avoid clipping
-  CELL_PX = Math.floor(Math.min(w / GRID_COLS, h / GRID_ROWS));
   const playW = CELL_PX * GRID_COLS;
   const playH = CELL_PX * GRID_ROWS;
   originPx = {
