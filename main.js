@@ -308,9 +308,15 @@ function activateTab(name) {
 }
 tabButtons.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
 
-wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
-cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
-laserBtn?.addEventListener('click', () => { selectedBuild = 'laser'; });
+wallBtn?.addEventListener('click', () => {
+  if (money >= WALL_COST) selectedBuild = 'wall';
+});
+cannonBtn?.addEventListener('click', () => {
+  if (money >= CANNON_BASE.cost) selectedBuild = 'cannon';
+});
+laserBtn?.addEventListener('click', () => {
+  if (money >= LASER_BASE.cost) selectedBuild = 'laser';
+});
 sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selectedTower = null; updateSelectedTowerInfo(); });
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 
@@ -612,7 +618,7 @@ function imgReady(img) {
 // -------------------- Tiny Dodge Game --------------------
 const WAVE_TIME = 60; // seconds per wave
 const ENEMIES_PER_WAVE = 10;
-const START_DELAY = 10; // secs before first wave
+const START_DELAY = 15; // secs before first wave
 const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
 const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
 const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
@@ -906,6 +912,9 @@ function drawHUD() {
     html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
     html += `Money: $${money}`;
   }
+  if (wallBtn) wallBtn.disabled = money < WALL_COST;
+  if (cannonBtn) cannonBtn.disabled = money < CANNON_BASE.cost;
+  if (laserBtn) laserBtn.disabled = money < LASER_BASE.cost;
   statsEl.innerHTML = html;
 }
 function render() {
@@ -1058,14 +1067,16 @@ function onCanvasClick(e) {
   }
 
   if (selectedBuild === 'wall') {
-    if (canPlace(cell)) {
+    if (canPlace(cell) && money >= WALL_COST) {
+      money -= WALL_COST;
       addOccupancy(gx, gy);
       walls.push({ x: gx, y: gy });
       firstPlacementDone = true;
       recalcEnemyPaths();
     }
   } else if (selectedBuild === 'cannon') {
-    if (canPlace(cell)) {
+    if (canPlace(cell) && money >= CANNON_BASE.cost) {
+      money -= CANNON_BASE.cost;
       addOccupancy(gx, gy);
       const p = cellToPx(cell);
       towers.push({
@@ -1088,7 +1099,8 @@ function onCanvasClick(e) {
       recalcEnemyPaths();
     }
   } else if (selectedBuild === 'laser') {
-    if (canPlace(cell)) {
+    if (canPlace(cell) && money >= LASER_BASE.cost) {
+      money -= LASER_BASE.cost;
       addOccupancy(gx, gy);
       const p = cellToPx(cell);
       towers.push({
