@@ -28,67 +28,181 @@ const fireRateBar = document.getElementById('fireRateBar');
 const rangeBar = document.getElementById('rangeBar');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const contextMenu = document.getElementById('contextMenu');
+const catLivesElm = document.getElementById('catLives');
 let selectedTower = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
 
 // -------------------- Grid & Build --------------------
-// Base grid resolution. Lower numbers mean larger cells.
-const GRID_SIZE = 15;
-let CELL = 20; // size of one grid cell in pixels (computed on resize)
-let GRID_COLS = GRID_SIZE; // dynamic grid width in cells
-let GRID_ROWS = GRID_SIZE; // dynamic grid height in cells
+// Fixed playfield grid
+const GRID_COLS = 36;
+const GRID_ROWS = 26;
+
+const DOGHOUSE_DOOR_CELL = { x: 28, y: 21 };
+const DOGHOUSE_SPAWN_CELL = { x: 27, y: 21 };
+const DOOR_TARGET = { gx: DOGHOUSE_DOOR_CELL.x, gy: DOGHOUSE_DOOR_CELL.y, r: 0.5 };
+const ENEMY_ENTRIES = [
+  { x: 5, y: 0 },
+  { x: Math.floor(GRID_COLS / 2), y: 0 },
+  { x: GRID_COLS - 6, y: 0 },
+  { x: 0, y: Math.floor(GRID_ROWS / 2) },
+  { x: 0, y: GRID_ROWS - 6 }
+];
+
+let CELL_PX = 20; // size of one grid cell in pixels (computed on resize)
+let originPxX = 0; // playfield offset from canvas top-left in pixels
+let originPxY = 0;
 let walls = [];
+let occupied = new Set();
 let selectedBuild = null;
 let towers = [];
 let bullets = [];
 let beams = [];
 let money = 0;
+let buildHistory = [];
+let debugGrid = false;
+
+const occKey = (x, y) => `${x},${y}`;
+function addWall(gx, gy) {
+  const k = occKey(gx, gy);
+  if (!occupied.has(k)) {
+    walls.push({ x: gx, y: gy });
+    occupied.add(k);
+  }
+}
+function hasWall(gx, gy) { return occupied.has(occKey(gx, gy)); }
+function removeWall(gx, gy) {
+  const k = occKey(gx, gy);
+  occupied.delete(k);
+  walls = walls.filter(w => w.x !== gx || w.y !== gy);
+}
+function isBlocked(gx, gy) { return hasWall(gx, gy); }
+
+function canPlace(gx, gy) {
+  if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return false;
+  const k = occKey(gx, gy);
+  if (occupied.has(k)) return false;
+  occupied.add(k);
+  const ok = ENEMY_ENTRIES.every(entry => {
+    const p = findPath(entry, DOGHOUSE_DOOR_CELL);
+    return p.length > 0 || (entry.x === DOGHOUSE_DOOR_CELL.x && entry.y === DOGHOUSE_DOOR_CELL.y);
+  });
+  occupied.delete(k);
+  return ok;
+}
 
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4 };
 let TOWER_TYPES = [];
 
-function isWallAt(gx, gy) {
-  return walls.some(w => w.x === gx && w.y === gy) || towers.some(t => t.gx === gx && t.gy === gy);
+function cellToPx(cell) {
+  return {
+    x: originPxX + (cell.x + 0.5) * CELL_PX,
+    y: originPxY + (cell.y + 0.5) * CELL_PX,
+  };
+}
+
+function pxToCell(px) {
+  return {
+    x: Math.min(GRID_COLS - 1, Math.max(0, Math.floor((px.x - originPxX) / CELL_PX))),
+    y: Math.min(GRID_ROWS - 1, Math.max(0, Math.floor((px.y - originPxY) / CELL_PX))),
+  };
+}
+
+function doorPx() { return cellToPx(DOGHOUSE_DOOR_CELL); }
+function doorSpawnPx() { return cellToPx(DOGHOUSE_SPAWN_CELL); }
+
+function positionCatLives() {
+  if (!catLivesElm || !gameCanvas) return;
+  const p = doorPx();
+  const rect = gameCanvas.getBoundingClientRect();
+  catLivesElm.style.left = (rect.left + p.x) + 'px';
+  catLivesElm.style.top = (rect.top + p.y) + 'px';
+}
+
+function updateCatLivesUI() {
+  if (!catLivesElm) return;
+  const count = catLives.filter(l => l.alive).length;
+  catLivesElm.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const img = document.createElement('img');
+    img.src = CAT_SRC;
+    img.width = CELL_PX;
+    img.height = CELL_PX;
+    catLivesElm.appendChild(img);
+  }
+  catLivesElm.style.width = (CELL_PX * 3) + 'px';
+  catLivesElm.style.height = (CELL_PX * 3) + 'px';
 }
 
 // Basic BFS pathfinding to navigate around walls
 function findPath(start, goal) {
   const key = (x, y) => `${x},${y}`;
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-  const queue = [start];
-  let qi = 0;
-  const visited = new Set([key(start.x, start.y)]);
-  const prev = new Map();
-  while (qi < queue.length) {
-    const cur = queue[qi++];
-    if (cur.x === goal.x && cur.y === goal.y) break;
-    for (const [dx,dy] of dirs) {
-      const nx = cur.x + dx, ny = cur.y + dy;
+  const dirs = [
+    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+    [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]
+  ];
+  const h = (x, y) => Math.hypot(x - goal.x, y - goal.y);
+  const open = [start];
+  const cameFrom = new Map();
+  const gScore = new Map([[key(start.x, start.y), 0]]);
+  const fScore = new Map([[key(start.x, start.y), h(start.x, start.y)]]);
+  const closed = new Set();
+
+  while (open.length) {
+    let bestIdx = 0;
+    let bestF = fScore.get(key(open[0].x, open[0].y)) ?? Infinity;
+    for (let i = 1; i < open.length; i++) {
+      const k = key(open[i].x, open[i].y);
+      const f = fScore.get(k) ?? Infinity;
+      if (f < bestF) { bestF = f; bestIdx = i; }
+    }
+    const current = open.splice(bestIdx, 1)[0];
+    const ck = key(current.x, current.y);
+    if (current.x === goal.x && current.y === goal.y) break;
+    closed.add(ck);
+
+    for (const [dx, dy, cost] of dirs) {
+      const nx = current.x + dx, ny = current.y + dy;
       if (nx < 0 || ny < 0 || nx >= GRID_COLS || ny >= GRID_ROWS) continue;
-      if (isWallAt(nx, ny)) continue;
-      const k = key(nx, ny);
-      if (visited.has(k)) continue;
-      visited.add(k);
-      queue.push({x:nx, y:ny});
-      prev.set(k, cur);
+      if (dx && dy) {
+        if (isBlocked(current.x + dx, current.y) || isBlocked(current.x, current.y + dy)) continue;
+      }
+      if (isBlocked(nx, ny) && !(nx === goal.x && ny === goal.y)) continue;
+      const nk = key(nx, ny);
+      if (closed.has(nk)) continue;
+      const tentative = (gScore.get(ck) ?? Infinity) + cost;
+      if (tentative < (gScore.get(nk) ?? Infinity)) {
+        cameFrom.set(nk, current);
+        gScore.set(nk, tentative);
+        fScore.set(nk, tentative + h(nx, ny));
+        if (!open.find(n => n.x === nx && n.y === ny)) open.push({ x: nx, y: ny });
+      }
     }
   }
+
   const path = [];
   let cur = goal;
   const goalKey = key(goal.x, goal.y);
-  if (!prev.has(goalKey) && (goal.x !== start.x || goal.y !== start.y)) return path;
+  if (!cameFrom.has(goalKey) && (goal.x !== start.x || goal.y !== start.y)) return path;
   while (cur.x !== start.x || cur.y !== start.y) {
     path.push(cur);
     const k = key(cur.x, cur.y);
-    cur = prev.get(k);
+    cur = cameFrom.get(k);
     if (!cur) break;
   }
   path.reverse();
   return path;
+}
+
+function recomputeEnemyPaths() {
+  enemies.forEach(e => {
+    const cur = { x: Math.floor(e.x), y: Math.floor(e.y) };
+    e.goalCell = DOGHOUSE_DOOR_CELL;
+    e.path = findPath(cur, DOGHOUSE_DOOR_CELL);
+  });
 }
 
 // -------------------- Small SFX (respects "Mute") --------------------
@@ -181,7 +295,9 @@ upgradeRangeBtn?.addEventListener('click', () => {
 });
 sellBtn?.addEventListener('click', () => {
   if (selectedTower) {
+    removeWall(selectedTower.gx, selectedTower.gy);
     towers = towers.filter(t => t !== selectedTower);
+    buildHistory = buildHistory.filter(b => b.tower !== selectedTower);
     selectedTower = null;
     updateSelectedTowerInfo();
   }
@@ -243,12 +359,17 @@ function resizeCanvas() {
   gameCanvas.width = Math.floor(w * ratio);
   gameCanvas.height = Math.floor(h * ratio);
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
+  ctx.imageSmoothingEnabled = false;
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
-  CELL = Math.floor(Math.min(gameCanvas.clientWidth, gameCanvas.clientHeight) / GRID_SIZE);
-  GRID_COLS = Math.floor(gameCanvas.clientWidth / CELL);
-  GRID_ROWS = Math.floor(gameCanvas.clientHeight / CELL);
-  towers.forEach(t => { t.x = (t.gx + 0.5) * CELL; t.y = (t.gy + 0.5) * CELL; });
+  CELL_PX = Math.floor(Math.min(gameCanvas.clientWidth / GRID_COLS, gameCanvas.clientHeight / GRID_ROWS));
+  const pfW = CELL_PX * GRID_COLS;
+  const pfH = CELL_PX * GRID_ROWS;
+  originPxX = Math.floor((gameCanvas.clientWidth - pfW) / 2);
+  originPxY = Math.floor((gameCanvas.clientHeight - pfH) / 2);
+  positionCatLives();
+  updateCatLivesUI();
+  recomputeEnemyPaths();
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -362,10 +483,12 @@ let catLives = [];
 function resetGame() {
   enemies = [];
   walls = [];
+  occupied = new Set();
   selectedBuild = null;
   towers = [];
   bullets = [];
   money = 0;
+  buildHistory = [];
   selectedTower = null;
   updateSelectedTowerInfo();
   waveActive = false;
@@ -379,24 +502,36 @@ function resetGame() {
     player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
 
-  // place cat head lives near the bottom-right, about 9 cells from the edge,
-  // then offset them down 4 cells and right 2 cells
+  // Block outer ring and doghouse region
+  for (let x = 0; x < GRID_COLS; x++) { addWall(x, 0); addWall(x, GRID_ROWS - 1); }
+  for (let y = 1; y < GRID_ROWS - 1; y++) { addWall(0, y); addWall(GRID_COLS - 1, y); }
+  const dogX0 = GRID_COLS - 7 - 1;
+  const dogY0 = GRID_ROWS - 8 - 1;
+  for (let x = 0; x < 7; x++) {
+    for (let y = 0; y < 8; y++) addWall(dogX0 + x, dogY0 + y);
+  }
+
+  // reset cat lives and position UI near the doghouse door
   catLives = [];
-  const cols = 3, rows = 3;
-  const margin = 9; // cells from right edge
-  const startCellX = Math.max(0, GRID_COLS - cols - margin) + 2;
-  const startCellY = GRID_ROWS - rows - 1 + 4;
+  const cols = 3;
+  const startCellX = DOGHOUSE_DOOR_CELL.x - 1;
+  const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
-    catLives.push({ x: (startCellX + col + 0.5) * CELL, y: (startCellY + row + 0.5) * CELL, r: CELL / 2, alive: true });
+    catLives.push({ gx: startCellX + col, gy: startCellY + row, r: 0.5, alive: true });
   }
+  updateCatLivesUI();
+  positionCatLives();
 }
 
 function spawnEnemy() {
-  const x = Math.floor(GRID_COLS / 2) * CELL + CELL / 2;
-  const y = -CELL;
-  const r = CELL / 2;
+  const entry = ENEMY_ENTRIES[Math.floor(Math.random() * ENEMY_ENTRIES.length)];
+  let x = entry.x + 0.5;
+  let y = entry.y + 0.5;
+  if (entry.y === 0) y -= 1;
+  if (entry.x === 0) x -= 1;
+  const r = 0.5;
   let stats;
   let img;
   if (waveIndex === BOSS_WAVE_INDEX) {
@@ -407,19 +542,18 @@ function spawnEnemy() {
     stats = { ...DEFAULT_DOG_STATS, ...type };
     img = imgReady(type.img) ? type.img : null;
   }
-  const baseSpeed = CELL * 2.5 * stats.baseSpeed;
-  const speed = baseSpeed * (0.9 + Math.random()*0.4); // px/sec
+  const baseSpeed = 2.5 * stats.baseSpeed;
+  const speed = baseSpeed * (0.9 + Math.random()*0.4); // cells/sec
   let health = stats.baseHealth;
   if (waveIndex > BOSS_WAVE_INDEX) {
     const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
     health = Math.round(health * scale);
   }
-  const target = catLives.find(l => l.alive) || null;
-  const startCell = { x: Math.floor(x / CELL), y: 0 };
-  const goalCell = target ? { x: Math.floor(target.x / CELL), y: Math.floor(target.y / CELL) } : null;
-  const path = goalCell ? findPath(startCell, goalCell) : [];
+  const startCell = { x: entry.x, y: entry.y };
+  const goalCell = { x: DOOR_TARGET.gx, y: DOOR_TARGET.gy };
+  const path = findPath(startCell, goalCell);
 
-  enemies.push({ x, y, r, speed, img, target, path, goalCell, health });
+  enemies.push({ x, y, r, speed, img, path, goalCell, health });
   enemiesSpawnedInWave++;
 }
 
@@ -458,29 +592,31 @@ function update(dt) {
     spawnTimer += spawnInterval;
   }
 
-  const liveTargets = catLives.filter(l => l.alive);
   enemies = enemies.filter(e => {
-    if (!e.target || !e.target.alive) e.target = liveTargets[0];
-    if (!e.target) return false;
-
-    const goalCell = { x: Math.floor(e.target.x / CELL), y: Math.floor(e.target.y / CELL) };
-    const curCell = { x: Math.min(Math.max(Math.floor(e.x / CELL), 0), GRID_COLS-1),
-                      y: Math.min(Math.max(Math.floor(e.y / CELL), 0), GRID_ROWS-1) };
+    const goal = DOOR_TARGET;
+    const goalCell = { x: goal.gx, y: goal.gy };
+    const curCell = { x: Math.min(Math.max(Math.floor(e.x), 0), GRID_COLS-1),
+                      y: Math.min(Math.max(Math.floor(e.y), 0), GRID_ROWS-1) };
 
     if (!e.path || !e.path.length || !e.goalCell || e.goalCell.x !== goalCell.x || e.goalCell.y !== goalCell.y) {
       e.path = findPath(curCell, goalCell);
       e.goalCell = goalCell;
     }
 
-    if (e.path && e.path.length && isWallAt(e.path[0].x, e.path[0].y)) {
+    if (
+      e.path &&
+      e.path.length &&
+      isBlocked(e.path[0].x, e.path[0].y) &&
+      !(e.path[0].x === goalCell.x && e.path[0].y === goalCell.y)
+    ) {
       e.path = findPath(curCell, goalCell);
     }
 
-    let destX = e.target.x, destY = e.target.y;
+    let destX = goalCell.x + 0.5, destY = goalCell.y + 0.5;
     if (e.path && e.path.length) {
       const step = e.path[0];
-      destX = (step.x + 0.5) * CELL;
-      destY = (step.y + 0.5) * CELL;
+      destX = step.x + 0.5;
+      destY = step.y + 0.5;
     }
 
     const prevX = e.x, prevY = e.y;
@@ -496,15 +632,21 @@ function update(dt) {
       e.x += (dx / d) * move;
       e.y += (dy / d) * move;
     }
-    const gx = Math.floor(e.x / CELL);
-    const gy = Math.floor(e.y / CELL);
-    if (isWallAt(gx, gy)) {
+    const gx = Math.floor(e.x);
+    const gy = Math.floor(e.y);
+    if (isBlocked(gx, gy) && !(gx === goalCell.x && gy === goalCell.y)) {
       e.x = prevX; e.y = prevY;
       e.path = findPath(curCell, goalCell);
     }
 
-    const dtgt = Math.hypot(e.target.x - e.x, e.target.y - e.y);
-    if (dtgt < e.r + e.target.r) { e.target.alive = false; sfx(160, 0.15, 0.06, 'sawtooth'); return false; }
+    const dtgt = Math.hypot((goalCell.x + 0.5) - e.x, (goalCell.y + 0.5) - e.y);
+    if (dtgt < e.r + goal.r) {
+      const life = catLives.find(l => l.alive);
+      if (life) life.alive = false;
+      updateCatLivesUI();
+      sfx(160, 0.15, 0.06, 'sawtooth');
+      return false;
+    }
 
     return true;
   });
@@ -512,11 +654,13 @@ function update(dt) {
   // Tower behavior
   for (const t of towers) {
     t.cooldown -= dt;
-    const rangePx = t.range * CELL;
+    const tx = t.gx + 0.5;
+    const ty = t.gy + 0.5;
+    const range = t.range;
     let target = null;
-    let closest = rangePx;
+    let closest = range;
     for (const e of enemies) {
-      const d = Math.hypot(e.x - t.x, e.y - t.y);
+      const d = Math.hypot(e.x - tx, e.y - ty);
       if (d <= closest) { target = e; closest = d; }
     }
     t.target = target;
@@ -524,7 +668,7 @@ function update(dt) {
       if (t.type === 'laser') {
         target.health -= t.damage;
         bark();
-        beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, time: 0.05 });
+        beams.push({ x1: tx, y1: ty, x2: target.x, y2: target.y, time: 0.05 });
         t.cooldown = 1 / t.fireRate;
         sfx(1200, 0.05, 0.04, 'sine');
         if (target.health <= 0) {
@@ -532,7 +676,7 @@ function update(dt) {
           money += 10;
         }
       } else {
-        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL, damage: t.damage });
+        bullets.push({ x: tx, y: ty, target, speed: CANNON_BASE.bulletSpeed, damage: t.damage });
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       }
@@ -581,23 +725,77 @@ function update(dt) {
 function drawBG() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  for (const wObj of walls) {
+    if (towers.some(t => t.gx === wObj.x && t.gy === wObj.y)) continue;
+    const center = cellToPx({ x: wObj.x, y: wObj.y });
+    const px = center.x - CELL_PX / 2;
+    const py = center.y - CELL_PX / 2;
+    if (imgReady(ASSETS.wall)) {
+      ctx.drawImage(ASSETS.wall, px, py, CELL_PX, CELL_PX);
+    } else {
+      ctx.fillStyle = 'rgba(120,120,120,0.5)';
+      ctx.fillRect(px, py, CELL_PX, CELL_PX);
+    }
+  }
+}
+
+function drawDebugGrid() {
+  ctx.save();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
   for (let i = 0; i <= GRID_COLS; i++) {
+    const x = originPxX + i * CELL_PX;
     ctx.beginPath();
-    ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, GRID_ROWS * CELL); ctx.stroke();
+    ctx.moveTo(x, originPxY);
+    ctx.lineTo(x, originPxY + GRID_ROWS * CELL_PX);
+    ctx.stroke();
   }
   for (let i = 0; i <= GRID_ROWS; i++) {
+    const y = originPxY + i * CELL_PX;
     ctx.beginPath();
-    ctx.moveTo(0, i * CELL); ctx.lineTo(GRID_COLS * CELL, i * CELL); ctx.stroke();
+    ctx.moveTo(originPxX, y);
+    ctx.lineTo(originPxX + GRID_COLS * CELL_PX, y);
+    ctx.stroke();
   }
-    for (const wObj of walls) {
-      if (imgReady(ASSETS.wall)) {
-        ctx.drawImage(ASSETS.wall, wObj.x * CELL, wObj.y * CELL, CELL, CELL);
-      } else {
-        ctx.fillStyle = 'rgba(120,120,120,0.5)';
-        ctx.fillRect(wObj.x * CELL, wObj.y * CELL, CELL, CELL);
-      }
-    }
+  ctx.fillStyle = 'rgba(255,0,0,0.25)';
+  for (const wObj of walls) {
+    const center = cellToPx({ x: wObj.x, y: wObj.y });
+    ctx.fillRect(center.x - CELL_PX / 2, center.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  }
+  const door = cellToPx(DOGHOUSE_DOOR_CELL);
+  ctx.fillStyle = 'rgba(0,255,0,0.25)';
+  ctx.fillRect(door.x - CELL_PX / 2, door.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  const spawn = cellToPx(DOGHOUSE_SPAWN_CELL);
+  ctx.fillStyle = 'rgba(0,0,255,0.25)';
+  ctx.fillRect(spawn.x - CELL_PX / 2, spawn.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  ctx.restore();
+}
+function drawGhost() {
+  if (!selectedBuild || !mouse.active) return;
+  if (mouse.x < originPxX || mouse.y < originPxY ||
+      mouse.x >= originPxX + GRID_COLS * CELL_PX ||
+      mouse.y >= originPxY + GRID_ROWS * CELL_PX) return;
+  const cell = pxToCell(mouse);
+  const gx = cell.x, gy = cell.y;
+  const valid = canPlace(gx, gy);
+  const pos = cellToPx(cell);
+  let img = null;
+  if (selectedBuild === 'wall') img = ASSETS.wall;
+  else if (selectedBuild === 'cannon') img = ASSETS.cannon;
+  else if (selectedBuild === 'laser') img = ASSETS.laser;
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  if (imgReady(img)) {
+    ctx.drawImage(img, pos.x - CELL_PX / 2, pos.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  } else {
+    ctx.fillStyle = '#888';
+    ctx.fillRect(pos.x - CELL_PX / 2, pos.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  }
+  if (!valid) {
+    ctx.fillStyle = 'rgba(255,0,0,0.5)';
+    ctx.fillRect(pos.x - CELL_PX / 2, pos.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  }
+  ctx.restore();
 }
 function drawHUD() {
   const statsEl = document.getElementById('gameStats');
@@ -619,43 +817,38 @@ function drawHUD() {
 function render() {
   drawBG();
 
-    // Towers
-    for (const t of towers) {
-      const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
-      if (imgReady(img)) {
-        const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
-        ctx.save();
-        ctx.translate(t.x, t.y);
-        ctx.rotate(angle);
-        ctx.drawImage(img, -CELL / 2, -CELL / 2, CELL, CELL);
-        ctx.restore();
-      } else {
-        ctx.fillStyle = '#888';
-        ctx.fillRect(t.gx * CELL, t.gy * CELL, CELL, CELL);
-      }
-    }
-
-  // Cat lives
-  for (const life of catLives) {
-    if (!life.alive) continue;
-    if (imgReady(ASSETS.cat)) {
-      ctx.drawImage(ASSETS.cat, life.x - life.r, life.y - life.r, life.r*2, life.r*2);
+  // Towers
+  for (const t of towers) {
+    const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
+    const center = cellToPx({ x: t.gx, y: t.gy });
+    if (imgReady(img)) {
+      const cx = t.gx + 0.5;
+      const cy = t.gy + 0.5;
+      const angle = t.target ? Math.atan2(t.target.y - cy, t.target.x - cx) : 0;
+      ctx.save();
+      ctx.translate(center.x, center.y);
+      ctx.rotate(angle);
+      ctx.drawImage(img, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
+      ctx.restore();
     } else {
-      ctx.beginPath();
-      ctx.fillStyle = '#5bd9ff';
-      ctx.arc(life.x, life.y, life.r, 0, Math.PI*2);
-      ctx.fill();
+      ctx.fillStyle = '#888';
+      ctx.fillRect(center.x - CELL_PX / 2, center.y - CELL_PX / 2, CELL_PX, CELL_PX);
     }
   }
 
+  drawGhost();
+
   // Enemies (safe draw)
   for (const e of enemies) {
+    const pos = cellToPx({ x: e.x, y: e.y });
+    const rPx = e.r * CELL_PX;
     if (imgReady(e.img)) {
-      ctx.drawImage(e.img, e.x - e.r, e.y - e.r, e.r*2, e.r*2);
+      ctx.drawImage(e.img, pos.x - rPx, pos.y - rPx, rPx * 2, rPx * 2);
     } else {
       ctx.beginPath();
-      ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
-      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
     }
   }
 
@@ -663,22 +856,26 @@ function render() {
   ctx.strokeStyle = '#0ff';
   ctx.lineWidth = 2;
   for (const beam of beams) {
+    const p1 = cellToPx({ x: beam.x1, y: beam.y1 });
+    const p2 = cellToPx({ x: beam.x2, y: beam.y2 });
     ctx.beginPath();
-    ctx.moveTo(beam.x1, beam.y1);
-    ctx.lineTo(beam.x2, beam.y2);
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
   }
 
   // Bullets
   for (const b of bullets) {
+    const pos = cellToPx({ x: b.x, y: b.y });
     ctx.beginPath();
     ctx.fillStyle = '#ff0';
-    ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
+    ctx.arc(pos.x, pos.y, CELL_PX / 6, 0, Math.PI * 2);
     ctx.fill();
   }
 
-    drawHUD();
-  }
+  if (debugGrid) drawDebugGrid();
+  drawHUD();
+}
 
 function loop(ts) {
   if (!running) return;
@@ -709,9 +906,13 @@ function onMouseMove(e) {
 }
 function onCanvasClick(e) {
   const r = gameCanvas.getBoundingClientRect();
-  const gx = Math.floor((e.clientX - r.left) / CELL);
-  const gy = Math.floor((e.clientY - r.top) / CELL);
-  if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
+  const px = { x: e.clientX - r.left, y: e.clientY - r.top };
+  if (px.x < originPxX || px.y < originPxY ||
+      px.x >= originPxX + GRID_COLS * CELL_PX ||
+      px.y >= originPxY + GRID_ROWS * CELL_PX) return;
+  const cell = pxToCell(px);
+  const gx = cell.x;
+  const gy = cell.y;
 
   if (!selectedBuild) {
     const t = towers.find(t => t.gx === gx && t.gy === gy);
@@ -726,47 +927,59 @@ function onCanvasClick(e) {
     return;
   }
 
+  if (!canPlace(gx, gy)) return;
+
   if (selectedBuild === 'wall') {
-    if (!walls.some(w => w.x === gx && w.y === gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-      walls.push({ x: gx, y: gy });
-    }
+    addWall(gx, gy);
+    buildHistory.push({ type: 'wall', gx, gy });
   } else if (selectedBuild === 'cannon') {
-    if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-        towers.push({
-          gx,
-          gy,
-          x: (gx + 0.5) * CELL,
-          y: (gy + 0.5) * CELL,
-          type: 'cannon',
-          cooldown: 0,
-          base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
-          damage: CANNON_BASE.damage,
-          fireRate: CANNON_BASE.fireRate,
-          range: CANNON_BASE.range,
-          upgrades: { damage: 0, fireRate: 0, range: 0 },
-          target: null
-        });
-    }
+    addWall(gx, gy);
+    const t = {
+      gx,
+      gy,
+      type: 'cannon',
+      cooldown: 0,
+      base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
+      damage: CANNON_BASE.damage,
+      fireRate: CANNON_BASE.fireRate,
+      range: CANNON_BASE.range,
+      upgrades: { damage: 0, fireRate: 0, range: 0 },
+      target: null
+    };
+    towers.push(t);
+    buildHistory.push({ type: 'cannon', gx, gy, tower: t });
   } else if (selectedBuild === 'laser') {
-    if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-        towers.push({
-          gx,
-          gy,
-          x: (gx + 0.5) * CELL,
-          y: (gy + 0.5) * CELL,
-          type: 'laser',
-          cooldown: 0,
-          base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
-          damage: LASER_BASE.damage,
-          fireRate: LASER_BASE.fireRate,
-          range: LASER_BASE.range,
-          upgrades: { damage: 0, fireRate: 0, range: 0 },
-          target: null
-        });
-    }
+    addWall(gx, gy);
+    const t = {
+      gx,
+      gy,
+      type: 'laser',
+      cooldown: 0,
+      base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
+      damage: LASER_BASE.damage,
+      fireRate: LASER_BASE.fireRate,
+      range: LASER_BASE.range,
+      upgrades: { damage: 0, fireRate: 0, range: 0 },
+      target: null
+    };
+    towers.push(t);
+    buildHistory.push({ type: 'laser', gx, gy, tower: t });
   }
 }
-function onKey(e) { if (e.key === 'Escape') endGame(); }
+function undoLastPlacement() {
+  const last = buildHistory.pop();
+  if (!last) return;
+  removeWall(last.gx, last.gy);
+  if (last.tower) {
+    towers = towers.filter(t => t !== last.tower);
+    if (selectedTower === last.tower) { selectedTower = null; updateSelectedTowerInfo(); }
+  }
+}
+function onKey(e) {
+  if (e.key === 'Escape') endGame();
+  else if (e.key.toLowerCase() === 'z') undoLastPlacement();
+  else if (e.key.toLowerCase() === 'g') debugGrid = !debugGrid;
+}
 
 async function startGame() {
   // UI
@@ -775,6 +988,7 @@ async function startGame() {
   quitGameBtn && (quitGameBtn.style.display = 'inline-block');
   nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
   hoverMenu && (hoverMenu.style.display = 'block');
+  catLivesElm && (catLivesElm.style.display = 'grid');
 
   // Canvas
   ensureCanvas();
@@ -820,6 +1034,7 @@ function endGame() {
   quitGameBtn && (quitGameBtn.style.display = 'none');
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   hoverMenu && (hoverMenu.style.display = 'none');
+  catLivesElm && (catLivesElm.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
   selectedTower = null;

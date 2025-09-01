@@ -136,3 +136,16 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   padding: 0.5rem;
   z-index: 40;
 }
+
+.cat-lives {
+  position: fixed;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  display: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+.cat-lives img {
+  display: block;
+}
