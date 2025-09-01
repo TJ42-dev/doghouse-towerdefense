@@ -7,3 +7,4 @@
 - Added costs for specialized towers and display them in the upgrade menu.
 - Added a 5s delay before waves begin after the previous wave is cleared.
 - Fixed upgrade menu height so Sell button doesn't shift when specialization options appear.
+- Added difficulty selection with easy/medium/hard settings affecting rewards, starting cash, and enemy health.

@@ -13,7 +13,7 @@ const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
 const optGridSize = document.getElementById('optGridSize');
 const optGridOverride = document.getElementById('optGridOverride');
-const optStartingCash = document.getElementById('optStartingCash');
+const optDifficulty = document.getElementById('optDifficulty');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
@@ -113,6 +113,14 @@ const SPECIALIZATION_COSTS = {
   dualLaser: 1500,
   railgun: 2500
 };
+
+const DIFFICULTY_SETTINGS = {
+  easy: { startingCash: 500, killReward: 15, waveReward: 75, healthMultiplier: 0.8 },
+  medium: { startingCash: 350, killReward: 10, waveReward: 50, healthMultiplier: 1 },
+  hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 }
+};
+let difficulty = 'medium';
+let difficultySettings = DIFFICULTY_SETTINGS[difficulty];
 
 sniperCostSpan && (sniperCostSpan.textContent = `$${SPECIALIZATION_COSTS.sniper}`);
 shotgunCostSpan && (shotgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.shotgun}`);
@@ -299,7 +307,7 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', gridOverride: false, startingCash: 250 };
+  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', gridOverride: false, difficulty: 'medium' };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') };
   } catch {
@@ -316,7 +324,7 @@ function syncUI() {
     optGridSize.value = o.gridSize || 'medium';
     optGridSize.disabled = !o.gridOverride;
   }
-  if (optStartingCash) optStartingCash.value = o.startingCash ?? 250;
+  if (optDifficulty) optDifficulty.value = o.difficulty || 'medium';
 }
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
 optGridOverride?.addEventListener('change', () => {
@@ -326,12 +334,14 @@ saveBtn?.addEventListener('click', () => {
   const override = optGridOverride?.checked;
   const map = loadBattlefield();
   const grid = override ? optGridSize?.value : MAPS[map].grid;
+  const difficulty = optDifficulty?.value || 'medium';
   const opts = {
     mute: optMute?.checked,
     fullscreen: optFullscreen?.checked,
     gridSize: grid,
     gridOverride: override,
-    startingCash: parseInt(optStartingCash?.value, 10) || 0
+    difficulty,
+    startingCash: DIFFICULTY_SETTINGS[difficulty].startingCash
   };
   saveOpts(opts);
   applyGridSize(grid);
@@ -876,7 +886,10 @@ function resetGame() {
   selectedBuild = null;
   towers = [];
   bullets = [];
-  money = loadOpts().startingCash || 0;
+  const opts = loadOpts();
+  difficulty = opts.difficulty || 'medium';
+  difficultySettings = DIFFICULTY_SETTINGS[difficulty];
+  money = difficultySettings.startingCash;
   selectedTower = null;
   updateSelectedTowerInfo();
   initOccupancy();
@@ -916,7 +929,7 @@ function spawnEnemy() {
   }
   const baseSpeed = 2.5 * stats.baseSpeed; // cells per second
   const speed = baseSpeed * (0.9 + Math.random()*0.4);
-  let health = stats.baseHealth;
+  let health = stats.baseHealth * difficultySettings.healthMultiplier;
   if (waveIndex < BOSS_WAVE_INDEX) {
     const scale = 0.8 + waveIndex * 0.05;
     health = Math.round(health * scale);
@@ -963,7 +976,7 @@ function updateProjectiles(dt) {
           bark();
           if (e.health <= 0) {
             enemies.splice(enemies.indexOf(e), 1);
-            money += 10;
+            money += difficultySettings.killReward;
             if (b.source) b.source.kills = (b.source.kills || 0) + 1;
           }
           return false;
@@ -988,7 +1001,7 @@ function updateProjectiles(dt) {
       bark();
       if (b.target.health <= 0) {
         enemies.splice(enemies.indexOf(b.target), 1);
-        money += 10;
+        money += difficultySettings.killReward;
         if (b.source) b.source.kills = (b.source.kills || 0) + 1;
       }
       return false;
@@ -1119,7 +1132,7 @@ function update(dt) {
         sfx(1200, 0.05, 0.04, 'sine');
         if (target.health <= 0) {
           enemies.splice(enemies.indexOf(target), 1);
-          money += 10;
+          money += difficultySettings.killReward;
           t.kills = (t.kills || 0) + 1;
         }
       } else if (t.type === 'railgun') {
@@ -1151,7 +1164,7 @@ function update(dt) {
             bark();
             if (e.health <= 0) {
               enemies.splice(enemies.indexOf(e), 1);
-              money += 10;
+              money += difficultySettings.killReward;
               t.kills = (t.kills || 0) + 1;
             }
           }
@@ -1185,7 +1198,7 @@ function update(dt) {
   updateProjectiles(dt);
 
   if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
-    money += 50;
+    money += difficultySettings.waveReward;
     victory();
     nextWave();
   }
