@@ -478,7 +478,7 @@ function resizeCanvas() {
   const playH = CELL_PX * GRID_ROWS;
   originPx = {
     x: Math.floor((w - playW) / 2),
-    y: Math.floor((h - playH) / 2)
+    y: Math.floor((h - playH) / 2 + h * 0.15)
   };
   towers.forEach(t => {
     const p = cellToPx({ x: t.gx, y: t.gy });
