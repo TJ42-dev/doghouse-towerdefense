@@ -819,8 +819,8 @@ function cssCenter() {
 let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
 let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
-const CANNON_BASE_SRC = 'assets/towers/bases/cannon.svg';
-const CANNON_TURRET_SRC = 'assets/towers/turrets/cannon.svg';
+const CANNON_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const CANNON_TURRET_SRC = 'assets/towers/turrets/cannon_turret.svg';
 const LASER_BASE_SRC = 'assets/towers/bases/laser.svg';
 const LASER_TURRET_SRC = 'assets/towers/turrets/laser.svg';
 const ROCKET_BASE_SRC = 'assets/towers/bases/rocket.svg';
