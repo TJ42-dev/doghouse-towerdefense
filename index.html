@@ -140,45 +140,51 @@
       </div>
     <div id="tab-upgrade" class="tab-content">
       <div id="selectedTowerInfo">No tower selected</div>
-      <div id="basicUpgrades">
-        <div class="upgrade-row">
-          <span class="label">Damage</span>
-          <span id="damageValue" class="value">-</span>
-          <span id="damageNext" class="next">(+0)</span>
-          <span id="damageCost" class="cost">$0</span>
-          <button id="upgradeDamage" class="btn sm">+</button>
+      <div id="upgradeOptions">
+        <div id="basicUpgrades">
+          <div class="upgrade-row">
+            <span class="label">Damage</span>
+            <span id="damageValue" class="value">-</span>
+            <span id="damageNext" class="next">(+0)</span>
+            <span id="damageCost" class="cost">$0</span>
+            <button id="upgradeDamage" class="btn sm">+</button>
+          </div>
+          <div class="upgrade-row">
+            <span class="label">Speed</span>
+            <span id="fireRateValue" class="value">-</span>
+            <span id="fireRateNext" class="next">(+0)</span>
+            <span id="fireRateCost" class="cost">$0</span>
+            <button id="upgradeFireRate" class="btn sm">+</button>
+          </div>
+          <div class="upgrade-row">
+            <span class="label">Range</span>
+            <span id="rangeValue" class="value">-</span>
+            <span id="rangeNext" class="next">(+0)</span>
+            <span id="rangeCost" class="cost">$0</span>
+            <button id="upgradeRange" class="btn sm">+</button>
+          </div>
         </div>
-        <div class="upgrade-row">
-          <span class="label">Speed</span>
-          <span id="fireRateValue" class="value">-</span>
-          <span id="fireRateNext" class="next">(+0)</span>
-          <span id="fireRateCost" class="cost">$0</span>
-          <button id="upgradeFireRate" class="btn sm">+</button>
-        </div>
-        <div class="upgrade-row">
-          <span class="label">Range</span>
-          <span id="rangeValue" class="value">-</span>
-          <span id="rangeNext" class="next">(+0)</span>
-          <span id="rangeCost" class="cost">$0</span>
-          <button id="upgradeRange" class="btn sm">+</button>
-        </div>
-      </div>
-      <div id="specialUpgrades" style="display:none;">
-        <div class="upgrade-row">
-          <span class="label">Sniper</span>
-          <button id="upgradeSniper" class="btn sm">Select</button>
-        </div>
-        <div class="upgrade-row">
-          <span class="label">Shotgun</span>
-          <button id="upgradeShotgun" class="btn sm">Select</button>
-        </div>
-        <div class="upgrade-row">
-          <span class="label">Dual Laser</span>
-          <button id="upgradeDualLaser" class="btn sm">Select</button>
-        </div>
-        <div class="upgrade-row">
-          <span class="label">Railgun</span>
-          <button id="upgradeRailgun" class="btn sm">Select</button>
+        <div id="specialUpgrades" style="display:none;">
+          <div class="upgrade-row">
+            <span class="label">Sniper</span>
+            <span id="sniperCost" class="cost"></span>
+            <button id="upgradeSniper" class="btn sm">Select</button>
+          </div>
+          <div class="upgrade-row">
+            <span class="label">Shotgun</span>
+            <span id="shotgunCost" class="cost"></span>
+            <button id="upgradeShotgun" class="btn sm">Select</button>
+          </div>
+          <div class="upgrade-row">
+            <span class="label">Dual Laser</span>
+            <span id="dualLaserCost" class="cost"></span>
+            <button id="upgradeDualLaser" class="btn sm">Select</button>
+          </div>
+          <div class="upgrade-row">
+            <span class="label">Railgun</span>
+            <span id="railgunCost" class="cost"></span>
+            <button id="upgradeRailgun" class="btn sm">Select</button>
+          </div>
         </div>
       </div>
       <button id="sellTower" class="btn">Sell</button>

@@ -43,6 +43,10 @@ const upgradeSniperBtn = document.getElementById('upgradeSniper');
 const upgradeShotgunBtn = document.getElementById('upgradeShotgun');
 const upgradeDualLaserBtn = document.getElementById('upgradeDualLaser');
 const upgradeRailgunBtn = document.getElementById('upgradeRailgun');
+const sniperCostSpan = document.getElementById('sniperCost');
+const shotgunCostSpan = document.getElementById('shotgunCost');
+const dualLaserCostSpan = document.getElementById('dualLaserCost');
+const railgunCostSpan = document.getElementById('railgunCost');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
@@ -74,6 +78,17 @@ let beams = [];
 let catLives = [];
 let money = 0;
 const WALL_COST = 10;
+const SPECIALIZATION_COSTS = {
+  sniper: 950,
+  shotgun: 1200,
+  dualLaser: 1500,
+  railgun: 2500
+};
+
+sniperCostSpan && (sniperCostSpan.textContent = `$${SPECIALIZATION_COSTS.sniper}`);
+shotgunCostSpan && (shotgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.shotgun}`);
+dualLaserCostSpan && (dualLaserCostSpan.textContent = `$${SPECIALIZATION_COSTS.dualLaser}`);
+railgunCostSpan && (railgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.railgun}`);
 
 // Landmarks
 let DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
@@ -402,10 +417,24 @@ function updateSelectedTowerInfo() {
       if (basicUpgrades) basicUpgrades.style.display = 'none';
       if (specialUpgrades) {
         specialUpgrades.style.display = '';
-        upgradeSniperBtn?.parentElement && (upgradeSniperBtn.parentElement.style.display = selectedTower.type === 'cannon' ? '' : 'none');
-        upgradeShotgunBtn?.parentElement && (upgradeShotgunBtn.parentElement.style.display = selectedTower.type === 'cannon' ? '' : 'none');
-        upgradeDualLaserBtn?.parentElement && (upgradeDualLaserBtn.parentElement.style.display = selectedTower.type === 'laser' ? '' : 'none');
-        upgradeRailgunBtn?.parentElement && (upgradeRailgunBtn.parentElement.style.display = selectedTower.type === 'laser' ? '' : 'none');
+        const isCannon = selectedTower.type === 'cannon';
+        const isLaser = selectedTower.type === 'laser';
+        if (upgradeSniperBtn) {
+          upgradeSniperBtn.parentElement && (upgradeSniperBtn.parentElement.style.display = isCannon ? '' : 'none');
+          upgradeSniperBtn.disabled = money < SPECIALIZATION_COSTS.sniper;
+        }
+        if (upgradeShotgunBtn) {
+          upgradeShotgunBtn.parentElement && (upgradeShotgunBtn.parentElement.style.display = isCannon ? '' : 'none');
+          upgradeShotgunBtn.disabled = money < SPECIALIZATION_COSTS.shotgun;
+        }
+        if (upgradeDualLaserBtn) {
+          upgradeDualLaserBtn.parentElement && (upgradeDualLaserBtn.parentElement.style.display = isLaser ? '' : 'none');
+          upgradeDualLaserBtn.disabled = money < SPECIALIZATION_COSTS.dualLaser;
+        }
+        if (upgradeRailgunBtn) {
+          upgradeRailgunBtn.parentElement && (upgradeRailgunBtn.parentElement.style.display = isLaser ? '' : 'none');
+          upgradeRailgunBtn.disabled = money < SPECIALIZATION_COSTS.railgun;
+        }
       }
     } else {
       if (basicUpgrades) basicUpgrades.style.display = '';
@@ -559,6 +588,10 @@ function specializeTower(t, kind) {
   if (!t.upgrades) return;
   const maxed = ['damage','fireRate','range'].every(s => t.upgrades[s] >= 10);
   if (!maxed) return;
+  const cost = SPECIALIZATION_COSTS[kind];
+  if (money < cost) return;
+  money -= cost;
+  t.spent = (t.spent || t.cost || 0) + cost;
   if (t.type === 'cannon') {
     if (kind === 'sniper') {
       const idx = 24; // wave 25 zero-based
@@ -739,6 +772,7 @@ const START_DELAY = 15; // secs before first wave
 const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
 const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
 const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
+const POST_WAVE_DELAY = 5; // delay after a wave clears
 let rafId = null;
 let lastT = 0;
 let running = false;
@@ -837,7 +871,9 @@ function startWave() {
 
 function nextWave() {
   waveIndex++;
-  startWave();
+  waveActive = false;
+  preWaveTimer = POST_WAVE_DELAY;
+  waveElapsed = 0;
 }
 
 function update(dt) {
@@ -1408,5 +1444,5 @@ quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can 
 nextWaveBtn?.addEventListener('click', () => {
   if (!running) return;
   if (!waveActive) startWave();
-  else nextWave();
+  else { waveIndex++; startWave(); }
 });

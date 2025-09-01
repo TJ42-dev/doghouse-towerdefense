@@ -318,6 +318,9 @@ html { background: #070a10; } /* safety net */
   margin: 0;
   padding: 0.25rem 0.4rem;
 }
+#upgradeOptions {
+  height: 150px;
+}
 
 .context-menu {
   position: absolute;
