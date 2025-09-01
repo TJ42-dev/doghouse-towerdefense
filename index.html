@@ -101,8 +101,12 @@
         <input type="checkbox" id="optFullscreen" checked>
       </label>
       <label class="row">
+        <span>Override grid size</span>
+        <input type="checkbox" id="optGridOverride">
+      </label>
+      <label class="row">
         <span>Grid size</span>
-        <select id="optGridSize">
+        <select id="optGridSize" disabled>
           <option value="large">large – 36×24</option>
           <option value="medium" selected>medium – 30×20</option>
           <option value="small">small – 24×16</option>
@@ -125,7 +129,7 @@
         <label class="map-choice">
           <input type="radio" name="battlefield" value="backyard" checked>
           <img src="./assets/maps/backyard/backyard.png" alt="Backyard map preview">
-          <span>Backyard</span>
+          <span>Backyard – Medium (30×20)</span>
         </label>
       </div>
       <menu class="dialog-actions">

@@ -10,6 +10,7 @@ const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
 const optGridSize = document.getElementById('optGridSize');
+const optGridOverride = document.getElementById('optGridOverride');
 const optStartingCash = document.getElementById('optStartingCash');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
@@ -58,7 +59,7 @@ const battlefieldDlg = document.getElementById('battlefieldDialog');
 const saveBattlefieldBtn = document.getElementById('saveBattlefield');
 const MAP_KEY = 'godot_web_battlefield';
 const MAPS = {
-  backyard: { name: 'Backyard', img: './assets/maps/backyard/backyard.png' }
+  backyard: { name: 'Backyard', img: './assets/maps/backyard/backyard.png', grid: 'medium' }
 };
 let selectedTower = null;
 let contextTarget = null;
@@ -279,7 +280,7 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', startingCash: 250 };
+  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', gridOverride: false, startingCash: 250 };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') };
   } catch {
@@ -291,19 +292,30 @@ function syncUI() {
   const o = loadOpts();
   if (optMute) optMute.checked = !!o.mute;
   if (optFullscreen) optFullscreen.checked = !!o.fullscreen;
-  if (optGridSize) optGridSize.value = o.gridSize || 'medium';
+  if (optGridOverride) optGridOverride.checked = !!o.gridOverride;
+  if (optGridSize) {
+    optGridSize.value = o.gridSize || 'medium';
+    optGridSize.disabled = !o.gridOverride;
+  }
   if (optStartingCash) optStartingCash.value = o.startingCash ?? 250;
 }
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
+optGridOverride?.addEventListener('change', () => {
+  if (optGridSize) optGridSize.disabled = !optGridOverride.checked;
+});
 saveBtn?.addEventListener('click', () => {
+  const override = optGridOverride?.checked;
+  const map = loadBattlefield();
+  const grid = override ? optGridSize?.value : MAPS[map].grid;
   const opts = {
     mute: optMute?.checked,
     fullscreen: optFullscreen?.checked,
-    gridSize: optGridSize?.value,
+    gridSize: grid,
+    gridOverride: override,
     startingCash: parseInt(optStartingCash?.value, 10) || 0
   };
   saveOpts(opts);
-  applyGridSize(opts.gridSize);
+  applyGridSize(grid);
 });
 
 function loadBestWave() {
@@ -341,8 +353,15 @@ function setBattlefield(map) {
 }
 
 ensureCanvas();
-setBattlefield(loadBattlefield());
-applyGridSize(loadOpts().gridSize);
+const initialMap = loadBattlefield();
+setBattlefield(initialMap);
+const initialOpts = loadOpts();
+const initialGrid = initialOpts.gridOverride ? initialOpts.gridSize : MAPS[initialMap].grid;
+if (!initialOpts.gridOverride && initialOpts.gridSize !== initialGrid) {
+  initialOpts.gridSize = initialGrid;
+  saveOpts(initialOpts);
+}
+applyGridSize(initialGrid);
 syncBestWave();
 
 
@@ -1520,9 +1539,21 @@ saveBattlefieldBtn?.addEventListener('click', () => {
   const selected = battlefieldDlg?.querySelector('input[name="battlefield"]:checked')?.value || 'backyard';
   saveBattlefield(selected);
   setBattlefield(selected);
+  const opts = loadOpts();
+  if (!opts.gridOverride) {
+    opts.gridSize = MAPS[selected].grid;
+    saveOpts(opts);
+    applyGridSize(opts.gridSize);
+  }
 });
 
-startBtn?.addEventListener('click', () => { startGame(); });
+startBtn?.addEventListener('click', () => {
+  const opts = loadOpts();
+  if (!opts.gridOverride) {
+    applyGridSize(MAPS[loadBattlefield()].grid);
+  }
+  startGame();
+});
 quitGameBtn?.addEventListener('click', () => endGame());
 quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));
 nextWaveBtn?.addEventListener('click', () => {
