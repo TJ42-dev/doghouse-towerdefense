@@ -6,6 +6,8 @@ const optionsBtn = document.getElementById('optionsBtn');
 const quitBtn = document.getElementById('quitBtn');         // main page "Quit"
 const quitGameBtn = document.getElementById('quitGameBtn'); // in-game "Quit"
 const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
+const statsOverlay = document.getElementById('statsOverlay');
+const overlayStats = document.getElementById('overlayStats');
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
@@ -1213,7 +1215,8 @@ function drawBG() {
 }
 function drawHUD() {
   const statsEl = document.getElementById('gameStats');
-  if (!statsEl) return;
+  const overlayEl = overlayStats;
+  if (!statsEl && !overlayEl) return;
   let html = '';
   if (!waveActive) {
     if (firstPlacementDone && preWaveTimer > 0) {
@@ -1231,7 +1234,8 @@ function drawHUD() {
   if (wallBtn) wallBtn.disabled = money < WALL_COST;
   if (cannonBtn) cannonBtn.disabled = money < CANNON_BASE.cost;
   if (laserBtn) laserBtn.disabled = money < LASER_BASE.cost;
-  statsEl.innerHTML = html;
+  if (statsEl) statsEl.innerHTML = html;
+  if (overlayEl) overlayEl.innerHTML = html;
 }
 function render() {
   drawBG();
@@ -1463,6 +1467,7 @@ async function startGame() {
   menu && (menu.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'inline-block');
   nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
+  statsOverlay && (statsOverlay.style.display = 'block');
   hoverMenu && (hoverMenu.style.display = 'block');
 
   // Canvas
@@ -1511,6 +1516,7 @@ function endGame() {
   quitGameBtn && (quitGameBtn.style.display = 'none');
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   hoverMenu && (hoverMenu.style.display = 'none');
+  statsOverlay && (statsOverlay.style.display = 'none');
   container && (container.style.display = 'block');
     menu && (menu.style.display = '');
     selectedTower = null;

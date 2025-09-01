@@ -144,8 +144,13 @@
 
 
   <canvas id="gameCanvas"></canvas>
-  <button id="nextWaveBtn" class="btn">Next Wave</button>
-  <button id="quitGameBtn" class="btn">Quit Game</button>
+  <div id="statsOverlay" class="stats-overlay">
+    <div class="overlay-header">
+      <button id="nextWaveBtn" class="btn sm">Next Wave</button>
+      <button id="quitGameBtn" class="btn sm">Quit Game</button>
+    </div>
+    <div id="overlayStats"></div>
+  </div>
 
   <div id="hoverMenu" class="hover-menu">
     <div id="hoverMenuHeader" class="menu-header">Build Menu</div>
