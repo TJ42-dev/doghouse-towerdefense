@@ -24,6 +24,7 @@ const tabContents = document.querySelectorAll('.tab-content');
 const wallBtn = document.getElementById('wallBtn');
 const cannonBtn = document.getElementById('cannonBtn');
 const laserBtn = document.getElementById('laserBtn');
+const rocketBtn = document.getElementById('rocketBtn');
 const cancelBuildBtn = document.getElementById('cancelBuildBtn');
 const sellBuildBtn = document.getElementById('sellBuildBtn');
 const upgradeDamageBtn = document.getElementById('upgradeDamage');
@@ -103,6 +104,7 @@ let walls = [];
 let selectedBuild = null;
 let towers = [];
 let bullets = [];
+let smokes = [];
 let beams = [];
 let catLives = [];
 let money = 0;
@@ -226,12 +228,14 @@ function recalcEnemyPaths() {
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
+let ROCKET_BASE = { damage: 200, fireRate: 0.3, range: 5.5, bulletSpeed: 3, cost: 175 };
 let TOWER_TYPES = [];
 
 function updateBuildButtonLabels() {
   if (wallBtn) wallBtn.textContent = `Wall $${WALL_COST}`;
   if (cannonBtn) cannonBtn.textContent = `Cannon $${CANNON_BASE.cost}`;
   if (laserBtn) laserBtn.textContent = `Laser $${LASER_BASE.cost}`;
+  if (rocketBtn) rocketBtn.textContent = `Rocket $${ROCKET_BASE.cost}`;
 }
 updateBuildButtonLabels();
 
@@ -410,6 +414,9 @@ cannonBtn?.addEventListener('click', () => {
 });
 laserBtn?.addEventListener('click', () => {
   if (money >= LASER_BASE.cost) selectedBuild = 'laser';
+});
+rocketBtn?.addEventListener('click', () => {
+  if (money >= ROCKET_BASE.cost) selectedBuild = 'rocket';
 });
 sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selectedTower = null; updateSelectedTowerInfo(); });
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
@@ -638,7 +645,9 @@ contextSellBtn?.addEventListener('click', () => {
 function getUpgradeCost(t, stat) {
   const base = t.cost || 50;
   const lvl = t.upgrades?.[stat] || 0;
-  return Math.floor(base * 0.5 * (lvl + 1));
+  let cost = Math.floor(base * 0.5 * (lvl + 1));
+  if (t.type === 'rocket') cost = Math.floor(cost * 1.5);
+  return cost;
 }
 
 function upgradeTower(t, stat) {
@@ -650,7 +659,11 @@ function upgradeTower(t, stat) {
   money -= cost;
   t.spent = (t.spent || t.cost || 0) + cost;
   t.upgrades[stat]++;
-  t[stat] = t.base[stat] * (1 + 0.1 * t.upgrades[stat]);
+  if (t.type === 'rocket' && stat === 'damage') {
+    t[stat] = t.base[stat] * (1 + 0.15 * t.upgrades[stat]);
+  } else {
+    t[stat] = t.base[stat] * (1 + 0.1 * t.upgrades[stat]);
+  }
   if (stat === 'range' && rangePreview && selectedTower === t) {
     rangePreview.r = t.range * CELL_PX;
   }
@@ -760,6 +773,8 @@ const CANNON_BASE_SRC = 'assets/cannon_base.svg';
 const CANNON_TURRET_SRC = 'assets/cannon_turret.svg';
 const LASER_BASE_SRC = 'assets/laser_base.svg';
 const LASER_TURRET_SRC = 'assets/laser_turret.svg';
+const ROCKET_BASE_SRC = 'assets/rocket_base.svg';
+const ROCKET_TURRET_SRC = 'assets/rocket_turret.svg';
 const DUAL_LASER_BASE_SRC = 'assets/laser_dual_base.svg';
 const DUAL_LASER_TURRET_SRC = 'assets/laser_dual_turret.svg';
 const RAILGUN_BASE_SRC = 'assets/railgun_base.svg';
@@ -786,6 +801,8 @@ async function loadData() {
       if (cannon) CANNON_BASE = { ...CANNON_BASE, ...cannon };
       const laser = TOWER_TYPES.find(t => t.id === 'laser');
       if (laser) LASER_BASE = { ...LASER_BASE, ...laser };
+      const rocket = TOWER_TYPES.find(t => t.id === 'rocket');
+      if (rocket) ROCKET_BASE = { ...ROCKET_BASE, ...rocket };
       updateBuildButtonLabels();
     }
     if (dogJson) {
@@ -820,6 +837,7 @@ let ASSETS = {
   wall: null,
   cannon: { base: null, turret: null },
   laser: { base: null, turret: null },
+  rocket: { base: null, turret: null },
   dualLaser: { base: null, turret: null },
   railgun: { base: null, turret: null },
   sniper: { base: null, turret: null },
@@ -840,6 +858,7 @@ async function ensureAssets() {
           wall: await loadImage(WALL_SRC),
           cannon: { base: await loadImage(CANNON_BASE_SRC), turret: await loadImage(CANNON_TURRET_SRC) },
           laser: { base: await loadImage(LASER_BASE_SRC), turret: await loadImage(LASER_TURRET_SRC) },
+          rocket: { base: await loadImage(ROCKET_BASE_SRC), turret: await loadImage(ROCKET_TURRET_SRC) },
           dualLaser: { base: await loadImage(DUAL_LASER_BASE_SRC), turret: await loadImage(DUAL_LASER_TURRET_SRC) },
           railgun: { base: await loadImage(RAILGUN_BASE_SRC), turret: await loadImage(RAILGUN_TURRET_SRC) },
           sniper: { base: await loadImage(SNIPER_BASE_SRC), turret: await loadImage(SNIPER_TURRET_SRC) },
@@ -887,6 +906,7 @@ function resetGame() {
   selectedBuild = null;
   towers = [];
   bullets = [];
+  smokes = [];
   const opts = loadOpts();
   difficulty = opts.difficulty || 'medium';
   difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
@@ -971,6 +991,41 @@ function nextWave() {
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
     const move = b.speed * dt;
+    if (b.type === 'rocket') {
+      if (!b.target || !enemies.includes(b.target)) return false;
+      const desired = Math.atan2(b.target.y - b.y, b.target.x - b.x);
+      let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
+      const maxTurn = b.turnRate * dt;
+      if (diff > maxTurn) diff = maxTurn;
+      if (diff < -maxTurn) diff = -maxTurn;
+      b.angle += diff;
+      b.x += Math.cos(b.angle) * move;
+      b.y += Math.sin(b.angle) * move;
+      b.smoke -= dt;
+      if (b.smoke <= 0) {
+        smokes.push({ x: b.x, y: b.y, life: 0.5 });
+        b.smoke = 0.05;
+      }
+      if (Math.hypot(b.target.x - b.x, b.target.y - b.y) <= b.target.r) {
+        b.target.health -= b.damage;
+        bark();
+        if (b.target.health <= 0) {
+          enemies.splice(enemies.indexOf(b.target), 1);
+          money += difficultySettings.killReward;
+          if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+        }
+        return false;
+      }
+      if (
+        b.x < originPx.x ||
+        b.x > originPx.x + GRID_COLS * CELL_PX ||
+        b.y < originPx.y ||
+        b.y > originPx.y + GRID_ROWS * CELL_PX
+      ) {
+        return false;
+      }
+      return true;
+    }
     if (b.straight) {
       b.x += b.dx * move;
       b.y += b.dy * move;
@@ -1013,6 +1068,11 @@ function updateProjectiles(dt) {
     b.x += (dx / dist) * move;
     b.y += (dy / dist) * move;
     return true;
+  });
+
+  smokes = smokes.filter(s => {
+    s.life -= dt;
+    return s.life > 0;
   });
 
   beams = beams.filter(b => {
@@ -1104,6 +1164,7 @@ function update(dt) {
   // Tower behavior
   for (const t of towers) {
     t.cooldown -= dt;
+    if (t.anim) t.anim -= dt;
     const rangePx = t.range * CELL_PX;
     let target = null;
     let closest = rangePx;
@@ -1177,6 +1238,13 @@ function update(dt) {
         beams.push({ x1: sx, y1: sy, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
         sfx(300, 0.2, 0.04, 'sawtooth');
+      } else if (t.type === 'rocket') {
+        const sx = t.x + Math.cos(angle) * (CELL_PX / 2);
+        const sy = t.y + Math.sin(angle) * (CELL_PX / 2);
+        bullets.push({ x: sx, y: sy, target, speed: ROCKET_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t, type: 'rocket', angle, turnRate: Math.PI, smoke: 0 });
+        t.cooldown = 1 / t.fireRate;
+        t.anim = 0.1;
+        sfx(200, 0.2, 0.04, 'sawtooth');
       } else if (t.type === 'shotgun') {
         const angle = t.angle;
         const spread = Math.PI / 12;
@@ -1262,6 +1330,7 @@ function drawHUD() {
   if (wallBtn) wallBtn.disabled = money < WALL_COST;
   if (cannonBtn) cannonBtn.disabled = money < CANNON_BASE.cost;
   if (laserBtn) laserBtn.disabled = money < LASER_BASE.cost;
+  if (rocketBtn) rocketBtn.disabled = money < ROCKET_BASE.cost;
   if (statsEl) statsEl.innerHTML = html;
   if (overlayEl) overlayEl.innerHTML = html;
 }
@@ -1288,6 +1357,7 @@ function render() {
     // Towers
     for (const t of towers) {
       const art = t.type === 'laser' ? ASSETS.laser :
+        t.type === 'rocket' ? ASSETS.rocket :
         t.type === 'dualLaser' ? ASSETS.dualLaser :
         t.type === 'railgun' ? ASSETS.railgun :
         t.type === 'sniper' ? ASSETS.sniper :
@@ -1299,6 +1369,12 @@ function render() {
         ctx.drawImage(art.base, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
         ctx.rotate(angle);
         ctx.drawImage(art.turret, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
+        if (t.type === 'rocket' && t.anim > 0) {
+          ctx.beginPath();
+          ctx.fillStyle = 'orange';
+          ctx.arc(CELL_PX / 2, 0, 6 * (t.anim / 0.1), 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       } else {
         ctx.fillStyle = '#888';
@@ -1344,13 +1420,29 @@ function render() {
   }
   // Reset line width after drawing beams to avoid affecting later strokes
   ctx.lineWidth = 1;
+  // Smoke trails
+  for (const s of smokes) {
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(200,200,200,${s.life / 0.5})`;
+    ctx.arc(s.x, s.y, 4, 0, Math.PI*2);
+    ctx.fill();
+  }
 
   // Bullets
   for (const b of bullets) {
-    ctx.beginPath();
-    ctx.fillStyle = '#ff0';
-    ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
-    ctx.fill();
+    if (b.type === 'rocket') {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.angle || 0);
+      ctx.fillStyle = '#f00';
+      ctx.fillRect(-4, -2, 8, 4);
+      ctx.restore();
+    } else {
+      ctx.beginPath();
+      ctx.fillStyle = '#ff0';
+      ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
   }
 
     drawHUD();
@@ -1455,6 +1547,33 @@ function onCanvasClick(e) {
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null,
         kills: 0
+      });
+      firstPlacementDone = true;
+      recalcEnemyPaths();
+    }
+  } else if (selectedBuild === 'rocket') {
+    if (canPlace(cell) && money >= ROCKET_BASE.cost) {
+      money -= ROCKET_BASE.cost;
+      addOccupancy(gx, gy);
+      const p = cellToPx(cell);
+      towers.push({
+        gx,
+        gy,
+        x: p.x,
+        y: p.y,
+        type: 'rocket',
+        cooldown: 0,
+        angle: 0,
+        base: { damage: ROCKET_BASE.damage, fireRate: ROCKET_BASE.fireRate, range: ROCKET_BASE.range },
+        damage: ROCKET_BASE.damage,
+        fireRate: ROCKET_BASE.fireRate,
+        range: ROCKET_BASE.range,
+        cost: ROCKET_BASE.cost,
+        spent: ROCKET_BASE.cost,
+        upgrades: { damage: 0, fireRate: 0, range: 0 },
+        target: null,
+        kills: 0,
+        anim: 0
       });
       firstPlacementDone = true;
       recalcEnemyPaths();

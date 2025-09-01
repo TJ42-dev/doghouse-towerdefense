@@ -9,3 +9,4 @@
 - Fixed upgrade menu height so Sell button doesn't shift when specialization options appear.
 - Added difficulty selection with easy/medium/hard settings affecting rewards, starting cash, and enemy health.
 - Kill rewards increase slightly after clearing each boss wave.
+- Introduced Rocket Launcher tower with homing rockets and smoke trails.
