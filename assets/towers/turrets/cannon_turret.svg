@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-pivot="11.3,11.2" data-muzzle="19.35,10.15">
+  <title id="title">Cat arm with toy pistol (overlay layer)</title>
+
+  <!-- Arm (matches base sprite style) -->
+  <g fill="currentColor" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round" stroke-width=".6">
+    <!-- Upper arm from shoulder pivot toward forearm -->
+    <path d="M11.3 11.2c1.15-.5 2.25-.85 3.1-.95l.4 1.2c-.8.2-1.7.55-2.7 1.15Z"></path>
+    <!-- Paw gripping pistol -->
+    <circle cx="15" cy="11.2" r=".65"></circle>
+  </g>
+
+  <!-- Toy pistol -->
+  <g fill="#8a8f98" stroke="#43464a" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- slide/barrel -->
+    <rect x="15.2" y="9.5" width="3.6" height="1.5" rx=".3"></rect>
+    <!-- orange toy tip (muzzle) -->
+    <rect x="18.8" y="9.6" width="1.1" height="1.1" rx=".25" fill="#ff7a2f" stroke="#c65119"></rect>
+    <!-- grip -->
+    <path d="M16.4 10.9l.9 1.1h-.9z"></path>
+    <!-- trigger guard -->
+    <path d="M16.7 11.1c.4 0 .6.2.6.4 0 .2-.2.3-.6.3" fill="none"></path>
+  </g>
+
+  <!-- Invisible guides (don’t render, useful for tooling) -->
+  <g opacity="0">
+    <circle id="pivot" cx="11.3" cy="11.2" r="0.01"></circle>
+    <circle id="muzzle" cx="19.35" cy="10.15" r="0.01"></circle>
+  </g>
+</svg>

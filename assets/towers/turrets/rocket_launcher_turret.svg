@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-pivot="11.3,11.2" data-muzzle="21.8,10.2" data-backblast="13.4,10.2">
+  <title id="title">Cat dual-arm rocket launcher (overlay layer)</title>
+
+  <!-- Primary arm (pivoted) -->
+  <g fill="currentColor" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round" stroke-width=".6">
+    <path d="M11.3 11.2c1.2-.55 2.5-.9 3.5-1l.4 1.2c-1 .25-2 .6-3.1 1.2Z"></path>
+    <circle cx="15.2" cy="11.0" r=".7"></circle>
+  </g>
+
+  <!-- Support arm (front hand under tube) -->
+  <g fill="currentColor" stroke="currentColor" stroke-linejoin="round" stroke-linecap="round" stroke-width=".6">
+    <path d="M10.0 12.8c1.4-.4 3-.6 4.6-.6 1.1 0 2.2.1 3.2.2l-.2 1.1c-1-.1-2-.2-3-.2-1.6 0-3.1.2-4.3.5Z"></path>
+    <circle cx="17.2" cy="12.2" r=".7"></circle>
+  </g>
+
+  <!-- Rocket launcher -->
+  <g fill="#7b8591" stroke="#43464a" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- main tube -->
+    <rect x="13.4" y="9.2" width="8.6" height="2.0" rx=".6"></rect>
+    <!-- top rail / sight -->
+    <rect x="15.0" y="8.6" width="3.0" height="0.45" rx=".2"></rect>
+    <!-- front muzzle ring (for clarity) -->
+    <circle cx="21.8" cy="10.2" r="0.8" fill="#9099a6"></circle>
+    <!-- rear vent ring (optional backblast reference) -->
+    <circle cx="13.4" cy="10.2" r="0.7" fill="#9099a6"></circle>
+    <!-- front grip bracket (sits above support paw) -->
+    <rect x="16.5" y="10.9" width="1.2" height="1.5" rx=".3"></rect>
+    <!-- rear grip / trigger block -->
+    <rect x="14.6" y="10.8" width="1.1" height="1.6" rx=".3"></rect>
+    <!-- hazard stripe accent -->
+    <path d="M14.0 9.3l1.2 1.8m.8-1.8l1.2 1.8m.8-1.8l1.2 1.8" stroke="#f4c542"></path>
+  </g>
+
+  <!-- Invisible guides (don’t render) -->
+  <g opacity="0">
+    <circle id="pivot" cx="11.3" cy="11.2" r="0.01"></circle>
+    <circle id="muzzle" cx="21.8" cy="10.2" r="0.01"></circle>
+    <circle id="backblast" cx="13.4" cy="10.2" r="0.01"></circle>
+  </g>
+</svg>

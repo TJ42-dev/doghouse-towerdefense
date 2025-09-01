@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-pivot="11.3,11.2" data-lid-center="21.0,10.2" data-handle="21.0,9.0">
+  <title id="title">Cat arm + metal silo lid (overlay layer)</title>
+
+  <!-- ===== Silo lid (behind paw so the paw looks like it’s on top) ===== -->
+  <g stroke="#43464a" stroke-linejoin="round" stroke-linecap="round" stroke-width=".6">
+    <!-- lid disk sized to the base silo’s inner opening (~r=1.2) -->
+    <circle cx="21.0" cy="10.2" r="1.35" fill="#9aa3b1"></circle>
+    <!-- subtle top shading -->
+    <circle cx="21.0" cy="10.35" r="0.9" fill="#7b8591" stroke="none" opacity=".55"></circle>
+    <!-- low-profile handle bar -->
+    <rect x="20.1" y="8.75" width="1.8" height="0.5" rx=".2" fill="#9aa3b1"></rect>
+    <circle cx="20.35" cy="9.0" r=".07" fill="#2b2f36" stroke="none"></circle>
+    <circle cx="21.65" cy="9.0" r=".07" fill="#2b2f36" stroke="none"></circle>
+  </g>
+
+  <!-- ===== Reaching arm (simple, natural: two strokes + elbow + paw) ===== -->
+  <g fill="currentColor" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <!-- upper arm: shoulder -> elbow -->
+    <path d="M11.3 11.2 L16.1 10.4" stroke-width="1.8"></path>
+    <!-- elbow cap (small round bump so the bend reads well) -->
+    <circle cx="16.1" cy="10.4" r=".55"></circle>
+    <!-- forearm: elbow -> handle -->
+    <path d="M16.1 10.4 L21.0 9.0" stroke-width="1.7"></path>
+    <!-- paw gripping handle (on top) -->
+    <ellipse cx="21.0" cy="9.0" rx="1.0" ry=".78" stroke-width=".6"></ellipse>
+  </g>
+
+  <!-- Invisible guides for alignment / code -->
+  <g opacity="0">
+    <circle id="pivot" cx="11.3" cy="11.2" r="0.01"></circle>
+    <circle id="lidCenter" cx="21.0" cy="10.2" r="0.01"></circle>
+    <circle id="handle" cx="21.0" cy="9.0" r="0.01"></circle>
+  </g>
+</svg>
