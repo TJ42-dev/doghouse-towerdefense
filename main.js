@@ -1113,20 +1113,15 @@ function update(dt) {
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
   }
 
-  if (!waveActive) {
-    updateProjectiles(dt);
-    if (!firstPlacementDone) return;
-    preWaveTimer -= dt;
-    if (preWaveTimer <= 0) startWave();
-    return;
-  }
-
-  waveElapsed += dt;
-  spawnTimer -= dt;
   const enemiesPerWave = waveIndex === BOSS_WAVE_INDEX ? 1 : ENEMIES_PER_WAVE;
-  while (spawnTimer <= 0 && enemiesSpawnedInWave < enemiesPerWave) {
-    spawnEnemy();
-    spawnTimer += spawnInterval;
+
+  if (waveActive) {
+    waveElapsed += dt;
+    spawnTimer -= dt;
+    while (spawnTimer <= 0 && enemiesSpawnedInWave < enemiesPerWave) {
+      spawnEnemy();
+      spawnTimer += spawnInterval;
+    }
   }
 
   const liveTargets = catLives.filter(l => l.alive);
@@ -1337,6 +1332,12 @@ function update(dt) {
   }
 
   updateProjectiles(dt);
+  if (!waveActive) {
+    if (!firstPlacementDone) return;
+    preWaveTimer -= dt;
+    if (preWaveTimer <= 0) startWave();
+    return;
+  }
 
   if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
     money += difficultySettings.waveReward;
