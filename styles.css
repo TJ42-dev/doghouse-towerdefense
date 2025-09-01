@@ -36,7 +36,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   height: 100vh;
     cursor: pointer;
   display: none;
-  background: url("./assets/backyard.svg") center/cover no-repeat;
+  background: url("./assets/backyard.png") center/cover no-repeat;
 }
 
 #quitGameBtn {
