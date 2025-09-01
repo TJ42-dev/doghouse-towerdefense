@@ -101,6 +101,20 @@
 /* Dialog header rename is purely cosmetic; keep existing dialog styles */
 .dialog-content h2 { letter-spacing: .5px; }
 
+.dialog-content .row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  margin: .5rem 0;
+  text-align: center;
+}
+
+.dialog-content .row input,
+.dialog-content .row select {
+  text-align: center;
+}
+
 /* Responsive tweaks unchanged */
 @media (max-width: 520px) {
   .hero { grid-template-columns: 1fr; text-align: center; }

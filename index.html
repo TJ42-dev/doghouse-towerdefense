@@ -98,9 +98,13 @@
         <span>Grid size</span>
         <select id="optGridSize">
           <option value="large">large – 36×24</option>
-          <option value="medium">medium – 30×20</option>
+          <option value="medium" selected>medium – 30×20</option>
           <option value="small">small – 24×16</option>
         </select>
+      </label>
+      <label class="row">
+        <span>Starting cash</span>
+        <input type="number" id="optStartingCash" min="0" value="0">
       </label>
       <menu class="dialog-actions">
         <button value="cancel" class="btn ghost">Cancel</button>

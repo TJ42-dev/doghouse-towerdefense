@@ -9,6 +9,7 @@ const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
 const optGridSize = document.getElementById('optGridSize');
+const optStartingCash = document.getElementById('optStartingCash');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
@@ -67,8 +68,8 @@ let money = 0;
 const WALL_COST = 10;
 
 // Landmarks
-const DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
-const DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
+let DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
+let DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
 
 // Entry points for enemies (top-left only)
 const ENTRIES = [ { x: 0, y: 0 } ];
@@ -79,10 +80,16 @@ const GRID_SIZES = {
   small: { cols: 24, rows: 16 }
 };
 
+function updateLandmarks() {
+  DOGHOUSE_DOOR_CELL = { x: GRID_COLS - 8, y: GRID_ROWS - 4 };
+  DOGHOUSE_SPAWN_CELL = { x: GRID_COLS - 9, y: GRID_ROWS - 4 };
+}
+
 function applyGridSize(size) {
-  const g = GRID_SIZES[size] || GRID_SIZES.large;
+  const g = GRID_SIZES[size] || GRID_SIZES.medium;
   GRID_COLS = g.cols;
   GRID_ROWS = g.rows;
+  updateLandmarks();
   initOccupancy();
   resizeCanvas();
 }
@@ -242,7 +249,7 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  const defaults = { mute: false, fullscreen: true, gridSize: 'large' };
+  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', startingCash: 0 };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') };
   } catch {
@@ -254,11 +261,17 @@ function syncUI() {
   const o = loadOpts();
   if (optMute) optMute.checked = !!o.mute;
   if (optFullscreen) optFullscreen.checked = !!o.fullscreen;
-  if (optGridSize) optGridSize.value = o.gridSize || 'large';
+  if (optGridSize) optGridSize.value = o.gridSize || 'medium';
+  if (optStartingCash) optStartingCash.value = o.startingCash ?? 0;
 }
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
 saveBtn?.addEventListener('click', () => {
-  const opts = { mute: optMute?.checked, fullscreen: optFullscreen?.checked, gridSize: optGridSize?.value };
+  const opts = {
+    mute: optMute?.checked,
+    fullscreen: optFullscreen?.checked,
+    gridSize: optGridSize?.value,
+    startingCash: parseInt(optStartingCash?.value, 10) || 0
+  };
   saveOpts(opts);
   applyGridSize(opts.gridSize);
 });
@@ -604,7 +617,7 @@ function resetGame() {
   selectedBuild = null;
   towers = [];
   bullets = [];
-  money = 0;
+  money = loadOpts().startingCash || 0;
   selectedTower = null;
   updateSelectedTowerInfo();
   initOccupancy();
