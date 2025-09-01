@@ -117,11 +117,13 @@
       <button class="tab-btn" data-tab="options">Options</button>
     </div>
       <div id="tab-build" class="tab-content active">
-        <h3>Build Menu</h3>
-        <button id="wallBtn" class="btn">Wall</button>
-        <button id="cannonBtn" class="btn">Cannon</button>
-        <button id="laserBtn" class="btn">Laser</button>
-        <button id="cancelBuildBtn" class="btn ghost">Cancel</button>
+        <button id="wallBtn" class="btn sm">Wall</button>
+        <button id="cannonBtn" class="btn sm">Cannon</button>
+        <button id="laserBtn" class="btn sm">Laser</button>
+        <div class="build-actions">
+          <button id="sellBuildBtn" class="btn sm ghost">$</button>
+          <button id="cancelBuildBtn" class="btn sm ghost">X</button>
+        </div>
       </div>
     <div id="tab-upgrade" class="tab-content">
       <div id="selectedTowerInfo">No tower selected</div>
@@ -151,7 +153,7 @@
       </div>
   </div>
 
-  <div id="contextMenu" class="context-menu"></div>
+    <div id="contextMenu" class="context-menu"><button id="contextSell" class="btn sm">$0</button></div>
 
   <script src="./main.js" defer></script>
 </body>
