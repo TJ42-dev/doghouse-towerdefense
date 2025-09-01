@@ -1,1 +1,138 @@
-:root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; } * { box-sizing: border-box; } html, body { height: 100%; margin: 0; } body { display: grid; place-items: center; background: #0f1222; color: #e9ecf1; } .container { width: min(720px, 92vw); text-align: center; } h1 { font-weight: 800; letter-spacing: .5px; margin-bottom: 1.25rem; } .menu { display: grid; gap: .75rem; margin: 1.5rem 0 2rem; } .btn { padding: .9rem 1.1rem; border: 0; border-radius: 14px; background: #3a47d5; color: white; font-weight: 700; cursor: pointer; transition: transform .05s ease, filter .2s ease; } .btn:hover { filter: brightness(1.06); } .btn:active { transform: translateY(1px); } .btn.ghost { background: #2c2f45; color: #cfd6ff; } dialog { border: none; border-radius: 16px; padding: 0; width: min(520px, 92vw); } dialog::backdrop { background: rgba(0,0,0,.55); } .dialog-content { padding: 1.25rem 1.25rem 1rem; } .row { display: flex; align-items: center; justify-content: space-between; padding: .6rem 0; } .dialog-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem; } .footnote { opacity: .7; font-size: .9rem; } #gameCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; cursor: pointer; display: none; background: url("./assets/backyard.svg") center/cover no-repeat; } #quitGameBtn { position: fixed; top: 1rem; right: 1rem; display: none; padding: .5rem .75rem; font-size: .8rem; z-index: 10; } #nextWaveBtn { position: fixed; top: 1rem; right: 7rem; display: none; padding: .5rem .75rem; font-size: .8rem; z-index: 10; } .hover-menu { display: none; position: absolute; top: 1rem; left: 1rem; background: rgba(0,0,0,0.6); padding: 0.5rem; border-radius: 12px; cursor: move; z-index: 20; min-width: 220px; user-select: none; } .tab-buttons { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; } .tab-btn { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid #fff; color: #fff; padding: 0.25rem; cursor: pointer; } .tab-btn.active { background: rgba(255,255,255,0.3); } .tab-content { display: none; } .tab-content.active { display: block; } .hover-menu .btn { display: block; width: 100%; margin: 0.25rem 0; } .upgrade-row { display: flex; align-items: center; margin: 0.25rem 0; } .upgrade-row span { width: 55px; font-size: 0.8rem; } .upgrade-bar { flex: 1; height: 8px; background: rgba(255,255,255,0.1); border: 1px solid #fff; border-radius: 4px; overflow: hidden; margin: 0 0.25rem; } .upgrade-bar-fill { height: 100%; width: 0%; background: #3a47d5; } .upgrade-row .btn { display: inline-block; width: auto; margin: 0; padding: 0.25rem 0.4rem; } .context-menu { position: absolute; display: none; background: rgba(0,0,0,0.8); border: 1px solid #fff; border-radius: 4px; padding: 0.5rem; z-index: 40; }
+:root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { display: grid; place-items: center; background: #0f1222; color: #e9ecf1; }
+
+.container { width: min(720px, 92vw); text-align: center; }
+h1 { font-weight: 800; letter-spacing: .5px; margin-bottom: 1.25rem; }
+
+.menu { display: grid; gap: .75rem; margin: 1.5rem 0 2rem; }
+.btn {
+  padding: .9rem 1.1rem; border: 0; border-radius: 14px;
+  background: #3a47d5; color: white; font-weight: 700; cursor: pointer;
+  transition: transform .05s ease, filter .2s ease;
+}
+.btn:hover { filter: brightness(1.06); }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: #2c2f45; color: #cfd6ff; }
+
+dialog { border: none; border-radius: 16px; padding: 0; width: min(520px, 92vw); }
+dialog::backdrop { background: rgba(0,0,0,.55); }
+.dialog-content { padding: 1.25rem 1.25rem 1rem; }
+.row { display: flex; align-items: center; justify-content: space-between; padding: .6rem 0; }
+.dialog-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem; }
+
+.footnote { opacity: .7; font-size: .9rem; }
+
+#gameCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+    cursor: pointer;
+  display: none;
+  background: url("./assets/backyard.svg") center/cover no-repeat;
+}
+
+#quitGameBtn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  display: none;
+  padding: .5rem .75rem;
+  font-size: .8rem;
+  z-index: 10;
+}
+
+#nextWaveBtn {
+  position: fixed;
+  top: 1rem;
+  right: 7rem;
+  display: none;
+  padding: .5rem .75rem;
+  font-size: .8rem;
+  z-index: 10;
+}
+
+.hover-menu {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(0,0,0,0.6);
+  padding: 0.5rem;
+  border-radius: 12px;
+  cursor: move;
+  z-index: 20;
+  min-width: 220px;
+  user-select: none;
+}
+.tab-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.tab-btn {
+  flex: 1;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid #fff;
+  color: #fff;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+.tab-btn.active {
+  background: rgba(255,255,255,0.3);
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+.hover-menu .btn {
+  display: block;
+  width: 100%;
+  margin: 0.25rem 0;
+}
+
+.upgrade-row {
+  display: flex;
+  align-items: center;
+  margin: 0.25rem 0;
+}
+.upgrade-row span {
+  width: 55px;
+  font-size: 0.8rem;
+}
+.upgrade-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid #fff;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 0.25rem;
+}
+.upgrade-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: #3a47d5;
+}
+.upgrade-row .btn {
+  display: inline-block;
+  width: auto;
+  margin: 0;
+  padding: 0.25rem 0.4rem;
+}
+
+.context-menu {
+  position: absolute;
+  display: none;
+  background: rgba(0,0,0,0.8);
+  border: 1px solid #fff;
+  border-radius: 4px;
+  padding: 0.5rem;
+  z-index: 40;
+}
