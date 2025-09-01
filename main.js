@@ -10,6 +10,7 @@ const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
 const optGridSize = document.getElementById('optGridSize');
+const optGridOverride = document.getElementById('optGridOverride');
 const optStartingCash = document.getElementById('optStartingCash');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
@@ -53,6 +54,13 @@ const contextMenu = document.getElementById('contextMenu');
 const contextSellBtn = document.getElementById('contextSell');
 const contextStats = document.getElementById('contextStats');
 const bestWaveSpan = document.getElementById('bestWave');
+const battlefieldBtn = document.getElementById('battlefieldBtn');
+const battlefieldDlg = document.getElementById('battlefieldDialog');
+const saveBattlefieldBtn = document.getElementById('saveBattlefield');
+const MAP_KEY = 'godot_web_battlefield';
+const MAPS = {
+  backyard: { name: 'Backyard', img: './assets/maps/backyard/backyard.png', grid: 'medium' }
+};
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
@@ -272,7 +280,7 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', startingCash: 250 };
+  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', gridOverride: false, startingCash: 250 };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') };
   } catch {
@@ -284,19 +292,30 @@ function syncUI() {
   const o = loadOpts();
   if (optMute) optMute.checked = !!o.mute;
   if (optFullscreen) optFullscreen.checked = !!o.fullscreen;
-  if (optGridSize) optGridSize.value = o.gridSize || 'medium';
+  if (optGridOverride) optGridOverride.checked = !!o.gridOverride;
+  if (optGridSize) {
+    optGridSize.value = o.gridSize || 'medium';
+    optGridSize.disabled = !o.gridOverride;
+  }
   if (optStartingCash) optStartingCash.value = o.startingCash ?? 250;
 }
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
+optGridOverride?.addEventListener('change', () => {
+  if (optGridSize) optGridSize.disabled = !optGridOverride.checked;
+});
 saveBtn?.addEventListener('click', () => {
+  const override = optGridOverride?.checked;
+  const map = loadBattlefield();
+  const grid = override ? optGridSize?.value : MAPS[map].grid;
   const opts = {
     mute: optMute?.checked,
     fullscreen: optFullscreen?.checked,
-    gridSize: optGridSize?.value,
+    gridSize: grid,
+    gridOverride: override,
     startingCash: parseInt(optStartingCash?.value, 10) || 0
   };
   saveOpts(opts);
-  applyGridSize(opts.gridSize);
+  applyGridSize(grid);
 });
 
 function loadBestWave() {
@@ -318,9 +337,33 @@ function syncBestWave() {
   if (bestWaveSpan) bestWaveSpan.textContent = loadBestWave();
 }
 
+function loadBattlefield() {
+  try {
+    return localStorage.getItem(MAP_KEY) || 'backyard';
+  } catch {
+    return 'backyard';
+  }
+}
+function saveBattlefield(v) { localStorage.setItem(MAP_KEY, v); }
+function setBattlefield(map) {
+  const m = MAPS[map] || MAPS.backyard;
+  if (gameCanvas) {
+    gameCanvas.style.background = `url('${m.img}') center/cover no-repeat`;
+  }
+}
+
 ensureCanvas();
-applyGridSize(loadOpts().gridSize);
+const initialMap = loadBattlefield();
+setBattlefield(initialMap);
+const initialOpts = loadOpts();
+const initialGrid = initialOpts.gridOverride ? initialOpts.gridSize : MAPS[initialMap].grid;
+if (!initialOpts.gridOverride && initialOpts.gridSize !== initialGrid) {
+  initialOpts.gridSize = initialGrid;
+  saveOpts(initialOpts);
+}
+applyGridSize(initialGrid);
 syncBestWave();
+
 
 // ----- Hover Menu -----
 function activateTab(name) {
@@ -1423,7 +1466,9 @@ async function startGame() {
   hoverMenu && (hoverMenu.style.display = 'block');
 
   // Canvas
-  ensureCanvas();
+  
+ensureCanvas();
+  setBattlefield(loadBattlefield());
   gameCanvas.style.display = 'block';
   resizeCanvas();
 
@@ -1481,7 +1526,34 @@ function endGame() {
 }
 
 // -------------------- Hooks --------------------
-startBtn?.addEventListener('click', () => { startGame(); });
+
+battlefieldBtn?.addEventListener('click', () => {
+  const current = loadBattlefield();
+  if (battlefieldDlg) {
+    const radios = battlefieldDlg.querySelectorAll('input[name="battlefield"]');
+    radios.forEach(r => { r.checked = (r.value === current); });
+    battlefieldDlg.showModal();
+  }
+});
+saveBattlefieldBtn?.addEventListener('click', () => {
+  const selected = battlefieldDlg?.querySelector('input[name="battlefield"]:checked')?.value || 'backyard';
+  saveBattlefield(selected);
+  setBattlefield(selected);
+  const opts = loadOpts();
+  if (!opts.gridOverride) {
+    opts.gridSize = MAPS[selected].grid;
+    saveOpts(opts);
+    applyGridSize(opts.gridSize);
+  }
+});
+
+startBtn?.addEventListener('click', () => {
+  const opts = loadOpts();
+  if (!opts.gridOverride) {
+    applyGridSize(MAPS[loadBattlefield()].grid);
+  }
+  startGame();
+});
 quitGameBtn?.addEventListener('click', () => endGame());
 quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));
 nextWaveBtn?.addEventListener('click', () => {

@@ -65,6 +65,12 @@
         <span class="btn-icon" aria-hidden="true">⚙️</span>
         Loadout
       </button>
+      <button id="battlefieldBtn" class="btn ghost outline tactical" role="menuitem" aria-haspopup="dialog" aria-controls="battlefieldDialog">
+        <span class="btn-icon" aria-hidden="true">🗺️</span>
+        Battlefield
+      </button>
+
+
 
       <button id="quitBtn" class="btn ghost outline tactical" role="menuitem">
         <span class="btn-icon" aria-hidden="true">⏻</span>
@@ -95,8 +101,12 @@
         <input type="checkbox" id="optFullscreen" checked>
       </label>
       <label class="row">
+        <span>Override grid size</span>
+        <input type="checkbox" id="optGridOverride">
+      </label>
+      <label class="row">
         <span>Grid size</span>
-        <select id="optGridSize">
+        <select id="optGridSize" disabled>
           <option value="large">large – 36×24</option>
           <option value="medium" selected>medium – 30×20</option>
           <option value="small">small – 24×16</option>
@@ -109,6 +119,22 @@
       <menu class="dialog-actions">
         <button value="cancel" class="btn ghost">Cancel</button>
         <button id="saveOptions" value="default" class="btn tactical">Save</button>
+      </menu>
+    </form>
+  </dialog>
+  <dialog id="battlefieldDialog">
+    <form method="dialog" class="dialog-content">
+      <h2>Select Battlefield</h2>
+      <div id="battlefieldOptions" class="maps">
+        <label class="map-choice">
+          <input type="radio" name="battlefield" value="backyard" checked>
+          <img src="./assets/maps/backyard/backyard.png" alt="Backyard map preview">
+          <span>Backyard – Medium (30×20)</span>
+        </label>
+      </div>
+      <menu class="dialog-actions">
+        <button value="cancel" class="btn ghost">Cancel</button>
+        <button id="saveBattlefield" value="default" class="btn tactical">Save</button>
       </menu>
     </form>
   </dialog>
