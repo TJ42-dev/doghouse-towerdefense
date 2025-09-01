@@ -61,8 +61,27 @@ const battlefieldDlg = document.getElementById('battlefieldDialog');
 const saveBattlefieldBtn = document.getElementById('saveBattlefield');
 const MAP_KEY = 'godot_web_battlefield';
 const MAPS = {
-  backyard: { name: 'Backyard', img: './assets/maps/backyard/backyard.png', grid: 'medium' }
+  backyard: {
+    name: 'Backyard',
+    img: './assets/maps/backyard/backyard.png',
+    grid: 'medium',
+    entries: [{ x: 0, y: 0 }],
+    catLives() {
+      const cols = 3, rows = 3;
+      const startCellX = DOGHOUSE_DOOR_CELL.x + 2;
+      const yOffset = GRID_ROWS === GRID_SIZES.medium.rows ? 5 : 1;
+      const startCellY = DOGHOUSE_DOOR_CELL.y - yOffset;
+      const cells = [];
+      for (let i = 0; i < cols * rows; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        cells.push({ x: startCellX + col, y: startCellY + row });
+      }
+      return cells;
+    }
+  }
 };
+let currentMap = MAPS.backyard;
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
@@ -104,8 +123,6 @@ railgunCostSpan && (railgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.railg
 let DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
 let DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
 
-// Entry points for enemies (top-left only)
-const ENTRIES = [ { x: 0, y: 0 } ];
 
 const GRID_SIZES = {
   large: { cols: 36, rows: 24 },
@@ -182,7 +199,7 @@ function canPlace(cell) {
   const target = catLives.find(l => l.alive);
   const goal = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const ok =
-    ENTRIES.every(e => findPath(e, goal).length > 0) &&
+    currentMap.entries.every(e => findPath(e, goal).length > 0) &&
     enemies.every(en => findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0);
   removeOccupancy(cell.x, cell.y);
   return ok;
@@ -349,6 +366,7 @@ function loadBattlefield() {
 function saveBattlefield(v) { localStorage.setItem(MAP_KEY, v); }
 function setBattlefield(map) {
   const m = MAPS[map] || MAPS.backyard;
+  currentMap = m;
   if (gameCanvas) {
     gameCanvas.style.background = `url('${m.img}') center/cover no-repeat`;
   }
@@ -874,23 +892,16 @@ function resetGame() {
   player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
 
-  // place nine cat heads inside the doghouse just to the right of the door
+  // place initial cat lives at map-specific locations
   catLives = [];
-    const cols = 3, rows = 3;
-    const startCellX = DOGHOUSE_DOOR_CELL.x + 2;
-    const yOffset = GRID_ROWS === GRID_SIZES.medium.rows ? 5 : 1;
-    const startCellY = DOGHOUSE_DOOR_CELL.y - yOffset;
-  for (let i = 0; i < INITIAL_LIVES; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const cell = { x: startCellX + col, y: startCellY + row };
+  for (const cell of currentMap.catLives()) {
     const p = cellToPx(cell);
     catLives.push({ x: p.x, y: p.y, r: CELL_PX / 2, alive: true, gx: cell.x, gy: cell.y });
   }
 }
 
 function spawnEnemy() {
-  const entry = ENTRIES[0];
+  const entry = currentMap.entries[0];
   const p = cellToPx(entry);
   const r = CELL_PX / 2;
   let stats;
