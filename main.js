@@ -1,5 +1,6 @@
 // -------------------- Options & DOM --------------------
 const LS_KEY = 'godot_web_options';
+const BEST_WAVE_KEY = 'godot_web_best_wave';
 const startBtn = document.getElementById('startBtn');
 const optionsBtn = document.getElementById('optionsBtn');
 const quitBtn = document.getElementById('quitBtn');         // main page "Quit"
@@ -41,6 +42,7 @@ const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
 const contextSellBtn = document.getElementById('contextSell');
 const contextStats = document.getElementById('contextStats');
+const bestWaveSpan = document.getElementById('bestWave');
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
@@ -276,8 +278,28 @@ saveBtn?.addEventListener('click', () => {
   applyGridSize(opts.gridSize);
 });
 
+function loadBestWave() {
+  try {
+    return parseInt(localStorage.getItem(BEST_WAVE_KEY), 10) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function recordBestWave(wave) {
+  const best = loadBestWave();
+  if (wave > best) {
+    localStorage.setItem(BEST_WAVE_KEY, wave);
+  }
+}
+
+function syncBestWave() {
+  if (bestWaveSpan) bestWaveSpan.textContent = loadBestWave();
+}
+
 ensureCanvas();
 applyGridSize(loadOpts().gridSize);
+syncBestWave();
 
 // ----- Hover Menu -----
 function activateTab(name) {
@@ -1151,9 +1173,12 @@ function endGame() {
     contextMenu && (contextMenu.style.display = 'none');
     pauseBtn && (pauseBtn.textContent = 'Pause');
 
-    const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
-    alert(msg);
-  }
+  const waveNum = waveIndex + 1;
+  recordBestWave(waveNum);
+  syncBestWave();
+  const msg = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
+  alert(msg);
+}
 
 // -------------------- Hooks --------------------
 startBtn?.addEventListener('click', () => { startGame(); });
