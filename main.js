@@ -551,12 +551,13 @@ function specializeTower(t, kind) {
     const scale = 1 + (idx - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
     t.type = 'sniper';
     t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
-    t.fireRate = 0.2;
+    t.fireRate = 0.6;
     t.range = t.range * 1.5;
   } else if (kind === 'shotgun') {
     t.type = 'shotgun';
     t.damage = Math.round(t.damage * 1.5);
-    // fireRate unchanged
+    // fireRate unchanged; reduce range for close-quarters spread
+    t.range = 4.5;
   }
   t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
   t.upgrades = { damage: 0, fireRate: 0, range: 0 };
