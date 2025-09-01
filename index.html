@@ -92,10 +92,10 @@
         <span>Mute audio</span>
         <input type="checkbox" id="optMute">
       </label>
-      <label class="row">
-        <span>Start in fullscreen</span>
-        <input type="checkbox" id="optFullscreen">
-      </label>
+        <label class="row">
+          <span>Start in fullscreen</span>
+          <input type="checkbox" id="optFullscreen" checked>
+        </label>
       <menu class="dialog-actions">
         <button value="cancel" class="btn ghost">Cancel</button>
         <button id="saveOptions" value="default" class="btn">Save</button>
@@ -116,12 +116,13 @@
       <button class="tab-btn" data-tab="stats">Stats</button>
       <button class="tab-btn" data-tab="options">Options</button>
     </div>
-    <div id="tab-build" class="tab-content active">
-      <button id="wallBtn" class="btn">Wall</button>
-      <button id="cannonBtn" class="btn">Cannon</button>
-      <button id="laserBtn" class="btn">Laser</button>
-      <button id="cancelBuildBtn" class="btn ghost">Cancel</button>
-    </div>
+      <div id="tab-build" class="tab-content active">
+        <h3>Build Menu</h3>
+        <button id="wallBtn" class="btn">Wall</button>
+        <button id="cannonBtn" class="btn">Cannon</button>
+        <button id="laserBtn" class="btn">Laser</button>
+        <button id="cancelBuildBtn" class="btn ghost">Cancel</button>
+      </div>
     <div id="tab-upgrade" class="tab-content">
       <div id="selectedTowerInfo">No tower selected</div>
       <div class="upgrade-row">
@@ -144,9 +145,10 @@
     <div id="tab-stats" class="tab-content">
       <div id="gameStats"></div>
     </div>
-    <div id="tab-options" class="tab-content">
-      <button id="quitInMenuBtn" class="btn">Quit</button>
-    </div>
+      <div id="tab-options" class="tab-content">
+        <button id="pauseBtn" class="btn">Pause</button>
+        <button id="quitInMenuBtn" class="btn">Quit</button>
+      </div>
   </div>
 
   <div id="contextMenu" class="context-menu"></div>
