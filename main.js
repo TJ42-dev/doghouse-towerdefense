@@ -129,12 +129,12 @@ function updateCatLivesUI() {
   for (let i = 0; i < count; i++) {
     const img = document.createElement('img');
     img.src = CAT_SRC;
-    img.width = CELL_PX;
-    img.height = CELL_PX;
+    img.width = Math.floor(CELL_PX / 3);
+    img.height = Math.floor(CELL_PX / 3);
     catLivesElm.appendChild(img);
   }
-  catLivesElm.style.width = (CELL_PX * 3) + 'px';
-  catLivesElm.style.height = (CELL_PX * 3) + 'px';
+  catLivesElm.style.width = CELL_PX + 'px';
+  catLivesElm.style.height = CELL_PX + 'px';
 }
 
 // Basic BFS pathfinding to navigate around walls
@@ -502,24 +502,10 @@ function resetGame() {
     player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
 
-  // Block outer ring and doghouse region
-  for (let x = 0; x < GRID_COLS; x++) { addWall(x, 0); addWall(x, GRID_ROWS - 1); }
-  for (let y = 1; y < GRID_ROWS - 1; y++) { addWall(0, y); addWall(GRID_COLS - 1, y); }
-  const dogX0 = GRID_COLS - 7 - 1;
-  const dogY0 = GRID_ROWS - 8 - 1;
-  for (let x = 0; x < 7; x++) {
-    for (let y = 0; y < 8; y++) addWall(dogX0 + x, dogY0 + y);
-  }
-
-  // reset cat lives and position UI near the doghouse door
+  // reset cat lives and position UI at the doghouse door
   catLives = [];
-  const cols = 3;
-  const startCellX = DOGHOUSE_DOOR_CELL.x - 1;
-  const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    catLives.push({ gx: startCellX + col, gy: startCellY + row, r: 0.5, alive: true });
+    catLives.push({ gx: DOGHOUSE_DOOR_CELL.x, gy: DOGHOUSE_DOOR_CELL.y, r: 0.5, alive: true });
   }
   updateCatLivesUI();
   positionCatLives();
