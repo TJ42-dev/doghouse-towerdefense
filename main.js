@@ -24,9 +24,15 @@ const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
 const upgradeRangeBtn = document.getElementById('upgradeRange');
 const sellBtn = document.getElementById('sellTower');
 const selectedTowerInfo = document.getElementById('selectedTowerInfo');
-const damageBar = document.getElementById('damageBar');
-const fireRateBar = document.getElementById('fireRateBar');
-const rangeBar = document.getElementById('rangeBar');
+const damageValue = document.getElementById('damageValue');
+const damageNext = document.getElementById('damageNext');
+const damageCost = document.getElementById('damageCost');
+const fireRateValue = document.getElementById('fireRateValue');
+const fireRateNext = document.getElementById('fireRateNext');
+const fireRateCost = document.getElementById('fireRateCost');
+const rangeValue = document.getElementById('rangeValue');
+const rangeNext = document.getElementById('rangeNext');
+const rangeCost = document.getElementById('rangeCost');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
@@ -263,13 +269,13 @@ function stopDrag() {
 }
 
 upgradeDamageBtn?.addEventListener('click', () => {
-  if (selectedTower) { upgradeTower(selectedTower, 'damage'); rankUp(); updateSelectedTowerInfo(); }
+  if (selectedTower && upgradeTower(selectedTower, 'damage')) { rankUp(); updateSelectedTowerInfo(); }
 });
 upgradeFireRateBtn?.addEventListener('click', () => {
-  if (selectedTower) { upgradeTower(selectedTower, 'fireRate'); rankUp(); updateSelectedTowerInfo(); }
+  if (selectedTower && upgradeTower(selectedTower, 'fireRate')) { rankUp(); updateSelectedTowerInfo(); }
 });
 upgradeRangeBtn?.addEventListener('click', () => {
-  if (selectedTower) { upgradeTower(selectedTower, 'range'); rankUp(); updateSelectedTowerInfo(); }
+  if (selectedTower && upgradeTower(selectedTower, 'range')) { rankUp(); updateSelectedTowerInfo(); }
 });
 sellBtn?.addEventListener('click', () => {
   if (selectedTower) {
@@ -300,17 +306,29 @@ function updateSelectedTowerInfo() {
   if (!selectedTowerInfo) return;
   if (selectedTower) {
     selectedTowerInfo.textContent = `Selected: ${selectedTower.type}`;
-    const maxD = selectedTower.base?.damage * 2;
-    const maxF = selectedTower.base?.fireRate * 2;
-    const maxR = selectedTower.base?.range * 2;
-    if (damageBar && maxD) damageBar.style.width = Math.min(100, selectedTower.damage / maxD * 100) + '%';
-    if (fireRateBar && maxF) fireRateBar.style.width = Math.min(100, selectedTower.fireRate / maxF * 100) + '%';
-    if (rangeBar && maxR) rangeBar.style.width = Math.min(100, selectedTower.range / maxR * 100) + '%';
+    rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
+    const stats = {
+      damage: { value: damageValue, next: damageNext, cost: damageCost, btn: upgradeDamageBtn },
+      fireRate: { value: fireRateValue, next: fireRateNext, cost: fireRateCost, btn: upgradeFireRateBtn },
+      range: { value: rangeValue, next: rangeNext, cost: rangeCost, btn: upgradeRangeBtn }
+    };
+    for (const [stat, els] of Object.entries(stats)) {
+      const lvl = selectedTower.upgrades?.[stat] || 0;
+      const curr = selectedTower[stat];
+      const next = selectedTower.base[stat] * (1 + 0.1 * (lvl + 1));
+      const inc = next - curr;
+      if (els.value) els.value.textContent = stat === 'fireRate' ? curr.toFixed(2) : Math.round(curr);
+      if (els.next) els.next.textContent = `(+${stat === 'fireRate' ? inc.toFixed(2) : Math.round(inc)})`;
+      if (els.cost) els.cost.textContent = `$${getUpgradeCost(selectedTower, stat)}`;
+      if (els.btn) els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
+    }
   } else {
     selectedTowerInfo.textContent = 'No tower selected';
-    if (damageBar) damageBar.style.width = '0%';
-    if (fireRateBar) fireRateBar.style.width = '0%';
-    if (rangeBar) rangeBar.style.width = '0%';
+    rangePreview = null;
+    [damageValue, damageNext, damageCost, fireRateValue, fireRateNext, fireRateCost, rangeValue, rangeNext, rangeCost].forEach(el => {
+      if (el) el.textContent = '-';
+    });
+    [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn].forEach(btn => { if (btn) btn.disabled = true; });
   }
 }
 
@@ -342,7 +360,15 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
   contextMenu.style.top = e.clientY + 'px';
   contextMenu.style.display = 'block';
 });
-document.addEventListener('click', () => { if (contextMenu) contextMenu.style.display = 'none'; contextTarget = null; rangePreview = null; });
+document.addEventListener('click', () => {
+  if (contextMenu) contextMenu.style.display = 'none';
+  contextTarget = null;
+  if (selectedTower) {
+    rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
+  } else {
+    rangePreview = null;
+  }
+});
 contextSellBtn?.addEventListener('click', () => {
   if (!contextTarget) return;
   const { gx, gy } = contextTarget;
@@ -367,12 +393,25 @@ contextSellBtn?.addEventListener('click', () => {
   rangePreview = null;
 });
 
+function getUpgradeCost(t, stat) {
+  const base = t.cost || 50;
+  const lvl = t.upgrades?.[stat] || 0;
+  return Math.floor(base * 0.5 * (lvl + 1));
+}
+
 function upgradeTower(t, stat) {
   if (!t.upgrades) t.upgrades = { damage: 0, fireRate: 0, range: 0 };
   if (!t.base) t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
-  if (t.upgrades[stat] >= 10) return;
+  if (t.upgrades[stat] >= 10) return false;
+  const cost = getUpgradeCost(t, stat);
+  if (money < cost) return false;
+  money -= cost;
   t.upgrades[stat]++;
   t[stat] = t.base[stat] * (1 + 0.1 * t.upgrades[stat]);
+  if (stat === 'range' && rangePreview && selectedTower === t) {
+    rangePreview.r = t.range * CELL_PX;
+  }
+  return true;
 }
 
 // -------------------- Canvas setup --------------------

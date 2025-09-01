@@ -69,7 +69,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   border-radius: 12px;
   cursor: move;
   z-index: 20;
-  min-width: 180px;
+  min-width: 220px;
   user-select: none;
 }
 .tab-buttons {
@@ -115,24 +115,20 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   display: flex;
   align-items: center;
   margin: 0.25rem 0;
-}
-.upgrade-row span {
-  width: 55px;
+  gap: 0.25rem;
   font-size: 0.8rem;
 }
-.upgrade-bar {
-  flex: 1;
-  height: 8px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid #fff;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 0 0.25rem;
+.upgrade-row .label {
+  width: 60px;
 }
-.upgrade-bar-fill {
-  height: 100%;
-  width: 0%;
-  background: #3a47d5;
+.upgrade-row .value,
+.upgrade-row .next,
+.upgrade-row .cost {
+  flex: 1;
+  text-align: center;
+}
+.upgrade-row .cost {
+  color: #ffd700;
 }
 .upgrade-row .btn {
   display: inline-block;
