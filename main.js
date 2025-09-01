@@ -1004,9 +1004,18 @@ function updateProjectiles(dt) {
         }
         b.target = closest;
         if (!b.target) {
-          b.angle += dt * 0.5;
-          b.x += Math.cos(b.angle) * move;
-          b.y += Math.sin(b.angle) * move;
+          const src = b.source || { x: b.x, y: b.y, range: 0 };
+          if (b.orbitR === undefined) {
+            const dist = Math.hypot(b.x - src.x, b.y - src.y);
+            b.orbitR = Math.min(dist, src.range * CELL_PX * 0.9);
+            b.orbitAng = Math.atan2(b.y - src.y, b.x - src.x);
+          }
+          const maxR = src.range * CELL_PX * 0.9;
+          b.orbitR = Math.min(b.orbitR, maxR);
+          b.orbitAng += (b.speed / b.orbitR) * dt;
+          b.x = src.x + Math.cos(b.orbitAng) * b.orbitR;
+          b.y = src.y + Math.sin(b.orbitAng) * b.orbitR;
+          b.angle = b.orbitAng + Math.PI / 2;
           b.smoke -= dt;
           if (b.smoke <= 0) {
             smokes.push({ x: b.x, y: b.y, life: 0.5 });
@@ -1192,7 +1201,39 @@ function update(dt) {
     if (target) {
       t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     }
-    if (t.cooldown <= 0 && target) {
+    if (t.type === 'rocket') {
+      const cap = (t.upgrades.range >= 5 && t.upgrades.fireRate >= 3) ? 3 : 1;
+      const existing = bullets.filter(b => b.type === 'rocket' && b.source === t).length;
+      if (existing < cap && t.cooldown <= 0) {
+        const toLaunch = cap - existing;
+        const baseAngle = t.angle || 0;
+        const maxSpeed = ROCKET_BASE.bulletSpeed * CELL_PX;
+        for (let i = 0; i < toLaunch; i++) {
+          const ang = cap > 1 ? baseAngle + (existing + i) * ((Math.PI * 2) / cap) : baseAngle;
+          const sx = t.x + Math.cos(ang) * (CELL_PX / 2);
+          const sy = t.y + Math.sin(ang) * (CELL_PX / 2);
+          bullets.push({
+            x: sx,
+            y: sy,
+            target,
+            speed: maxSpeed * 0.2,
+            maxSpeed,
+            accel: maxSpeed,
+            damage: t.damage,
+            source: t,
+            type: 'rocket',
+            angle: ang,
+            turnRate: Math.PI,
+            smoke: 0,
+            orbitAng: Math.atan2(sy - t.y, sx - t.x),
+            orbitR: t.range * CELL_PX * 0.6
+          });
+        }
+        t.cooldown = 1 / t.fireRate;
+        t.anim = 0.1;
+        sfx(200, 0.2, 0.04, 'sawtooth');
+      }
+    } else if (t.cooldown <= 0 && target) {
       const angle = t.angle;
       if (t.type === 'laser' || t.type === 'dualLaser') {
         target.health -= t.damage;
@@ -1254,27 +1295,6 @@ function update(dt) {
         beams.push({ x1: sx, y1: sy, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
         sfx(300, 0.2, 0.04, 'sawtooth');
-      } else if (t.type === 'rocket') {
-        const sx = t.x + Math.cos(angle) * (CELL_PX / 2);
-        const sy = t.y + Math.sin(angle) * (CELL_PX / 2);
-        const maxSpeed = ROCKET_BASE.bulletSpeed * CELL_PX;
-        bullets.push({
-          x: sx,
-          y: sy,
-          target,
-          speed: maxSpeed * 0.2,
-          maxSpeed,
-          accel: maxSpeed,
-          damage: t.damage,
-          source: t,
-          type: 'rocket',
-          angle,
-          turnRate: Math.PI,
-          smoke: 0
-        });
-        t.cooldown = 1 / t.fireRate;
-        t.anim = 0.1;
-        sfx(200, 0.2, 0.04, 'sawtooth');
       } else if (t.type === 'shotgun') {
         const angle = t.angle;
         const spread = Math.PI / 12;
