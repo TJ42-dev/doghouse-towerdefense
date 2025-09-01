@@ -404,6 +404,11 @@ function updateSelectedTowerInfo() {
       if (els.cost) els.cost.textContent = `$${getUpgradeCost(selectedTower, stat)}`;
       if (els.btn) els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
     }
+    if (sellBtn) {
+      const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
+      sellBtn.textContent = `Sell ($${refund})`;
+      sellBtn.disabled = false;
+    }
   } else {
     selectedTowerInfo.textContent = 'No tower selected';
     rangePreview = null;
@@ -411,6 +416,10 @@ function updateSelectedTowerInfo() {
       if (el) el.textContent = '-';
     });
     [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn].forEach(btn => { if (btn) btn.disabled = true; });
+    if (sellBtn) {
+      sellBtn.textContent = 'Sell';
+      sellBtn.disabled = true;
+    }
   }
 }
 
@@ -709,7 +718,10 @@ function spawnEnemy() {
   const baseSpeed = 2.5 * stats.baseSpeed; // cells per second
   const speed = baseSpeed * (0.9 + Math.random()*0.4);
   let health = stats.baseHealth;
-  if (waveIndex > BOSS_WAVE_INDEX) {
+  if (waveIndex < BOSS_WAVE_INDEX) {
+    const scale = 0.8 + waveIndex * 0.05;
+    health = Math.round(health * scale);
+  } else if (waveIndex > BOSS_WAVE_INDEX) {
     const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
     health = Math.round(health * scale);
   }
