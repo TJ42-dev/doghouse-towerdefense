@@ -56,13 +56,6 @@ let beams = [];
 let money = 0;
 const WALL_COST = 10;
 
-function updateBuildButtonLabels() {
-  if (wallBtn) wallBtn.textContent = `Wall $${WALL_COST}`;
-  if (cannonBtn) cannonBtn.textContent = `Cannon $${CANNON_BASE.cost}`;
-  if (laserBtn) laserBtn.textContent = `Laser $${LASER_BASE.cost}`;
-}
-updateBuildButtonLabels();
-
 // Landmarks
 const DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
 const DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
@@ -145,6 +138,13 @@ function recalcEnemyPaths() {
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
 let TOWER_TYPES = [];
+
+function updateBuildButtonLabels() {
+  if (wallBtn) wallBtn.textContent = `Wall $${WALL_COST}`;
+  if (cannonBtn) cannonBtn.textContent = `Cannon $${CANNON_BASE.cost}`;
+  if (laserBtn) laserBtn.textContent = `Laser $${LASER_BASE.cost}`;
+}
+updateBuildButtonLabels();
 
 // Basic BFS pathfinding to navigate around walls
 function findPath(start, goal) {
