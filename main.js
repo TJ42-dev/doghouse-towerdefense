@@ -891,6 +891,8 @@ function nextWave() {
   waveActive = false;
   preWaveTimer = POST_WAVE_DELAY;
   waveElapsed = 0;
+  bullets = [];
+  beams = [];
 }
 
 function update(dt) {
@@ -983,9 +985,12 @@ function update(dt) {
       if (d <= closest) { target = e; closest = d; }
     }
     t.target = target;
+    if (target) {
+      t.angle = Math.atan2(target.y - t.y, target.x - t.x);
+    }
     if (t.cooldown <= 0 && target) {
+      const angle = t.angle;
       if (t.type === 'laser' || t.type === 'dualLaser') {
-        const angle = Math.atan2(target.y - t.y, target.x - t.x);
         target.health -= t.damage;
         bark();
         if (t.type === 'dualLaser') {
@@ -1008,7 +1013,7 @@ function update(dt) {
           t.kills = (t.kills || 0) + 1;
         }
       } else if (t.type === 'railgun') {
-        const angle = Math.atan2(target.y - t.y, target.x - t.x);
+        const angle = t.angle;
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
         const sx = t.x + dx * (CELL_PX / 2);
@@ -1046,7 +1051,7 @@ function update(dt) {
         t.cooldown = 1 / t.fireRate;
         sfx(300, 0.2, 0.04, 'sawtooth');
       } else if (t.type === 'shotgun') {
-        const angle = Math.atan2(target.y - t.y, target.x - t.x);
+        const angle = t.angle;
         const spread = Math.PI / 12;
         for (let i = -1; i <= 1; i++) {
           const ang = angle + i * spread;
@@ -1057,7 +1062,7 @@ function update(dt) {
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       } else {
-        const angle = Math.atan2(target.y - t.y, target.x - t.x);
+        const angle = t.angle;
         const sx = t.x + Math.cos(angle) * (CELL_PX / 2);
         const sy = t.y + Math.sin(angle) * (CELL_PX / 2);
         bullets.push({ x: sx, y: sy, target, speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t });
@@ -1204,7 +1209,7 @@ function render() {
         t.type === 'sniper' ? ASSETS.sniper :
         t.type === 'shotgun' ? ASSETS.shotgun : ASSETS.cannon;
       if (imgReady(art.base) && imgReady(art.turret)) {
-        const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
+        const angle = t.angle || 0;
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.drawImage(art.base, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
@@ -1356,6 +1361,7 @@ function onCanvasClick(e) {
         y: p.y,
         type: 'cannon',
         cooldown: 0,
+        angle: 0,
         base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
         damage: CANNON_BASE.damage,
         fireRate: CANNON_BASE.fireRate,
@@ -1381,6 +1387,7 @@ function onCanvasClick(e) {
         y: p.y,
         type: 'laser',
         cooldown: 0,
+        angle: 0,
         base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
         damage: LASER_BASE.damage,
         fireRate: LASER_BASE.fireRate,
