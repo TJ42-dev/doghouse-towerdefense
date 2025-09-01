@@ -1,0 +1,8 @@
+{
+  "id": "shotgun",
+  "damage": 120,
+  "fireRate": 0.5,
+  "range": 4.5,
+  "bulletSpeed": 5,
+  "cost": 1200
+}
