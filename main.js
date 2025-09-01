@@ -379,12 +379,13 @@ function resetGame() {
     player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
 
-  // place cat head lives near the bottom-right, about 9 cells from the edge
+  // place cat head lives near the bottom-right, about 9 cells from the edge,
+  // then offset them down 4 cells and right 2 cells
   catLives = [];
   const cols = 3, rows = 3;
   const margin = 9; // cells from right edge
-  const startCellX = Math.max(0, GRID_COLS - cols - margin);
-  const startCellY = GRID_ROWS - rows - 1;
+  const startCellX = Math.max(0, GRID_COLS - cols - margin) + 2;
+  const startCellY = GRID_ROWS - rows - 1 + 4;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -773,6 +774,7 @@ async function startGame() {
   menu && (menu.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'inline-block');
   nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
+  hoverMenu && (hoverMenu.style.display = 'block');
 
   // Canvas
   ensureCanvas();
@@ -817,6 +819,7 @@ function endGame() {
   gameCanvas && (gameCanvas.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'none');
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
+  hoverMenu && (hoverMenu.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
   selectedTower = null;

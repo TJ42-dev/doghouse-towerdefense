@@ -56,6 +56,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 }
 
 .hover-menu {
+  display: none;
   position: absolute;
   top: 1rem;
   left: 1rem;
