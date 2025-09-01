@@ -957,8 +957,6 @@ function update(dt) {
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
         const rangePx = t.range * CELL_PX;
-        const endX = t.x + dx * rangePx;
-        const endY = t.y + dy * rangePx;
         for (const e of [...enemies]) {
           const ex = e.x - t.x;
           const ey = e.y - t.y;
@@ -974,6 +972,18 @@ function update(dt) {
             }
           }
         }
+        // Extend beam visuals to the edge of the grid regardless of targeting range
+        const minX = originPx.x;
+        const maxX = originPx.x + GRID_COLS * CELL_PX;
+        const minY = originPx.y;
+        const maxY = originPx.y + GRID_ROWS * CELL_PX;
+        let edgeT = Infinity;
+        if (dx > 0) edgeT = Math.min(edgeT, (maxX - t.x) / dx);
+        else if (dx < 0) edgeT = Math.min(edgeT, (minX - t.x) / dx);
+        if (dy > 0) edgeT = Math.min(edgeT, (maxY - t.y) / dy);
+        else if (dy < 0) edgeT = Math.min(edgeT, (minY - t.y) / dy);
+        const endX = t.x + dx * edgeT;
+        const endY = t.y + dy * edgeT;
         // Railgun beam is wider for a more powerful visual effect
         beams.push({ x1: t.x, y1: t.y, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
