@@ -8,35 +8,101 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>My Godot Web Game</h1>
+<main class="container menu-page" aria-labelledby="gameTitle">
+  <!-- ambient decor (non-interactive) -->
+  <div class="decor" aria-hidden="true">
+    <span class="paw" style="--i:0; --x:8%; --d:0s"></span>
+    <span class="paw" style="--i:1; --x:22%; --d:.6s"></span>
+    <span class="paw" style="--i:2; --x:40%; --d:1.2s"></span>
+    <span class="paw" style="--i:3; --x:58%; --d:1.8s"></span>
+    <span class="paw" style="--i:4; --x:76%; --d:2.4s"></span>
+    <span class="paw" style="--i:5; --x:90%; --d:3s"></span>
+  </div>
+
+  <section class="menu-card" role="region" aria-label="Game menu">
+    <header class="hero">
+      <div class="logo" aria-hidden="true">
+        <!-- Simple inline SVG doghouse with a cat peeking -->
+        <svg viewBox="0 0 220 160" width="160" height="116" role="img" aria-label="Doghouse logo">
+          <defs>
+            <linearGradient id="roof" x1="0" x2="1">
+              <stop offset="0" stop-color="#ec4899"/>
+              <stop offset="1" stop-color="#8b5cf6"/>
+            </linearGradient>
+            <linearGradient id="wood" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#f59e0b"/>
+              <stop offset="1" stop-color="#b45309"/>
+            </linearGradient>
+          </defs>
+          <polygon points="110,10 10,70 30,70 30,150 190,150 190,70 210,70" fill="url(#roof)"/>
+          <rect x="40" y="70" width="140" height="80" rx="6" fill="url(#wood)"/>
+          <rect x="50" y="78" width="120" height="10" fill="rgba(0,0,0,.18)"/>
+          <rect x="50" y="96" width="120" height="10" fill="rgba(0,0,0,.12)"/>
+          <rect x="50" y="114" width="120" height="10" fill="rgba(0,0,0,.12)"/>
+          <!-- door -->
+          <path d="M110 90a24 24 0 0 0-24 24v36h48v-36a24 24 0 0 0-24-24z" fill="#0f1222"/>
+          <!-- cat peeking -->
+          <g transform="translate(110,115)">
+            <circle r="12" fill="#111827"/>
+            <circle cx="-6" cy="-2" r="2.5" fill="#f59e0b"/>
+            <circle cx="6" cy="-2" r="2.5" fill="#f59e0b"/>
+            <path d="M-9 -10 l6 -8 l3 8 M3 -10 l6 -8 l-3 8" stroke="#111827" stroke-width="2" fill="none"/>
+            <path d="M-6 4 q6 6 12 0" stroke="#fbbf24" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="titles">
+        <h1 id="gameTitle">Doghouse Tower Defence</h1>
+        <p class="tagline">Protect the yard, save the <strong>cat lives</strong> 🐱❤️</p>
+      </div>
+    </header>
 
     <nav class="menu" role="menu" aria-label="Main menu">
-      <button id="startBtn" class="btn" role="menuitem">Start</button>
-      <button id="optionsBtn" class="btn" role="menuitem" aria-haspopup="dialog" aria-controls="optionsDialog">Options</button>
-      <button id="quitBtn" class="btn" role="menuitem">Quit</button>
+      <button id="startBtn" class="btn lg accent bone" role="menuitem" autofocus>
+        <span class="btn-icon" aria-hidden="true">🐾</span>
+        Start
+      </button>
+
+      <button id="optionsBtn" class="btn ghost outline" role="menuitem" aria-haspopup="dialog" aria-controls="optionsDialog">
+        <span class="btn-icon" aria-hidden="true">⚙️</span>
+        Options
+      </button>
+
+      <button id="quitBtn" class="btn ghost outline" role="menuitem">
+        <span class="btn-icon" aria-hidden="true">🚪</span>
+        Quit
+      </button>
     </nav>
 
-    <dialog id="optionsDialog">
-      <form method="dialog" class="dialog-content">
-        <h2>Options</h2>
-        <label class="row">
-          <span>Mute audio</span>
-          <input type="checkbox" id="optMute">
-        </label>
-        <label class="row">
-          <span>Start in fullscreen</span>
-          <input type="checkbox" id="optFullscreen">
-        </label>
-        <menu class="dialog-actions">
-          <button value="cancel" class="btn ghost">Cancel</button>
-          <button id="saveOptions" value="default" class="btn">Save</button>
-        </menu>
-      </form>
-    </dialog>
+    <div class="meta">
+      <div class="pill">Last save: <span id="lastSave">—</span></div>
+      <div class="pill">Best wave: <span id="bestWave">0</span></div>
+    </div>
 
-    <p class="footnote">WebGL 2 + WASM build. Best in modern browsers.</p>
-  </main>
+    <p class="footnote">Tip: towers can’t be placed on the dog path. Keep the cats safe!</p>
+  </section>
+
+  <!-- existing dialog kept intact -->
+  <dialog id="optionsDialog">
+    <form method="dialog" class="dialog-content">
+      <h2>Options</h2>
+      <label class="row">
+        <span>Mute audio</span>
+        <input type="checkbox" id="optMute">
+      </label>
+      <label class="row">
+        <span>Start in fullscreen</span>
+        <input type="checkbox" id="optFullscreen">
+      </label>
+      <menu class="dialog-actions">
+        <button value="cancel" class="btn ghost">Cancel</button>
+        <button id="saveOptions" value="default" class="btn">Save</button>
+      </menu>
+    </form>
+  </dialog>
+</main>
+
 
   <canvas id="gameCanvas"></canvas>
   <button id="nextWaveBtn" class="btn">Next Wave</button>
