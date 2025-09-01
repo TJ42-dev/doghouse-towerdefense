@@ -1012,7 +1012,7 @@ function updateProjectiles(dt) {
             b.orbitAng = Math.atan2(b.y - src.y, b.x - src.x);
           }
           const maxR = src.range * CELL_PX * 0.9;
-          b.orbitR = Math.min(b.orbitR, maxR);
+          b.orbitR = Math.min(maxR, b.orbitR + b.speed * dt);
           b.orbitAng += (b.speed / b.orbitR) * dt;
           b.x = src.x + Math.cos(b.orbitAng) * b.orbitR;
           b.y = src.y + Math.sin(b.orbitAng) * b.orbitR;
@@ -1219,8 +1219,6 @@ function update(dt) {
           angle: baseAngle,
           turnRate: Math.PI,
           smoke: 0,
-          orbitAng: Math.atan2(sy - t.y, sx - t.x),
-          orbitR: t.range * CELL_PX * 0.6,
           sentinel: true
         });
         t.cooldown = 1 / t.fireRate;
@@ -1239,9 +1237,7 @@ function update(dt) {
           type: 'rocket',
           angle: baseAngle,
           turnRate: Math.PI,
-          smoke: 0,
-          orbitAng: Math.atan2(sy - t.y, sx - t.x),
-          orbitR: t.range * CELL_PX * 0.6
+          smoke: 0
         });
         t.cooldown = 1 / t.fireRate;
         t.anim = 0.1;
