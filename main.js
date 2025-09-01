@@ -1041,7 +1041,7 @@ function nextWave() {
     const healthInc = stageCompleted === 3 ? 0.025 : stageCompleted === 2 ? 0.05 : 0.1;
     healthBuffMultiplier *= 1 + healthInc;
     killReward += stageCompleted === 3 ? 20 : stageCompleted === 2 ? 10 : 5;
-    money += stageCompleted === 3 ? 100 : stageCompleted === 2 ? 500 : 0;
+    money += stageCompleted === 3 ? 1000 : stageCompleted === 2 ? 500 : 0;
   }
   waveIndex++;
   waveActive = false;
