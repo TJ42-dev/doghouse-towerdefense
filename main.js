@@ -18,6 +18,7 @@ const wallBtn = document.getElementById('wallBtn');
 const cannonBtn = document.getElementById('cannonBtn');
 const laserBtn = document.getElementById('laserBtn');
 const cancelBuildBtn = document.getElementById('cancelBuildBtn');
+const sellBuildBtn = document.getElementById('sellBuildBtn');
 const upgradeDamageBtn = document.getElementById('upgradeDamage');
 const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
 const upgradeRangeBtn = document.getElementById('upgradeRange');
@@ -29,7 +30,9 @@ const rangeBar = document.getElementById('rangeBar');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
+const contextSellBtn = document.getElementById('contextSell');
 let selectedTower = null;
+let contextTarget = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
@@ -228,6 +231,7 @@ tabButtons.forEach(btn => btn.addEventListener('click', () => activateTab(btn.da
 wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
 cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
 laserBtn?.addEventListener('click', () => { selectedBuild = 'laser'; });
+sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selectedTower = null; updateSelectedTowerInfo(); });
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 
 let drag = null;
@@ -303,11 +307,34 @@ function updateSelectedTowerInfo() {
 gameCanvas?.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   if (!contextMenu) return;
+  const r = gameCanvas.getBoundingClientRect();
+  const cell = pxToCell({ x: e.clientX - r.left, y: e.clientY - r.top });
+  contextTarget = { gx: cell.x, gy: cell.y };
   contextMenu.style.left = e.clientX + 'px';
   contextMenu.style.top = e.clientY + 'px';
   contextMenu.style.display = 'block';
 });
-document.addEventListener('click', () => { if (contextMenu) contextMenu.style.display = 'none'; });
+document.addEventListener('click', () => { if (contextMenu) contextMenu.style.display = 'none'; contextTarget = null; });
+contextSellBtn?.addEventListener('click', () => {
+  if (!contextTarget) return;
+  const { gx, gy } = contextTarget;
+  const t = towers.find(t => t.gx === gx && t.gy === gy);
+  if (t) {
+    removeOccupancy(gx, gy);
+    towers = towers.filter(tt => tt !== t);
+    selectedTower = null;
+    updateSelectedTowerInfo();
+  } else {
+    const idx = walls.findIndex(w => w.x === gx && w.y === gy);
+    if (idx !== -1) {
+      walls.splice(idx, 1);
+      removeOccupancy(gx, gy);
+    }
+  }
+  recalcEnemyPaths();
+  contextMenu.style.display = 'none';
+  contextTarget = null;
+});
 
 function upgradeTower(t, stat) {
   if (!t.upgrades) t.upgrades = { damage: 0, fireRate: 0, range: 0 };
@@ -739,7 +766,7 @@ function drawHUD() {
 }
 function render() {
   drawBG();
-  if (selectedBuild && mouse.active) {
+  if (selectedBuild && mouse.active && selectedBuild !== 'sell') {
     const cell = pxToCell(mouse);
     const x = originPx.x + cell.x * CELL_PX;
     const y = originPx.y + cell.y * CELL_PX;
@@ -851,6 +878,24 @@ function onCanvasClick(e) {
       selectedTower = null;
       updateSelectedTowerInfo();
     }
+    return;
+  }
+
+  if (selectedBuild === 'sell') {
+    const t = towers.find(t => t.gx === gx && t.gy === gy);
+    if (t) {
+      removeOccupancy(gx, gy);
+      towers = towers.filter(tt => tt !== t);
+      selectedTower = null;
+      updateSelectedTowerInfo();
+    } else {
+      const idx = walls.findIndex(w => w.x === gx && w.y === gy);
+      if (idx !== -1) {
+        walls.splice(idx, 1);
+        removeOccupancy(gx, gy);
+      }
+    }
+    recalcEnemyPaths();
     return;
   }
 
