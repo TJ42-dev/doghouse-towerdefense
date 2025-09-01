@@ -42,6 +42,7 @@ const GRID_ROWS = 26;
 const DOGHOUSE_DOOR_CELL = { x: 28, y: 21 };
 const DOGHOUSE_SPAWN_CELL = { x: 27, y: 21 };
 const DOOR_TARGET = { gx: DOGHOUSE_SPAWN_CELL.x, gy: DOGHOUSE_SPAWN_CELL.y, r: 0.5 };
+const ENEMY_ENTRIES = [{ x: Math.floor(GRID_COLS / 2), y: 0 }];
 
 let CELL_PX = 20; // size of one grid cell in pixels (computed on resize)
 let originPxX = 0; // playfield offset from canvas top-left in pixels
@@ -53,6 +54,7 @@ let towers = [];
 let bullets = [];
 let beams = [];
 let money = 0;
+let buildHistory = [];
 
 const occKey = (x, y) => `${x},${y}`;
 function addWall(gx, gy) {
@@ -63,7 +65,25 @@ function addWall(gx, gy) {
   }
 }
 function hasWall(gx, gy) { return occupied.has(occKey(gx, gy)); }
-function isBlocked(gx, gy) { return hasWall(gx, gy) || towers.some(t => t.gx === gx && t.gy === gy); }
+function removeWall(gx, gy) {
+  const k = occKey(gx, gy);
+  occupied.delete(k);
+  walls = walls.filter(w => w.x !== gx || w.y !== gy);
+}
+function isBlocked(gx, gy) { return hasWall(gx, gy); }
+
+function canPlace(gx, gy) {
+  if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return false;
+  const k = occKey(gx, gy);
+  if (occupied.has(k)) return false;
+  occupied.add(k);
+  const ok = ENEMY_ENTRIES.every(entry => {
+    const p = findPath(entry, DOGHOUSE_DOOR_CELL);
+    return p.length > 0 || (entry.x === DOGHOUSE_DOOR_CELL.x && entry.y === DOGHOUSE_DOOR_CELL.y);
+  });
+  occupied.delete(k);
+  return ok;
+}
 
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
@@ -236,7 +256,9 @@ upgradeRangeBtn?.addEventListener('click', () => {
 });
 sellBtn?.addEventListener('click', () => {
   if (selectedTower) {
+    removeWall(selectedTower.gx, selectedTower.gy);
     towers = towers.filter(t => t !== selectedTower);
+    buildHistory = buildHistory.filter(b => b.tower !== selectedTower);
     selectedTower = null;
     updateSelectedTowerInfo();
   }
@@ -425,6 +447,7 @@ function resetGame() {
   towers = [];
   bullets = [];
   money = 0;
+  buildHistory = [];
   selectedTower = null;
   updateSelectedTowerInfo();
   waveActive = false;
@@ -462,8 +485,9 @@ function resetGame() {
 }
 
 function spawnEnemy() {
-  const x = Math.floor(GRID_COLS / 2) + 0.5;
-  const y = -0.5;
+  const entry = ENEMY_ENTRIES[0];
+  const x = entry.x + 0.5;
+  const y = entry.y - 0.5;
   const r = 0.5;
   let stats;
   let img;
@@ -482,7 +506,7 @@ function spawnEnemy() {
     const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
     health = Math.round(health * scale);
   }
-  const startCell = { x: Math.floor(x), y: 0 };
+  const startCell = { x: entry.x, y: entry.y };
   const goalCell = { x: DOOR_TARGET.gx, y: DOOR_TARGET.gy };
   const path = findPath(startCell, goalCell);
 
@@ -669,6 +693,7 @@ function drawBG() {
     ctx.stroke();
   }
   for (const wObj of walls) {
+    if (towers.some(t => t.gx === wObj.x && t.gy === wObj.y)) continue;
     const center = cellToPx({ x: wObj.x, y: wObj.y });
     const px = center.x - CELL_PX / 2;
     const py = center.y - CELL_PX / 2;
@@ -679,6 +704,33 @@ function drawBG() {
       ctx.fillRect(px, py, CELL_PX, CELL_PX);
     }
   }
+}
+function drawGhost() {
+  if (!selectedBuild || !mouse.active) return;
+  if (mouse.x < originPxX || mouse.y < originPxY ||
+      mouse.x >= originPxX + GRID_COLS * CELL_PX ||
+      mouse.y >= originPxY + GRID_ROWS * CELL_PX) return;
+  const cell = pxToCell(mouse);
+  const gx = cell.x, gy = cell.y;
+  const valid = canPlace(gx, gy);
+  const pos = cellToPx(cell);
+  let img = null;
+  if (selectedBuild === 'wall') img = ASSETS.wall;
+  else if (selectedBuild === 'cannon') img = ASSETS.cannon;
+  else if (selectedBuild === 'laser') img = ASSETS.laser;
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  if (imgReady(img)) {
+    ctx.drawImage(img, pos.x - CELL_PX / 2, pos.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  } else {
+    ctx.fillStyle = '#888';
+    ctx.fillRect(pos.x - CELL_PX / 2, pos.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  }
+  if (!valid) {
+    ctx.fillStyle = 'rgba(255,0,0,0.5)';
+    ctx.fillRect(pos.x - CELL_PX / 2, pos.y - CELL_PX / 2, CELL_PX, CELL_PX);
+  }
+  ctx.restore();
 }
 function drawHUD() {
   const statsEl = document.getElementById('gameStats');
@@ -718,6 +770,8 @@ function render() {
       ctx.fillRect(center.x - CELL_PX / 2, center.y - CELL_PX / 2, CELL_PX, CELL_PX);
     }
   }
+
+  drawGhost();
 
   // Enemies (safe draw)
   for (const e of enemies) {
@@ -807,43 +861,58 @@ function onCanvasClick(e) {
     return;
   }
 
+  if (!canPlace(gx, gy)) return;
+
   if (selectedBuild === 'wall') {
-    if (!hasWall(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-      addWall(gx, gy);
-    }
+    addWall(gx, gy);
+    buildHistory.push({ type: 'wall', gx, gy });
   } else if (selectedBuild === 'cannon') {
-    if (!hasWall(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-        towers.push({
-          gx,
-          gy,
-          type: 'cannon',
-          cooldown: 0,
-          base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
-          damage: CANNON_BASE.damage,
-          fireRate: CANNON_BASE.fireRate,
-          range: CANNON_BASE.range,
-          upgrades: { damage: 0, fireRate: 0, range: 0 },
-          target: null
-        });
-    }
+    addWall(gx, gy);
+    const t = {
+      gx,
+      gy,
+      type: 'cannon',
+      cooldown: 0,
+      base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
+      damage: CANNON_BASE.damage,
+      fireRate: CANNON_BASE.fireRate,
+      range: CANNON_BASE.range,
+      upgrades: { damage: 0, fireRate: 0, range: 0 },
+      target: null
+    };
+    towers.push(t);
+    buildHistory.push({ type: 'cannon', gx, gy, tower: t });
   } else if (selectedBuild === 'laser') {
-    if (!hasWall(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-        towers.push({
-          gx,
-          gy,
-          type: 'laser',
-          cooldown: 0,
-          base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
-          damage: LASER_BASE.damage,
-          fireRate: LASER_BASE.fireRate,
-          range: LASER_BASE.range,
-          upgrades: { damage: 0, fireRate: 0, range: 0 },
-          target: null
-        });
-    }
+    addWall(gx, gy);
+    const t = {
+      gx,
+      gy,
+      type: 'laser',
+      cooldown: 0,
+      base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
+      damage: LASER_BASE.damage,
+      fireRate: LASER_BASE.fireRate,
+      range: LASER_BASE.range,
+      upgrades: { damage: 0, fireRate: 0, range: 0 },
+      target: null
+    };
+    towers.push(t);
+    buildHistory.push({ type: 'laser', gx, gy, tower: t });
   }
 }
-function onKey(e) { if (e.key === 'Escape') endGame(); }
+function undoLastPlacement() {
+  const last = buildHistory.pop();
+  if (!last) return;
+  removeWall(last.gx, last.gy);
+  if (last.tower) {
+    towers = towers.filter(t => t !== last.tower);
+    if (selectedTower === last.tower) { selectedTower = null; updateSelectedTowerInfo(); }
+  }
+}
+function onKey(e) {
+  if (e.key === 'Escape') endGame();
+  else if (e.key.toLowerCase() === 'z') undoLastPlacement();
+}
 
 async function startGame() {
   // UI
