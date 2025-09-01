@@ -53,12 +53,8 @@ let money = 0;
 const DOGHOUSE_DOOR_CELL = { x: 28, y: 21 };
 const DOGHOUSE_SPAWN_CELL = { x: 27, y: 21 };
 
-// Entry points for enemies
-const ENTRIES = [
-  { x: 5, y: 0 },
-  { x: 15, y: 0 },
-  { x: 0, y: 10 }
-];
+// Entry points for enemies (top-left only)
+const ENTRIES = [ { x: 0, y: 0 } ];
 
 // Pure helpers ------------------------------------------------------------
 const key = (x, y) => `${x},${y}`;
@@ -112,21 +108,22 @@ function canPlace(cell) {
   if (!inBounds(cell)) return false;
   if (occupancy.has(key(cell.x, cell.y))) return false;
   addOccupancy(cell.x, cell.y);
-  const goal = DOGHOUSE_DOOR_CELL;
+  const target = catLives.find(l => l.alive);
+  const goal = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const ok =
     ENTRIES.every(e => findPath(e, goal).length > 0) &&
-    enemies.every(en =>
-      findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0
-    );
+    enemies.every(en => findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0);
   removeOccupancy(cell.x, cell.y);
   return ok;
 }
 
 function recalcEnemyPaths() {
-  const goal = DOGHOUSE_DOOR_CELL;
+  const target = catLives.find(l => l.alive);
+  const goal = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   for (const en of enemies) {
     const start = pxToCell({ x: en.x, y: en.y });
     en.path = findPath(start, goal);
+    en.goalCell = goal;
   }
 }
 
@@ -337,6 +334,10 @@ function resizeCanvas() {
     const p = cellToPx({ x: t.gx, y: t.gy });
     t.x = p.x; t.y = p.y;
   });
+  catLives.forEach(l => {
+    const p = cellToPx({ x: l.gx, y: l.gy });
+    l.x = p.x; l.y = p.y; l.r = CELL_PX / 2;
+  });
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -469,24 +470,22 @@ function resetGame() {
   player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
 
-  // place cat head lives near the bottom-right, about 9 cells from the edge,
-  // then offset them down 4 cells and right 2 cells
+  // place nine cat heads inside the doghouse just to the right of the door
   catLives = [];
   const cols = 3, rows = 3;
-  const margin = 9; // cells from right edge
-  const startCellX = Math.max(0, GRID_COLS - cols - margin) + 2;
-  const startCellY = GRID_ROWS - rows - 1 + 4;
+  const startCellX = DOGHOUSE_DOOR_CELL.x + 1;
+  const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const cell = { x: startCellX + col, y: startCellY + row };
     const p = cellToPx(cell);
-    catLives.push({ x: p.x, y: p.y, r: CELL_PX / 2, alive: true });
+    catLives.push({ x: p.x, y: p.y, r: CELL_PX / 2, alive: true, gx: cell.x, gy: cell.y });
   }
 }
 
 function spawnEnemy() {
-  const entry = ENTRIES[Math.floor(Math.random() * ENTRIES.length)];
+  const entry = ENTRIES[0];
   const p = cellToPx(entry);
   const r = CELL_PX / 2;
   let stats;
@@ -506,9 +505,11 @@ function spawnEnemy() {
     const scale = 1 + (waveIndex - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
     health = Math.round(health * scale);
   }
-  const path = findPath(entry, DOGHOUSE_DOOR_CELL);
+  const target = catLives.find(l => l.alive);
+  const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
+  const path = findPath(entry, goalCell);
 
-  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell: DOGHOUSE_DOOR_CELL, health });
+  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health });
   enemiesSpawnedInWave++;
 }
 
@@ -553,18 +554,26 @@ function update(dt) {
     const target = liveTargets[0];
     if (!target) return false;
 
-    const goalCell = DOGHOUSE_DOOR_CELL;
+    const goalCell = { x: target.gx, y: target.gy };
     const curCell = pxToCell({ x: e.x, y: e.y });
 
-    if (!e.path || !e.path.length) {
+    if (
+      !e.path ||
+      !e.path.length ||
+      !e.goalCell ||
+      e.goalCell.x !== goalCell.x ||
+      e.goalCell.y !== goalCell.y
+    ) {
       e.path = findPath(curCell, goalCell);
+      e.goalCell = goalCell;
     }
 
     if (e.path && e.path.length && isWallAt(e.path[0].x, e.path[0].y)) {
       e.path = findPath(curCell, goalCell);
+      e.goalCell = goalCell;
     }
 
-    let dest = doorPx();
+    let dest = cellToPx(goalCell);
     if (e.path && e.path.length) {
       dest = cellToPx(e.path[0]);
     }
@@ -589,7 +598,11 @@ function update(dt) {
     }
 
     const dtgt = Math.hypot(target.x - e.x, target.y - e.y);
-    if (dtgt < e.r + target.r) { target.alive = false; sfx(160, 0.15, 0.06, 'sawtooth'); return false; }
+    if (dtgt < e.r + target.r) {
+      target.alive = false;
+      sfx(160, 0.15, 0.06, 'sawtooth');
+      return false;
+    }
 
     return true;
   });
