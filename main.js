@@ -35,27 +35,35 @@ let ctx = null;
 
 // -------------------- Grid & Build --------------------
 // Fixed playfield grid
-const GRID_COLS = 38;
-const GRID_ROWS = 28;
+const GRID_COLS = 36;
+const GRID_ROWS = 26;
 
 let CELL_PX = 20; // size of one grid cell in pixels (computed on resize)
 let originPxX = 0; // playfield offset from canvas top-left in pixels
 let originPxY = 0;
 let walls = [];
+let occupied = new Set();
 let selectedBuild = null;
 let towers = [];
 let bullets = [];
 let beams = [];
 let money = 0;
 
+const occKey = (x, y) => `${x},${y}`;
+function addWall(gx, gy) {
+  const k = occKey(gx, gy);
+  if (!occupied.has(k)) {
+    walls.push({ x: gx, y: gy });
+    occupied.add(k);
+  }
+}
+function hasWall(gx, gy) { return occupied.has(occKey(gx, gy)); }
+function isBlocked(gx, gy) { return hasWall(gx, gy) || towers.some(t => t.gx === gx && t.gy === gy); }
+
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4 };
 let TOWER_TYPES = [];
-
-function isWallAt(gx, gy) {
-  return walls.some(w => w.x === gx && w.y === gy) || towers.some(t => t.gx === gx && t.gy === gy);
-}
 
 function cellToPx(cell) {
   return {
@@ -85,7 +93,7 @@ function findPath(start, goal) {
     for (const [dx,dy] of dirs) {
       const nx = cur.x + dx, ny = cur.y + dy;
       if (nx < 0 || ny < 0 || nx >= GRID_COLS || ny >= GRID_ROWS) continue;
-      if (isWallAt(nx, ny)) continue;
+      if (isBlocked(nx, ny)) continue;
       const k = key(nx, ny);
       if (visited.has(k)) continue;
       visited.add(k);
@@ -379,6 +387,7 @@ let catLives = [];
 function resetGame() {
   enemies = [];
   walls = [];
+  occupied = new Set();
   selectedBuild = null;
   towers = [];
   bullets = [];
@@ -395,6 +404,15 @@ function resetGame() {
   const c = cssCenter();
     player.x = c.x; player.y = c.y; player.r = 0;
   mouse = { x: c.x, y: c.y, active: false };
+
+  // Block outer ring and doghouse region
+  for (let x = 0; x < GRID_COLS; x++) { addWall(x, 0); addWall(x, GRID_ROWS - 1); }
+  for (let y = 1; y < GRID_ROWS - 1; y++) { addWall(0, y); addWall(GRID_COLS - 1, y); }
+  const dogX0 = GRID_COLS - 7 - 1;
+  const dogY0 = GRID_ROWS - 8 - 1;
+  for (let x = 0; x < 7; x++) {
+    for (let y = 0; y < 8; y++) addWall(dogX0 + x, dogY0 + y);
+  }
 
   // place cat head lives near the bottom-right, about 9 cells from the edge,
   // then offset them down 4 cells and right 2 cells
@@ -489,7 +507,7 @@ function update(dt) {
       e.goalCell = goalCell;
     }
 
-    if (e.path && e.path.length && isWallAt(e.path[0].x, e.path[0].y)) {
+    if (e.path && e.path.length && isBlocked(e.path[0].x, e.path[0].y)) {
       e.path = findPath(curCell, goalCell);
     }
 
@@ -515,7 +533,7 @@ function update(dt) {
     }
     const gx = Math.floor(e.x);
     const gy = Math.floor(e.y);
-    if (isWallAt(gx, gy)) {
+    if (isBlocked(gx, gy)) {
       e.x = prevX; e.y = prevY;
       e.path = findPath(curCell, goalCell);
     }
@@ -770,11 +788,11 @@ function onCanvasClick(e) {
   }
 
   if (selectedBuild === 'wall') {
-    if (!walls.some(w => w.x === gx && w.y === gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
-      walls.push({ x: gx, y: gy });
+    if (!hasWall(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
+      addWall(gx, gy);
     }
   } else if (selectedBuild === 'cannon') {
-    if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
+    if (!hasWall(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
         towers.push({
           gx,
           gy,
@@ -789,7 +807,7 @@ function onCanvasClick(e) {
         });
     }
   } else if (selectedBuild === 'laser') {
-    if (!isWallAt(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
+    if (!hasWall(gx, gy) && !towers.some(t => t.gx === gx && t.gy === gy)) {
         towers.push({
           gx,
           gy,
