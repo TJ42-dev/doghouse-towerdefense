@@ -11,16 +11,23 @@ const optFullscreen = document.getElementById('optFullscreen');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
-const buildMenu = document.getElementById('buildMenu');
+const hoverMenu = document.getElementById('hoverMenu');
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
 const wallBtn = document.getElementById('wallBtn');
 const cannonBtn = document.getElementById('cannonBtn');
 const laserBtn = document.getElementById('laserBtn');
-const towerMenu = document.getElementById('towerMenu');
+const cancelBuildBtn = document.getElementById('cancelBuildBtn');
 const upgradeDamageBtn = document.getElementById('upgradeDamage');
 const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
 const upgradeRangeBtn = document.getElementById('upgradeRange');
 const sellBtn = document.getElementById('sellTower');
-const closeTowerMenuBtn = document.getElementById('closeTowerMenu');
+const selectedTowerInfo = document.getElementById('selectedTowerInfo');
+const damageBar = document.getElementById('damageBar');
+const fireRateBar = document.getElementById('fireRateBar');
+const rangeBar = document.getElementById('rangeBar');
+const quitInMenuBtn = document.getElementById('quitInMenuBtn');
+const contextMenu = document.getElementById('contextMenu');
 let selectedTower = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
@@ -133,75 +140,87 @@ function syncUI() {
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
 saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fullscreen: optFullscreen?.checked }); });
 
-// ----- Build Menu -----
+// ----- Hover Menu -----
+function activateTab(name) {
+  tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === name));
+  tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${name}`));
+}
+tabButtons.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+
 wallBtn?.addEventListener('click', () => { selectedBuild = 'wall'; });
 cannonBtn?.addEventListener('click', () => { selectedBuild = 'cannon'; });
 laserBtn?.addEventListener('click', () => { selectedBuild = 'laser'; });
-if (buildMenu) {
-  let drag = null;
-  buildMenu.addEventListener('mousedown', (e) => {
-    if (e.target.tagName === 'BUTTON') return;
-    drag = { x: e.offsetX, y: e.offsetY };
-    document.addEventListener('mousemove', onDrag);
-    document.addEventListener('mouseup', stopDrag);
-  });
-  function onDrag(e) {
-    if (!drag) return;
-    buildMenu.style.left = (e.pageX - drag.x) + 'px';
-    buildMenu.style.top = (e.pageY - drag.y) + 'px';
+cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
+
+let drag = null;
+hoverMenu?.addEventListener('mousedown', (e) => {
+  if (e.target.tagName === 'BUTTON') return;
+  drag = { x: e.offsetX, y: e.offsetY };
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', stopDrag);
+});
+function onDrag(e) {
+  if (!drag) return;
+  hoverMenu.style.left = (e.pageX - drag.x) + 'px';
+  hoverMenu.style.top = (e.pageY - drag.y) + 'px';
+}
+function stopDrag() {
+  drag = null;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', stopDrag);
+}
+
+upgradeDamageBtn?.addEventListener('click', () => {
+  if (selectedTower) { upgradeTower(selectedTower, 'damage'); rankUp(); updateSelectedTowerInfo(); }
+});
+upgradeFireRateBtn?.addEventListener('click', () => {
+  if (selectedTower) { upgradeTower(selectedTower, 'fireRate'); rankUp(); updateSelectedTowerInfo(); }
+});
+upgradeRangeBtn?.addEventListener('click', () => {
+  if (selectedTower) { upgradeTower(selectedTower, 'range'); rankUp(); updateSelectedTowerInfo(); }
+});
+sellBtn?.addEventListener('click', () => {
+  if (selectedTower) {
+    towers = towers.filter(t => t !== selectedTower);
+    selectedTower = null;
+    updateSelectedTowerInfo();
   }
-  function stopDrag() {
-    drag = null;
-    document.removeEventListener('mousemove', onDrag);
-    document.removeEventListener('mouseup', stopDrag);
+});
+quitInMenuBtn?.addEventListener('click', () => endGame());
+
+function updateSelectedTowerInfo() {
+  if (!selectedTowerInfo) return;
+  if (selectedTower) {
+    selectedTowerInfo.textContent = `Selected: ${selectedTower.type}`;
+    const maxD = selectedTower.base?.damage * 2;
+    const maxF = selectedTower.base?.fireRate * 2;
+    const maxR = selectedTower.base?.range * 2;
+    if (damageBar && maxD) damageBar.style.width = Math.min(100, selectedTower.damage / maxD * 100) + '%';
+    if (fireRateBar && maxF) fireRateBar.style.width = Math.min(100, selectedTower.fireRate / maxF * 100) + '%';
+    if (rangeBar && maxR) rangeBar.style.width = Math.min(100, selectedTower.range / maxR * 100) + '%';
+  } else {
+    selectedTowerInfo.textContent = 'No tower selected';
+    if (damageBar) damageBar.style.width = '0%';
+    if (fireRateBar) fireRateBar.style.width = '0%';
+    if (rangeBar) rangeBar.style.width = '0%';
   }
 }
 
-if (towerMenu) {
-  upgradeDamageBtn?.addEventListener('click', () => {
-    if (selectedTower) { upgradeTower(selectedTower, 'damage'); rankUp(); }
-    hideTowerMenu();
-  });
-  upgradeFireRateBtn?.addEventListener('click', () => {
-    if (selectedTower) { upgradeTower(selectedTower, 'fireRate'); rankUp(); }
-    hideTowerMenu();
-  });
-  upgradeRangeBtn?.addEventListener('click', () => {
-    if (selectedTower) { upgradeTower(selectedTower, 'range'); rankUp(); }
-    hideTowerMenu();
-  });
-  sellBtn?.addEventListener('click', () => {
-    if (selectedTower) {
-      towers = towers.filter(t => t !== selectedTower);
-    }
-    hideTowerMenu();
-  });
-  closeTowerMenuBtn?.addEventListener('click', hideTowerMenu);
-}
+gameCanvas?.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (!contextMenu) return;
+  contextMenu.style.left = e.clientX + 'px';
+  contextMenu.style.top = e.clientY + 'px';
+  contextMenu.style.display = 'block';
+});
+document.addEventListener('click', () => { if (contextMenu) contextMenu.style.display = 'none'; });
 
-function showTowerMenu(t, x, y) {
-  selectedTower = t;
-  towerMenu.style.left = x + 'px';
-  towerMenu.style.top = y + 'px';
-  towerMenu.style.display = 'block';
-}
-function hideTowerMenu() {
-  towerMenu.style.display = 'none';
-  selectedTower = null;
-}
 function upgradeTower(t, stat) {
-  t.level = (t.level || 1) + 1;
-  switch (stat) {
-    case 'damage':
-      t.damage += 20;
-      break;
-    case 'fireRate':
-      t.fireRate += 0.1;
-      break;
-    case 'range':
-      t.range += 1;
-      break;
-  }
+  if (!t.upgrades) t.upgrades = { damage: 0, fireRate: 0, range: 0 };
+  if (!t.base) t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
+  if (t.upgrades[stat] >= 10) return;
+  t.upgrades[stat]++;
+  t[stat] = t.base[stat] * (1 + 0.1 * t.upgrades[stat]);
 }
 
 // -------------------- Canvas setup --------------------
@@ -347,7 +366,8 @@ function resetGame() {
   towers = [];
   bullets = [];
   money = 0;
-  hideTowerMenu();
+  selectedTower = null;
+  updateSelectedTowerInfo();
   waveActive = false;
   preWaveTimer = START_DELAY;
   waveElapsed = 0;
@@ -579,18 +599,21 @@ function drawBG() {
     }
 }
 function drawHUD() {
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  const statsEl = document.getElementById('gameStats');
+  if (!statsEl) return;
+  let html = '';
   if (!waveActive && preWaveTimer > 0) {
-    ctx.fillText(`Next wave in: ${preWaveTimer.toFixed(1)}s`, 12, 12);
-    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 32);
-    ctx.fillText(`Money: $${money}`, 12, 52);
+    html += `Next wave in: ${preWaveTimer.toFixed(1)}s<br>`;
+    html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
+    html += `Money: $${money}`;
   } else {
-    ctx.fillText(`Wave: ${waveIndex + 1}`, 12, 12);
-    ctx.fillText(`Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s`, 12, 32);
-    ctx.fillText(`Enemies: ${enemies.length}`, 12, 52);
-    ctx.fillText(`Lives: ${catLives.filter(l => l.alive).length}`, 12, 72);
-    ctx.fillText(`Money: $${money}`, 12, 92);
+    html += `Wave: ${waveIndex + 1}<br>`;
+    html += `Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s<br>`;
+    html += `Enemies: ${enemies.length}<br>`;
+    html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
+    html += `Money: $${money}`;
   }
+  statsEl.innerHTML = html;
 }
 function render() {
   drawBG();
@@ -692,9 +715,12 @@ function onCanvasClick(e) {
   if (!selectedBuild) {
     const t = towers.find(t => t.gx === gx && t.gy === gy);
     if (t) {
-      showTowerMenu(t, e.clientX, e.clientY);
+      selectedTower = t;
+      updateSelectedTowerInfo();
+      activateTab('upgrade');
     } else {
-      hideTowerMenu();
+      selectedTower = null;
+      updateSelectedTowerInfo();
     }
     return;
   }
@@ -712,9 +738,11 @@ function onCanvasClick(e) {
           y: (gy + 0.5) * CELL,
           type: 'cannon',
           cooldown: 0,
+          base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
           damage: CANNON_BASE.damage,
           fireRate: CANNON_BASE.fireRate,
           range: CANNON_BASE.range,
+          upgrades: { damage: 0, fireRate: 0, range: 0 },
           target: null
         });
     }
@@ -727,9 +755,11 @@ function onCanvasClick(e) {
           y: (gy + 0.5) * CELL,
           type: 'laser',
           cooldown: 0,
+          base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
           damage: LASER_BASE.damage,
           fireRate: LASER_BASE.fireRate,
           range: LASER_BASE.range,
+          upgrades: { damage: 0, fireRate: 0, range: 0 },
           target: null
         });
     }
@@ -789,7 +819,9 @@ function endGame() {
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
-  hideTowerMenu();
+  selectedTower = null;
+  updateSelectedTowerInfo();
+  contextMenu && (contextMenu.style.display = 'none');
 
   const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
   alert(msg);
