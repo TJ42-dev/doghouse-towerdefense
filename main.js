@@ -23,6 +23,9 @@ const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
 const upgradeRangeBtn = document.getElementById('upgradeRange');
 const sellBtn = document.getElementById('sellTower');
 const selectedTowerInfo = document.getElementById('selectedTowerInfo');
+const damageBar = document.getElementById('damageBar');
+const fireRateBar = document.getElementById('fireRateBar');
+const rangeBar = document.getElementById('rangeBar');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const contextMenu = document.getElementById('contextMenu');
 let selectedTower = null;
@@ -188,9 +191,18 @@ quitInMenuBtn?.addEventListener('click', () => endGame());
 function updateSelectedTowerInfo() {
   if (!selectedTowerInfo) return;
   if (selectedTower) {
-    selectedTowerInfo.textContent = `Selected: ${selectedTower.type} lvl ${selectedTower.level || 1}`;
+    selectedTowerInfo.textContent = `Selected: ${selectedTower.type}`;
+    const maxD = selectedTower.base?.damage * 2;
+    const maxF = selectedTower.base?.fireRate * 2;
+    const maxR = selectedTower.base?.range * 2;
+    if (damageBar && maxD) damageBar.style.width = Math.min(100, selectedTower.damage / maxD * 100) + '%';
+    if (fireRateBar && maxF) fireRateBar.style.width = Math.min(100, selectedTower.fireRate / maxF * 100) + '%';
+    if (rangeBar && maxR) rangeBar.style.width = Math.min(100, selectedTower.range / maxR * 100) + '%';
   } else {
     selectedTowerInfo.textContent = 'No tower selected';
+    if (damageBar) damageBar.style.width = '0%';
+    if (fireRateBar) fireRateBar.style.width = '0%';
+    if (rangeBar) rangeBar.style.width = '0%';
   }
 }
 
@@ -204,18 +216,11 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
 document.addEventListener('click', () => { if (contextMenu) contextMenu.style.display = 'none'; });
 
 function upgradeTower(t, stat) {
-  t.level = (t.level || 1) + 1;
-  switch (stat) {
-    case 'damage':
-      t.damage += 20;
-      break;
-    case 'fireRate':
-      t.fireRate += 0.1;
-      break;
-    case 'range':
-      t.range += 1;
-      break;
-  }
+  if (!t.upgrades) t.upgrades = { damage: 0, fireRate: 0, range: 0 };
+  if (!t.base) t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
+  if (t.upgrades[stat] >= 10) return;
+  t.upgrades[stat]++;
+  t[stat] = t.base[stat] * (1 + 0.1 * t.upgrades[stat]);
 }
 
 // -------------------- Canvas setup --------------------
@@ -733,9 +738,11 @@ function onCanvasClick(e) {
           y: (gy + 0.5) * CELL,
           type: 'cannon',
           cooldown: 0,
+          base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
           damage: CANNON_BASE.damage,
           fireRate: CANNON_BASE.fireRate,
           range: CANNON_BASE.range,
+          upgrades: { damage: 0, fireRate: 0, range: 0 },
           target: null
         });
     }
@@ -748,9 +755,11 @@ function onCanvasClick(e) {
           y: (gy + 0.5) * CELL,
           type: 'laser',
           cooldown: 0,
+          base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
           damage: LASER_BASE.damage,
           fireRate: LASER_BASE.fireRate,
           range: LASER_BASE.range,
+          upgrades: { damage: 0, fireRate: 0, range: 0 },
           target: null
         });
     }

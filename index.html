@@ -57,9 +57,21 @@
     </div>
     <div id="tab-upgrade" class="tab-content">
       <div id="selectedTowerInfo">No tower selected</div>
-      <button id="upgradeDamage" class="btn">Damage +</button>
-      <button id="upgradeFireRate" class="btn">Speed +</button>
-      <button id="upgradeRange" class="btn">Range +</button>
+      <div class="upgrade-row">
+        <span>Damage</span>
+        <div class="upgrade-bar"><div id="damageBar" class="upgrade-bar-fill"></div></div>
+        <button id="upgradeDamage" class="btn">+</button>
+      </div>
+      <div class="upgrade-row">
+        <span>Speed</span>
+        <div class="upgrade-bar"><div id="fireRateBar" class="upgrade-bar-fill"></div></div>
+        <button id="upgradeFireRate" class="btn">+</button>
+      </div>
+      <div class="upgrade-row">
+        <span>Range</span>
+        <div class="upgrade-bar"><div id="rangeBar" class="upgrade-bar-fill"></div></div>
+        <button id="upgradeRange" class="btn">+</button>
+      </div>
       <button id="sellTower" class="btn">Sell</button>
     </div>
     <div id="tab-stats" class="tab-content">
