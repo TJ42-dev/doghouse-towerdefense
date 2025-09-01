@@ -1,0 +1,8 @@
+{
+  "id": "rocket",
+  "damage": 200,
+  "fireRate": 0.4,
+  "range": 5.5,
+  "bulletSpeed": 4,
+  "cost": 175
+}

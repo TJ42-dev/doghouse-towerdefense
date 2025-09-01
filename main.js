@@ -819,34 +819,38 @@ function cssCenter() {
 let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
 let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
-const CANNON_BASE_SRC = 'assets/cannon_base.svg';
-const CANNON_TURRET_SRC = 'assets/cannon_turret.svg';
-const LASER_BASE_SRC = 'assets/laser_base.svg';
-const LASER_TURRET_SRC = 'assets/laser_turret.svg';
-const ROCKET_BASE_SRC = 'assets/rocket_base.svg';
-const ROCKET_TURRET_SRC = 'assets/rocket_turret.svg';
-const NUKE_BASE_SRC = 'assets/nuke_base.svg';
-const NUKE_TURRET_SRC = 'assets/nuke_turret.svg';
-const HELLFIRE_BASE_SRC = 'assets/hellfire_base.svg';
-const HELLFIRE_TURRET_SRC = 'assets/hellfire_turret.svg';
-const DUAL_LASER_BASE_SRC = 'assets/laser_dual_base.svg';
-const DUAL_LASER_TURRET_SRC = 'assets/laser_dual_turret.svg';
-const RAILGUN_BASE_SRC = 'assets/railgun_base.svg';
-const RAILGUN_TURRET_SRC = 'assets/railgun_turret.svg';
+const CANNON_BASE_SRC = 'assets/towers/bases/cannon.svg';
+const CANNON_TURRET_SRC = 'assets/towers/turrets/cannon.svg';
+const LASER_BASE_SRC = 'assets/towers/bases/laser.svg';
+const LASER_TURRET_SRC = 'assets/towers/turrets/laser.svg';
+const ROCKET_BASE_SRC = 'assets/towers/bases/rocket.svg';
+const ROCKET_TURRET_SRC = 'assets/towers/turrets/rocket.svg';
+const NUKE_BASE_SRC = 'assets/towers/bases/nuke.svg';
+const NUKE_TURRET_SRC = 'assets/towers/turrets/nuke.svg';
+const HELLFIRE_BASE_SRC = 'assets/towers/bases/hellfire.svg';
+const HELLFIRE_TURRET_SRC = 'assets/towers/turrets/hellfire.svg';
+const DUAL_LASER_BASE_SRC = 'assets/towers/bases/laser_dual.svg';
+const DUAL_LASER_TURRET_SRC = 'assets/towers/turrets/laser_dual.svg';
+const RAILGUN_BASE_SRC = 'assets/towers/bases/railgun.svg';
+const RAILGUN_TURRET_SRC = 'assets/towers/turrets/railgun.svg';
 const WALL_SRC = 'assets/wall.svg';
-const SNIPER_BASE_SRC = 'assets/sniper_base.svg';
-const SNIPER_TURRET_SRC = 'assets/sniper_turret.svg';
-const SHOTGUN_BASE_SRC = 'assets/shotgun_base.svg';
-const SHOTGUN_TURRET_SRC = 'assets/shotgun_turret.svg';
+const SNIPER_BASE_SRC = 'assets/towers/bases/sniper.svg';
+const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper.svg';
+const SHOTGUN_BASE_SRC = 'assets/towers/bases/shotgun.svg';
+const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun.svg';
 const BOSS_SRC = 'assets/animals/dogs/german.png';
 const BOSS_STATS = { baseHealth: 500, baseSpeed: 1.2 };
+const TOWER_CONFIG_IDS = ['cannon', 'laser', 'rocket'];
 
 let DATA_LOADED = false;
 async function loadData() {
   if (DATA_LOADED) return;
   try {
+    const towerPromises = TOWER_CONFIG_IDS.map(id =>
+      fetch(`data/towers/${id}.json`).then(r => r.json())
+    );
     const [towerJson, dogJson] = await Promise.all([
-      fetch('data/towers.json').then(r => r.json()),
+      Promise.all(towerPromises),
       fetch('data/dogs.json').then(r => r.json())
     ]);
     if (Array.isArray(towerJson)) {

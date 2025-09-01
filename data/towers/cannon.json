@@ -1,0 +1,8 @@
+{
+  "id": "cannon",
+  "damage": 80,
+  "fireRate": 0.5,
+  "range": 4,
+  "bulletSpeed": 5,
+  "cost": 50
+}
