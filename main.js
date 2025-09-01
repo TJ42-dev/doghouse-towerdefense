@@ -13,6 +13,7 @@ const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
 const hoverMenu = document.getElementById('hoverMenu');
+const hoverMenuHeader = document.getElementById('hoverMenuHeader');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 const wallBtn = document.getElementById('wallBtn');
@@ -274,8 +275,7 @@ sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selected
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 
 let drag = null;
-hoverMenu?.addEventListener('mousedown', (e) => {
-  if (e.target.tagName === 'BUTTON') return;
+hoverMenuHeader?.addEventListener('mousedown', (e) => {
   drag = { x: e.offsetX, y: e.offsetY };
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', stopDrag);

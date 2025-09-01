@@ -222,7 +222,6 @@ html { background: #070a10; } /* safety net */
   background: rgba(0,0,0,0.6);
   padding: 0.25rem;
   border-radius: 12px;
-  cursor: move;
   z-index: 20;
   min-width: 220px;
   user-select: none;
@@ -258,6 +257,14 @@ html { background: #070a10; } /* safety net */
 .hover-menu .btn.sm {
   width: auto;
   display: inline-block;
+}
+
+.menu-header {
+  cursor: move;
+  color: #fff;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
 }
 
 .build-actions {
