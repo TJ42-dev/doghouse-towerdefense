@@ -41,20 +41,36 @@
   <canvas id="gameCanvas"></canvas>
   <button id="nextWaveBtn" class="btn">Next Wave</button>
   <button id="quitGameBtn" class="btn">Quit Game</button>
-  <div id="buildMenu" class="build-menu">
-    <h3>Build Menu</h3>
-    <button id="wallBtn" class="btn">Wall</button>
-    <button id="cannonBtn" class="btn">Cannon</button>
-    <button id="laserBtn" class="btn">Laser</button>
+
+  <div id="hoverMenu" class="hover-menu">
+    <div class="tab-buttons">
+      <button class="tab-btn active" data-tab="build">Build</button>
+      <button class="tab-btn" data-tab="upgrade">Upgrade</button>
+      <button class="tab-btn" data-tab="stats">Stats</button>
+      <button class="tab-btn" data-tab="options">Options</button>
+    </div>
+    <div id="tab-build" class="tab-content active">
+      <button id="wallBtn" class="btn">Wall</button>
+      <button id="cannonBtn" class="btn">Cannon</button>
+      <button id="laserBtn" class="btn">Laser</button>
+      <button id="cancelBuildBtn" class="btn ghost">Cancel</button>
+    </div>
+    <div id="tab-upgrade" class="tab-content">
+      <div id="selectedTowerInfo">No tower selected</div>
+      <button id="upgradeDamage" class="btn">Damage +</button>
+      <button id="upgradeFireRate" class="btn">Speed +</button>
+      <button id="upgradeRange" class="btn">Range +</button>
+      <button id="sellTower" class="btn">Sell</button>
+    </div>
+    <div id="tab-stats" class="tab-content">
+      <div id="gameStats"></div>
+    </div>
+    <div id="tab-options" class="tab-content">
+      <button id="quitInMenuBtn" class="btn">Quit</button>
+    </div>
   </div>
 
-  <div id="towerMenu" class="tower-menu">
-    <button id="closeTowerMenu" class="close-btn">✖</button>
-    <button id="upgradeDamage" class="btn">Damage +</button>
-    <button id="upgradeFireRate" class="btn">Speed +</button>
-    <button id="upgradeRange" class="btn">Range +</button>
-    <button id="sellTower" class="btn">Sell</button>
-  </div>
+  <div id="contextMenu" class="context-menu"></div>
 
   <script src="./main.js" defer></script>
 </body>
