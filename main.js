@@ -41,6 +41,12 @@ const basicUpgrades = document.getElementById('basicUpgrades');
 const specialUpgrades = document.getElementById('specialUpgrades');
 const upgradeSniperBtn = document.getElementById('upgradeSniper');
 const upgradeShotgunBtn = document.getElementById('upgradeShotgun');
+const upgradeDualLaserBtn = document.getElementById('upgradeDualLaser');
+const upgradeRailgunBtn = document.getElementById('upgradeRailgun');
+const sniperCostSpan = document.getElementById('sniperCost');
+const shotgunCostSpan = document.getElementById('shotgunCost');
+const dualLaserCostSpan = document.getElementById('dualLaserCost');
+const railgunCostSpan = document.getElementById('railgunCost');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
@@ -72,6 +78,17 @@ let beams = [];
 let catLives = [];
 let money = 0;
 const WALL_COST = 10;
+const SPECIALIZATION_COSTS = {
+  sniper: 950,
+  shotgun: 1200,
+  dualLaser: 1500,
+  railgun: 2500
+};
+
+sniperCostSpan && (sniperCostSpan.textContent = `$${SPECIALIZATION_COSTS.sniper}`);
+shotgunCostSpan && (shotgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.shotgun}`);
+dualLaserCostSpan && (dualLaserCostSpan.textContent = `$${SPECIALIZATION_COSTS.dualLaser}`);
+railgunCostSpan && (railgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.railgun}`);
 
 // Landmarks
 let DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
@@ -356,6 +373,12 @@ upgradeSniperBtn?.addEventListener('click', () => {
 upgradeShotgunBtn?.addEventListener('click', () => {
   if (selectedTower) { specializeTower(selectedTower, 'shotgun'); updateSelectedTowerInfo(); }
 });
+upgradeDualLaserBtn?.addEventListener('click', () => {
+  if (selectedTower) { specializeTower(selectedTower, 'dualLaser'); updateSelectedTowerInfo(); }
+});
+upgradeRailgunBtn?.addEventListener('click', () => {
+  if (selectedTower) { specializeTower(selectedTower, 'railgun'); updateSelectedTowerInfo(); }
+});
 sellBtn?.addEventListener('click', () => {
   if (selectedTower) {
     const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
@@ -386,13 +409,33 @@ pauseBtn?.addEventListener('click', () => {
 function updateSelectedTowerInfo() {
   if (!selectedTowerInfo) return;
   if (selectedTower) {
-    const isSpecial = selectedTower.type === 'sniper' || selectedTower.type === 'shotgun';
-    const fullyUpgraded = selectedTower.type === 'cannon' && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
+    const isSpecial = ['sniper','shotgun','dualLaser','railgun'].includes(selectedTower.type);
+    const fullyUpgraded = ['cannon','laser'].includes(selectedTower.type) && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
     if (fullyUpgraded) {
       selectedTowerInfo.textContent = 'Choose specialization';
       if (basicUpgrades) basicUpgrades.style.display = 'none';
-      if (specialUpgrades) specialUpgrades.style.display = '';
+      if (specialUpgrades) {
+        specialUpgrades.style.display = '';
+        const isCannon = selectedTower.type === 'cannon';
+        const isLaser = selectedTower.type === 'laser';
+        if (upgradeSniperBtn) {
+          upgradeSniperBtn.parentElement && (upgradeSniperBtn.parentElement.style.display = isCannon ? '' : 'none');
+          upgradeSniperBtn.disabled = money < SPECIALIZATION_COSTS.sniper;
+        }
+        if (upgradeShotgunBtn) {
+          upgradeShotgunBtn.parentElement && (upgradeShotgunBtn.parentElement.style.display = isCannon ? '' : 'none');
+          upgradeShotgunBtn.disabled = money < SPECIALIZATION_COSTS.shotgun;
+        }
+        if (upgradeDualLaserBtn) {
+          upgradeDualLaserBtn.parentElement && (upgradeDualLaserBtn.parentElement.style.display = isLaser ? '' : 'none');
+          upgradeDualLaserBtn.disabled = money < SPECIALIZATION_COSTS.dualLaser;
+        }
+        if (upgradeRailgunBtn) {
+          upgradeRailgunBtn.parentElement && (upgradeRailgunBtn.parentElement.style.display = isLaser ? '' : 'none');
+          upgradeRailgunBtn.disabled = money < SPECIALIZATION_COSTS.railgun;
+        }
+      }
     } else {
       if (basicUpgrades) basicUpgrades.style.display = '';
       if (specialUpgrades) specialUpgrades.style.display = 'none';
@@ -542,22 +585,41 @@ function upgradeTower(t, stat) {
 }
 
 function specializeTower(t, kind) {
-  if (t.type !== 'cannon') return;
   if (!t.upgrades) return;
   const maxed = ['damage','fireRate','range'].every(s => t.upgrades[s] >= 10);
   if (!maxed) return;
-  if (kind === 'sniper') {
-    const idx = 24; // wave 25 zero-based
-    const scale = 1 + (idx - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
-    t.type = 'sniper';
-    t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
-    t.fireRate = 0.6;
-    t.range = t.range * 1.5;
-  } else if (kind === 'shotgun') {
-    t.type = 'shotgun';
-    t.damage = Math.round(t.damage * 1.5);
-    // fireRate unchanged; reduce range for close-quarters spread
-    t.range = 4.5;
+  const cost = SPECIALIZATION_COSTS[kind];
+  if (money < cost) return;
+  money -= cost;
+  t.spent = (t.spent || t.cost || 0) + cost;
+  if (t.type === 'cannon') {
+    if (kind === 'sniper') {
+      const idx = 24; // wave 25 zero-based
+      const scale = 1 + (idx - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
+      t.type = 'sniper';
+      t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
+      t.fireRate = 0.6;
+      t.range = t.range * 1.5;
+    } else if (kind === 'shotgun') {
+      t.type = 'shotgun';
+      t.damage = Math.round(t.damage * 1.5);
+      // fireRate unchanged; reduce range for close-quarters spread
+      t.range = 4.5;
+    }
+  } else if (t.type === 'laser') {
+    if (kind === 'dualLaser') {
+      t.type = 'dualLaser';
+      t.damage = Math.round(t.damage * 1.2);
+      t.fireRate = t.fireRate * 2;
+      // range unchanged
+    } else if (kind === 'railgun') {
+      t.type = 'railgun';
+      t.damage = Math.round(t.damage * 4);
+      t.fireRate = t.fireRate * 0.5;
+      // range unchanged
+    }
+  } else {
+    return;
   }
   t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
   t.upgrades = { damage: 0, fireRate: 0, range: 0 };
@@ -623,6 +685,8 @@ let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_SRC = 'assets/pistol_cat.svg';
 const LASER_SRC = 'assets/laser.svg';
+const DUAL_LASER_SRC = 'assets/laser-dual.svg';
+const RAILGUN_SRC = 'assets/railgun.svg';
 const WALL_SRC = 'assets/wall.svg';
 const SNIPER_SRC = 'assets/sniper.svg';
 const SHOTGUN_SRC = 'assets/shotgun.svg';
@@ -670,7 +734,7 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [], boss: null, cat: null, cannon: null, laser: null, wall: null, sniper: null, shotgun: null };
+let ASSETS = { dogs: [], boss: null, cat: null, cannon: null, laser: null, dualLaser: null, railgun: null, wall: null, sniper: null, shotgun: null };
 let assetsReady; // Promise
 
 async function ensureAssets() {
@@ -685,6 +749,8 @@ async function ensureAssets() {
           cat: await loadImage(CAT_SRC),
           cannon: await loadImage(CANNON_SRC),
           laser: await loadImage(LASER_SRC),
+          dualLaser: await loadImage(DUAL_LASER_SRC),
+          railgun: await loadImage(RAILGUN_SRC),
           wall: await loadImage(WALL_SRC),
           sniper: await loadImage(SNIPER_SRC),
           shotgun: await loadImage(SHOTGUN_SRC)
@@ -706,6 +772,7 @@ const START_DELAY = 15; // secs before first wave
 const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
 const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
 const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
+const POST_WAVE_DELAY = 5; // delay after a wave clears
 let rafId = null;
 let lastT = 0;
 let running = false;
@@ -804,7 +871,9 @@ function startWave() {
 
 function nextWave() {
   waveIndex++;
-  startWave();
+  waveActive = false;
+  preWaveTimer = POST_WAVE_DELAY;
+  waveElapsed = 0;
 }
 
 function update(dt) {
@@ -898,10 +967,20 @@ function update(dt) {
     }
     t.target = target;
     if (t.cooldown <= 0 && target) {
-      if (t.type === 'laser') {
+      if (t.type === 'laser' || t.type === 'dualLaser') {
         target.health -= t.damage;
         bark();
-        beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, time: 0.05 });
+        if (t.type === 'dualLaser') {
+          const angle = Math.atan2(target.y - t.y, target.x - t.x);
+          const perp = angle + Math.PI / 2;
+          const offset = t.alt ? 5 : -5;
+          const x1 = t.x + Math.cos(perp) * offset;
+          const y1 = t.y + Math.sin(perp) * offset;
+          t.alt = !t.alt;
+          beams.push({ x1, y1, x2: target.x, y2: target.y, time: 0.05 });
+        } else {
+          beams.push({ x1: t.x, y1: t.y, x2: target.x, y2: target.y, time: 0.05 });
+        }
         t.cooldown = 1 / t.fireRate;
         sfx(1200, 0.05, 0.04, 'sine');
         if (target.health <= 0) {
@@ -909,6 +988,42 @@ function update(dt) {
           money += 10;
           t.kills = (t.kills || 0) + 1;
         }
+      } else if (t.type === 'railgun') {
+        const angle = Math.atan2(target.y - t.y, target.x - t.x);
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        // Determine where the beam hits the edge of the grid
+        const minX = originPx.x;
+        const maxX = originPx.x + GRID_COLS * CELL_PX;
+        const minY = originPx.y;
+        const maxY = originPx.y + GRID_ROWS * CELL_PX;
+        let edgeT = Infinity;
+        if (dx > 0) edgeT = Math.min(edgeT, (maxX - t.x) / dx);
+        else if (dx < 0) edgeT = Math.min(edgeT, (minX - t.x) / dx);
+        if (dy > 0) edgeT = Math.min(edgeT, (maxY - t.y) / dy);
+        else if (dy < 0) edgeT = Math.min(edgeT, (minY - t.y) / dy);
+        const endX = t.x + dx * edgeT;
+        const endY = t.y + dy * edgeT;
+        // Damage every enemy intersected by the beam up to the edge
+        for (const e of [...enemies]) {
+          const ex = e.x - t.x;
+          const ey = e.y - t.y;
+          const along = ex * dx + ey * dy;
+          const perp = Math.abs(ex * dy - ey * dx);
+          if (along > 0 && along <= edgeT && perp <= e.r) {
+            e.health -= t.damage;
+            bark();
+            if (e.health <= 0) {
+              enemies.splice(enemies.indexOf(e), 1);
+              money += 10;
+              t.kills = (t.kills || 0) + 1;
+            }
+          }
+        }
+        // Railgun beam is wider for a more powerful visual effect
+        beams.push({ x1: t.x, y1: t.y, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
+        t.cooldown = 1 / t.fireRate;
+        sfx(300, 0.2, 0.04, 'sawtooth');
       } else if (t.type === 'shotgun') {
         const angle = Math.atan2(target.y - t.y, target.x - t.x);
         const spread = Math.PI / 12;
@@ -990,6 +1105,8 @@ function drawBG() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  // Ensure grid lines stay consistent even after drawing wide beams
+  ctx.lineWidth = 1;
   for (let i = 0; i <= GRID_COLS; i++) {
     ctx.beginPath();
     const x = originPx.x + i * CELL_PX;
@@ -1056,6 +1173,8 @@ function render() {
     // Towers
     for (const t of towers) {
       const img = t.type === 'laser' ? ASSETS.laser :
+        t.type === 'dualLaser' ? ASSETS.dualLaser :
+        t.type === 'railgun' ? ASSETS.railgun :
         t.type === 'sniper' ? ASSETS.sniper :
         t.type === 'shotgun' ? ASSETS.shotgun : ASSETS.cannon;
       if (imgReady(img)) {
@@ -1096,14 +1215,19 @@ function render() {
   }
 
   // Beams
-  ctx.strokeStyle = '#0ff';
-  ctx.lineWidth = 2;
   for (const beam of beams) {
+    const grad = ctx.createLinearGradient(beam.x1, beam.y1, beam.x2, beam.y2);
+    const cols = beam.colors || ['#0ff'];
+    cols.forEach((c, i) => grad.addColorStop(cols.length === 1 ? 0 : i / (cols.length - 1), c));
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = beam.width || 2;
     ctx.beginPath();
     ctx.moveTo(beam.x1, beam.y1);
     ctx.lineTo(beam.x2, beam.y2);
     ctx.stroke();
   }
+  // Reset line width after drawing beams to avoid affecting later strokes
+  ctx.lineWidth = 1;
 
   // Bullets
   for (const b of bullets) {
@@ -1320,5 +1444,5 @@ quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can 
 nextWaveBtn?.addEventListener('click', () => {
   if (!running) return;
   if (!waveActive) startWave();
-  else nextWave();
+  else { waveIndex++; startWave(); }
 });
