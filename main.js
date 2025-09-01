@@ -1055,29 +1055,45 @@ function updateProjectiles(dt) {
         let closestDist = Infinity;
         for (const e of enemies) {
           const d = Math.hypot(e.x - b.x, e.y - b.y);
-          if (d < closestDist) {
-            closestDist = d;
-            closest = e;
-          }
+          if (d < closestDist) { closestDist = d; closest = e; }
         }
         b.target = closest;
+        if (b.target && b.sentinel) b.sentinel = false;
         if (!b.target) {
-          const src = b.source || { x: b.x, y: b.y, range: 0 };
-          if (b.orbitR === undefined) {
-            const dist = Math.hypot(b.x - src.x, b.y - src.y);
-            b.orbitR = Math.min(dist, src.range * CELL_PX * 0.9);
-            b.orbitAng = Math.atan2(b.y - src.y, b.x - src.x);
+          if (b.sentinel) {
+            const src = b.source || { x: b.x, y: b.y, range: 0 };
+            if (b.orbitR === undefined) {
+              const dist = Math.hypot(b.x - src.x, b.y - src.y);
+              b.orbitR = Math.min(dist, src.range * CELL_PX * 0.9);
+              b.orbitAng = Math.atan2(b.y - src.y, b.x - src.x);
+            }
+            const maxR = src.range * CELL_PX * 0.9;
+            b.orbitR = Math.min(maxR, b.orbitR + b.speed * dt);
+            b.orbitAng += (b.speed / b.orbitR) * dt;
+            b.x = src.x + Math.cos(b.orbitAng) * b.orbitR;
+            b.y = src.y + Math.sin(b.orbitAng) * b.orbitR;
+            b.angle = b.orbitAng + Math.PI / 2;
+            b.smoke -= dt;
+            if (b.smoke <= 0) {
+              smokes.push({ x: b.x, y: b.y, life: 0.5 });
+              b.smoke = 0.05;
+            }
+            return true;
           }
-          const maxR = src.range * CELL_PX * 0.9;
-          b.orbitR = Math.min(maxR, b.orbitR + b.speed * dt);
-          b.orbitAng += (b.speed / b.orbitR) * dt;
-          b.x = src.x + Math.cos(b.orbitAng) * b.orbitR;
-          b.y = src.y + Math.sin(b.orbitAng) * b.orbitR;
-          b.angle = b.orbitAng + Math.PI / 2;
+          b.x += Math.cos(b.angle) * move;
+          b.y += Math.sin(b.angle) * move;
           b.smoke -= dt;
           if (b.smoke <= 0) {
             smokes.push({ x: b.x, y: b.y, life: 0.5 });
             b.smoke = 0.05;
+          }
+          if (
+            b.x < originPx.x ||
+            b.x > originPx.x + GRID_COLS * CELL_PX ||
+            b.y < originPx.y ||
+            b.y > originPx.y + GRID_ROWS * CELL_PX
+          ) {
+            return false;
           }
           return true;
         }
@@ -1277,31 +1293,33 @@ function update(dt) {
       const isRocket = t.type === 'rocket';
       const hasCap = isHellfire ? true : t.upgrades.range >= 5 && t.upgrades.fireRate >= 3;
       const cap = isHellfire ? 5 : (isRocket && hasCap ? 3 : 0);
-      const existing = bullets.filter(b => b.type === 'rocket' && b.source === t && b.sentinel).length;
+      const existing = bullets.filter(b => b.type === 'rocket' && b.source === t).length;
       const maxSpeed = ROCKET_BASE.bulletSpeed * CELL_PX;
       const baseAngle = t.type === 'nuke' ? -Math.PI / 2 : (t.angle || 0);
       const sx = t.x + Math.cos(baseAngle) * (CELL_PX / 2);
       const sy = t.y + Math.sin(baseAngle) * (CELL_PX / 2);
-      if (cap > 0 && existing < cap && t.cooldown <= 0) {
-        bullets.push({
-          x: sx,
-          y: sy,
-          target,
-          speed: maxSpeed * 0.2,
-          maxSpeed,
-          accel: maxSpeed,
-          damage: t.damage,
-          source: t,
-          type: 'rocket',
-          angle: baseAngle,
-          turnRate: Math.PI,
-          smoke: 0,
-          sentinel: true,
-          variant: t.type
-        });
-        t.cooldown = 1 / t.fireRate;
-        t.anim = 0.1;
-        sfx(200, 0.2, 0.04, 'sawtooth');
+      if (cap > 0) {
+        if (existing < cap && t.cooldown <= 0) {
+          bullets.push({
+            x: sx,
+            y: sy,
+            target,
+            speed: maxSpeed * 0.2,
+            maxSpeed,
+            accel: maxSpeed,
+            damage: t.damage,
+            source: t,
+            type: 'rocket',
+            angle: baseAngle,
+            turnRate: Math.PI,
+            smoke: 0,
+            sentinel: true,
+            variant: t.type
+          });
+          t.cooldown = 1 / t.fireRate;
+          t.anim = 0.1;
+          sfx(200, 0.2, 0.04, 'sawtooth');
+        }
       } else if (t.cooldown <= 0 && target) {
         bullets.push({
           x: sx,
