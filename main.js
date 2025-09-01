@@ -621,7 +621,7 @@ function cssCenter() {
 let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
 let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
-const CANNON_SRC = 'assets/cannon.svg';
+const CANNON_SRC = 'assets/pistol_cat';
 const LASER_SRC = 'assets/laser.svg';
 const WALL_SRC = 'assets/wall.svg';
 const SNIPER_SRC = 'assets/sniper.svg';
