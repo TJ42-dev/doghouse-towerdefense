@@ -47,9 +47,10 @@ let ctx = null;
 
 // -------------------- Grid & Build --------------------
 // Fixed logical grid
-const GRID_COLS = 36;
-// Trim top and bottom rows so only the visible play area is usable
-const GRID_ROWS = 24;
+// Reduce the overall playfield size by trimming 7 columns from the right and
+// 7 rows from the top.
+const GRID_COLS = 29;
+const GRID_ROWS = 17;
 let CELL_PX = 22; // pixel size of a cell (computed on resize)
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
@@ -64,8 +65,9 @@ let money = 0;
 const WALL_COST = 10;
 
 // Landmarks
-const DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
-const DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
+// Reposition doghouse landmarks to account for the trimmed grid
+const DOGHOUSE_DOOR_CELL = { x: 21, y: 13 };
+const DOGHOUSE_SPAWN_CELL = { x: 20, y: 13 };
 
 // Entry points for enemies (top-left only)
 const ENTRIES = [ { x: 0, y: 0 } ];
