@@ -11,3 +11,4 @@
 - Added free mode difficulty with medium enemy health and 99999 starting cash.
 - Kill rewards increase slightly after clearing each boss wave.
 - Introduced Rocket Launcher tower with homing rockets and smoke trails.
+- Rocket launchers keep up to three persistent rockets between waves and still fire at foes when fully stocked.
