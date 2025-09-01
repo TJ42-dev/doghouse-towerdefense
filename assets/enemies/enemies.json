@@ -1,0 +1,9 @@
+{
+  "default": { "baseHealth": 100, "baseSpeed": 1.0 },
+  "types": [
+    { "id": "normal", "name": "labrador", "src": "assets/enemies/normal/labrador.png", "baseHealth": 100, "baseSpeed": 1.0 },
+    { "id": "tank", "name": "bulldog", "src": "assets/enemies/tank/bulldog.png", "baseHealth": 200, "baseSpeed": 0.7 },
+    { "id": "speed", "name": "beagle", "src": "assets/enemies/speed/beagle.png", "baseHealth": 80, "baseSpeed": 1.5 },
+    { "id": "boss", "name": "german", "src": "assets/enemies/boss/german.png", "baseHealth": 500, "baseSpeed": 1.2 }
+  ]
+}
