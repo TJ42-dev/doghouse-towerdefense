@@ -12,6 +12,10 @@ h1 { font-weight: 800; letter-spacing: .5px; margin-bottom: 1.25rem; }
   background: #3a47d5; color: white; font-weight: 700; cursor: pointer;
   transition: transform .05s ease, filter .2s ease;
 }
+.btn.sm {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
+}
 .btn:hover { filter: brightness(1.06); }
 .btn:active { transform: translateY(1px); }
 .btn.ghost { background: #2c2f45; color: #cfd6ff; }
@@ -61,11 +65,11 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   top: 1rem;
   left: 1rem;
   background: rgba(0,0,0,0.6);
-  padding: 0.5rem;
+  padding: 0.25rem;
   border-radius: 12px;
   cursor: move;
   z-index: 20;
-  min-width: 220px;
+  min-width: 180px;
   user-select: none;
 }
 .tab-buttons {
@@ -94,7 +98,17 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 .hover-menu .btn {
   display: block;
   width: 100%;
-  margin: 0.25rem 0;
+  margin: 0.2rem 0;
+}
+.hover-menu .btn.sm {
+  width: auto;
+  display: inline-block;
+}
+
+.build-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
 }
 
 .upgrade-row {

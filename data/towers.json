@@ -4,12 +4,14 @@
     "damage": 80,
     "fireRate": 0.5,
     "range": 4,
-    "bulletSpeed": 5
+    "bulletSpeed": 5,
+    "cost": 50
   },
   {
     "id": "laser",
     "damage": 120,
     "fireRate": 0.4,
-    "range": 4
+    "range": 4,
+    "cost": 100
   }
 ]

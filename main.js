@@ -33,6 +33,7 @@ const contextMenu = document.getElementById('contextMenu');
 const contextSellBtn = document.getElementById('contextSell');
 let selectedTower = null;
 let contextTarget = null;
+let rangePreview = null;
 
 let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
@@ -53,6 +54,14 @@ let towers = [];
 let bullets = [];
 let beams = [];
 let money = 0;
+const WALL_COST = 10;
+
+function updateBuildButtonLabels() {
+  if (wallBtn) wallBtn.textContent = `Wall $${WALL_COST}`;
+  if (cannonBtn) cannonBtn.textContent = `Cannon $${CANNON_BASE.cost}`;
+  if (laserBtn) laserBtn.textContent = `Laser $${LASER_BASE.cost}`;
+}
+updateBuildButtonLabels();
 
 // Landmarks
 const DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
@@ -133,8 +142,8 @@ function recalcEnemyPaths() {
 }
 
 // Tower and enemy stats are loaded from external JSON for easier tuning
-let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5 };
-let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4 };
+let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
+let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
 let TOWER_TYPES = [];
 
 // Basic BFS pathfinding to navigate around walls
@@ -306,15 +315,27 @@ function updateSelectedTowerInfo() {
 
 gameCanvas?.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  if (!contextMenu) return;
+  if (!contextMenu || !contextSellBtn) return;
   const r = gameCanvas.getBoundingClientRect();
   const cell = pxToCell({ x: e.clientX - r.left, y: e.clientY - r.top });
+  const t = towers.find(tt => tt.gx === cell.x && tt.gy === cell.y);
+  const w = walls.find(ww => ww.x === cell.x && ww.y === cell.y);
   contextTarget = { gx: cell.x, gy: cell.y };
+  if (t) {
+    contextSellBtn.textContent = `$${t.cost || 0}`;
+    rangePreview = { x: t.x, y: t.y, r: t.range * CELL_PX };
+  } else if (w) {
+    contextSellBtn.textContent = `$${WALL_COST}`;
+    rangePreview = null;
+  } else {
+    contextSellBtn.textContent = 'X';
+    rangePreview = null;
+  }
   contextMenu.style.left = e.clientX + 'px';
   contextMenu.style.top = e.clientY + 'px';
   contextMenu.style.display = 'block';
 });
-document.addEventListener('click', () => { if (contextMenu) contextMenu.style.display = 'none'; contextTarget = null; });
+document.addEventListener('click', () => { if (contextMenu) contextMenu.style.display = 'none'; contextTarget = null; rangePreview = null; });
 contextSellBtn?.addEventListener('click', () => {
   if (!contextTarget) return;
   const { gx, gy } = contextTarget;
@@ -322,6 +343,7 @@ contextSellBtn?.addEventListener('click', () => {
   if (t) {
     removeOccupancy(gx, gy);
     towers = towers.filter(tt => tt !== t);
+    money += t.cost || 0;
     selectedTower = null;
     updateSelectedTowerInfo();
   } else {
@@ -329,11 +351,13 @@ contextSellBtn?.addEventListener('click', () => {
     if (idx !== -1) {
       walls.splice(idx, 1);
       removeOccupancy(gx, gy);
+      money += WALL_COST;
     }
   }
   recalcEnemyPaths();
   contextMenu.style.display = 'none';
   contextTarget = null;
+  rangePreview = null;
 });
 
 function upgradeTower(t, stat) {
@@ -414,6 +438,7 @@ async function loadData() {
       if (cannon) CANNON_BASE = { ...CANNON_BASE, ...cannon };
       const laser = TOWER_TYPES.find(t => t.id === 'laser');
       if (laser) LASER_BASE = { ...LASER_BASE, ...laser };
+      updateBuildButtonLabels();
     }
     if (dogJson) {
       DEFAULT_DOG_STATS = { ...DEFAULT_DOG_STATS, ...(dogJson.default || {}) };
@@ -774,6 +799,16 @@ function render() {
     ctx.fillRect(x, y, CELL_PX, CELL_PX);
   }
 
+  if (rangePreview) {
+    ctx.beginPath();
+    ctx.arc(rangePreview.x, rangePreview.y, rangePreview.r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,255,0,0.15)';
+    ctx.strokeStyle = 'rgba(0,255,0,0.4)';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+  }
+
     // Towers
     for (const t of towers) {
       const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
@@ -886,6 +921,7 @@ function onCanvasClick(e) {
     if (t) {
       removeOccupancy(gx, gy);
       towers = towers.filter(tt => tt !== t);
+      money += t.cost || 0;
       selectedTower = null;
       updateSelectedTowerInfo();
     } else {
@@ -893,6 +929,7 @@ function onCanvasClick(e) {
       if (idx !== -1) {
         walls.splice(idx, 1);
         removeOccupancy(gx, gy);
+        money += WALL_COST;
       }
     }
     recalcEnemyPaths();
@@ -921,6 +958,7 @@ function onCanvasClick(e) {
         damage: CANNON_BASE.damage,
         fireRate: CANNON_BASE.fireRate,
         range: CANNON_BASE.range,
+        cost: CANNON_BASE.cost,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null
       });
@@ -942,6 +980,7 @@ function onCanvasClick(e) {
         damage: LASER_BASE.damage,
         fireRate: LASER_BASE.fireRate,
         range: LASER_BASE.range,
+        cost: LASER_BASE.cost,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null
       });
