@@ -102,24 +102,10 @@ function removeOccupancy(x, y) {
 }
 
 function initOccupancy() {
+  // Start with an empty grid; cells become occupied only when walls or towers
+  // are placed during gameplay.
   occupancy = new Set();
   walls = [];
-  // Edge moat
-  for (let x = 0; x < GRID_COLS; x++) {
-    addOccupancy(x, 0); walls.push({ x, y: 0 });
-    addOccupancy(x, GRID_ROWS - 1); walls.push({ x, y: GRID_ROWS - 1 });
-  }
-  for (let y = 1; y < GRID_ROWS - 1; y++) {
-    addOccupancy(0, y); walls.push({ x: 0, y });
-    addOccupancy(GRID_COLS - 1, y); walls.push({ x: GRID_COLS - 1, y });
-  }
-  // Doghouse footprint (excluding door)
-  for (let x = 29; x < GRID_COLS; x++) {
-    for (let y = 18; y < GRID_ROWS; y++) {
-      if (x === DOGHOUSE_DOOR_CELL.x && y === DOGHOUSE_DOOR_CELL.y) continue;
-      addOccupancy(x, y); walls.push({ x, y });
-    }
-  }
 }
 
 function canPlace(cell) {
