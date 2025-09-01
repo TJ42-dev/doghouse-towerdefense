@@ -107,6 +107,37 @@
   .logo { justify-self: center; }
 }
 
+/* Fill the page more and center focus without breaking other screens */
+.container.menu-page.war { width: min(860px, 94vw); }
+
+/* Focused layout: make the card taller and center the nav stack */
+.menu-card.battle.focused {
+  padding: 2rem 2rem 2.25rem;
+  min-height: clamp(520px, 76vh, 820px);
+  display: grid;
+  grid-template-rows: auto 1fr auto auto; /* hero, nav, meta, footnote */
+}
+.menu-card.battle.focused .menu { align-self: center; }
+
+/* Breathing room */
+.hero { gap: 1.25rem; margin-bottom: 1.5rem; }
+.menu { gap: 1rem; margin: 2.25rem 0 2.25rem; }
+.menu .btn.lg { font-size: 1.08rem; padding: 1.15rem 1.35rem; }
+
+/* Dogtag pill spacing; only Best Wave remains */
+.meta { margin-top: .25rem; }
+.pill.dogtag { padding: .35rem .7rem; }
+
+/* Tip copy update already in HTML; ensure readability */
+.footnote.intel { margin-top: 1rem; }
+
+/* Small devices still centered */
+@media (max-width: 520px) {
+  .container.menu-page.war { width: min(96vw, 480px); }
+  .menu-card.battle.focused { padding: 1.5rem; }
+  .menu .btn.lg { font-size: 1.02rem; padding: 1.05rem 1.2rem; }
+}
+
 
 #gameCanvas {
   position: fixed;
