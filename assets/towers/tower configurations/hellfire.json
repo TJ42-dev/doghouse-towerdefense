@@ -1,0 +1,8 @@
+{
+  "id": "hellfire",
+  "damage": 200,
+  "fireRate": 0.6,
+  "range": 5.5,
+  "bulletSpeed": 4,
+  "cost": 2000
+}

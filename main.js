@@ -838,14 +838,24 @@ const SNIPER_BASE_SRC = 'assets/towers/bases/sniper.svg';
 const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper.svg';
 const SHOTGUN_BASE_SRC = 'assets/towers/bases/shotgun.svg';
 const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun.svg';
-const TOWER_CONFIG_IDS = ['cannon', 'laser', 'rocket'];
+const TOWER_CONFIG_IDS = [
+  'cannon',
+  'laser',
+  'rocket',
+  'sniper',
+  'shotgun',
+  'dualLaser',
+  'railgun',
+  'nuke',
+  'hellfire'
+];
 
 let DATA_LOADED = false;
 async function loadData() {
   if (DATA_LOADED) return;
   try {
     const towerPromises = TOWER_CONFIG_IDS.map(id =>
-      fetch(`data/towers/${id}.json`).then(r => r.json())
+      fetch(`assets/towers/tower configurations/${id}.json`).then(r => r.json())
     );
     const [towerJson, dogJson] = await Promise.all([
       Promise.all(towerPromises),

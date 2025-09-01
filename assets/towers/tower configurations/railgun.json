@@ -1,0 +1,7 @@
+{
+  "id": "railgun",
+  "damage": 480,
+  "fireRate": 0.2,
+  "range": 4,
+  "cost": 2500
+}

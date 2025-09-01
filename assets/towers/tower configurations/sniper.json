@@ -1,0 +1,8 @@
+{
+  "id": "sniper",
+  "damage": 1000,
+  "fireRate": 0.6,
+  "range": 6,
+  "bulletSpeed": 8,
+  "cost": 950
+}
