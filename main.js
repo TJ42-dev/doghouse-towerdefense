@@ -1025,7 +1025,7 @@ function spawnEnemy() {
   const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const path = findPath(entry, goalCell);
 
-  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health });
+  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0 });
   enemiesSpawnedInWave++;
 }
 
@@ -1055,12 +1055,27 @@ function updateProjectiles(dt) {
     if (b.type === 'rocket') {
       b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
       const move = b.speed * dt;
-      if (!b.target || !enemies.includes(b.target)) {
+
+      const needsNewTarget =
+        !b.target ||
+        !enemies.includes(b.target) ||
+        b.target.health <= 0;
+
+      if (needsNewTarget) {
+        b.target = null;
         let closest = null;
         let closestDist = Infinity;
+        const maxSearchDist = 800;
         for (const e of enemies) {
-          const d = Math.hypot(e.x - b.x, e.y - b.y);
-          if (d < closestDist) { closestDist = d; closest = e; }
+          if (e.health <= 0) continue;
+          const dx = e.x - b.x;
+          const dy = e.y - b.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq > maxSearchDist * maxSearchDist) continue;
+          if (distSq < closestDist) {
+            closestDist = distSq;
+            closest = e;
+          }
         }
         b.target = closest;
         if (b.target) {
@@ -1090,39 +1105,59 @@ function updateProjectiles(dt) {
           return true;
         }
       }
-      const desired = Math.atan2(b.target.y - b.y, b.target.x - b.x);
+
+      const targetVelX = b.target.velX || 0;
+      const targetVelY = b.target.velY || 0;
+      const distToTarget = Math.hypot(b.target.x - b.x, b.target.y - b.y);
+      const leadTime = distToTarget / b.speed;
+      const predictedX = b.target.x + targetVelX * leadTime * 0.5;
+      const predictedY = b.target.y + targetVelY * leadTime * 0.5;
+
+      const desired = Math.atan2(predictedY - b.y, predictedX - b.x);
       let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
-      const maxTurn = b.turnRate * dt;
+      const turnRateMultiplier = Math.min(2.0, Math.max(0.5, 200 / distToTarget));
+      const maxTurn = b.turnRate * turnRateMultiplier * dt;
       if (diff > maxTurn) diff = maxTurn;
       if (diff < -maxTurn) diff = -maxTurn;
       b.angle += diff;
+
       b.x += Math.cos(b.angle) * move;
       b.y += Math.sin(b.angle) * move;
+
       b.smoke -= dt;
       if (b.smoke <= 0) {
         smokes.push({ x: b.x, y: b.y, life: 0.5 });
         b.smoke = 0.05;
       }
-      if (Math.hypot(b.target.x - b.x, b.target.y - b.y) <= b.target.r) {
+
+      const newDist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
+      const hitRadius = b.target.r + 2;
+      if (newDist <= hitRadius) {
         b.target.health -= b.damage;
         bark();
         if (b.variant === 'nuke') {
-          for (const e of enemies.slice()) {
-            if (e !== b.target && Math.hypot(e.x - b.target.x, e.y - b.target.y) <= NUKE_SPLASH_RADIUS) {
+          const targetX = b.target.x;
+          const targetY = b.target.y;
+          for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
+            if (e !== b.target && Math.hypot(e.x - targetX, e.y - targetY) <= NUKE_SPLASH_RADIUS) {
               e.health -= b.damage * 0.8;
               if (e.health <= 0) {
-                enemies.splice(enemies.indexOf(e), 1);
+                enemies.splice(i, 1);
                 money += difficultySettings.killReward;
                 if (b.source) b.source.kills = (b.source.kills || 0) + 1;
               }
             }
           }
-          explosions.push({ x: b.target.x, y: b.target.y, life: 0.3, max: 0.3 });
+          explosions.push({ x: targetX, y: targetY, life: 0.3, max: 0.3 });
         }
         if (b.target.health <= 0) {
-          enemies.splice(enemies.indexOf(b.target), 1);
-          money += difficultySettings.killReward;
-          if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+          const targetIndex = enemies.indexOf(b.target);
+          if (targetIndex !== -1) {
+            enemies.splice(targetIndex, 1);
+            money += difficultySettings.killReward;
+            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+          }
         }
         return false;
       }
@@ -1254,6 +1289,9 @@ function update(dt) {
       e.x = prevX; e.y = prevY;
       e.path = findPath(curCell, goalCell);
     }
+
+    e.velX = (e.x - prevX) / dt;
+    e.velY = (e.y - prevY) / dt;
 
     const dtgt = Math.hypot(target.x - e.x, target.y - e.y);
     if (dtgt < e.r + target.r) {
