@@ -1057,26 +1057,42 @@ function updateProjectiles(dt) {
       const move = b.speed * dt;
       const rangePx = (b.source?.range || Infinity) * CELL_PX;
 
-      // Always look for the closest enemy within the tower's range
-      let closest = null;
-      let closestDist = Infinity;
-      for (const e of enemies) {
-        if (b.source) {
-          const distToTower = Math.hypot(
-            e.x - b.source.x,
-            e.y - b.source.y
-          );
-          if (distToTower > rangePx) continue;
-        }
-        const distToRocket = Math.hypot(e.x - b.x, e.y - b.y);
-        if (distToRocket < closestDist) {
-          closestDist = distToRocket;
-          closest = e;
-        }
-      }
-      b.target = closest;
+      if (b.target && !enemies.includes(b.target)) b.target = null;
 
-      // If no target is available, orbit idly
+      if (!b.target) {
+        // Find the nearest enemy within the tower's range that isn't already
+        // targeted by another rocket
+        const taken = new Set(
+          bullets
+            .filter(
+              o =>
+                o !== b &&
+                o.type === 'rocket' &&
+                o.target &&
+                enemies.includes(o.target)
+            )
+            .map(o => o.target)
+        );
+        let closest = null;
+        let closestDist = Infinity;
+        for (const e of enemies) {
+          if (taken.has(e)) continue;
+          if (b.source) {
+            const distToTower = Math.hypot(
+              e.x - b.source.x,
+              e.y - b.source.y
+            );
+            if (distToTower > rangePx) continue;
+          }
+          const distToRocket = Math.hypot(e.x - b.x, e.y - b.y);
+          if (distToRocket < closestDist) {
+            closestDist = distToRocket;
+            closest = e;
+          }
+        }
+        b.target = closest;
+      }
+
       if (!b.target) {
         if (!b.orbitCenter) {
           b.orbitCenter = { x: b.x, y: b.y };
@@ -1102,7 +1118,6 @@ function updateProjectiles(dt) {
         return true;
       }
 
-      // Chase the acquired target
       b.orbitCenter = null;
       const desired = Math.atan2(b.target.y - b.y, b.target.x - b.x);
       let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
