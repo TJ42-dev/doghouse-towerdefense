@@ -10,7 +10,7 @@
 <body>
 
 <main class="container menu-page war" aria-labelledby="gameTitle">
-  <!-- ambient decor (now sparks/embers instead of cutesy paws) -->
+  <!-- ambient decor (sparks/embers) -->
   <div class="decor" aria-hidden="true">
     <span class="paw" style="--i:0; --x:8%; --d:0s"></span>
     <span class="paw" style="--i:1; --x:22%; --d:.6s"></span>
@@ -20,11 +20,11 @@
     <span class="paw" style="--i:5; --x:90%; --d:3s"></span>
   </div>
 
-  <section class="menu-card battle" role="region" aria-label="Game menu">
+  <section class="menu-card battle focused" role="region" aria-label="Game menu">
     <header class="hero">
       <div class="logo" aria-hidden="true">
         <!-- Tactical shield + crosshair doghouse badge -->
-        <svg viewBox="0 0 220 160" width="160" height="116" role="img" aria-label="Doghouse tactical badge">
+        <svg viewBox="0 0 220 160" width="168" height="122" role="img" aria-label="Doghouse tactical badge">
           <defs>
             <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#9aa3ad"/>
@@ -35,15 +35,12 @@
               <stop offset="1" stop-color="#f59e0b"/>
             </linearGradient>
           </defs>
-          <!-- crosshair -->
           <g stroke="url(#danger)" stroke-width="4" opacity=".8">
             <circle cx="110" cy="80" r="58" fill="none"/>
             <path d="M20 80h60M110 20v60M140 80h60M110 110v30" />
           </g>
-          <!-- steel shield -->
           <path d="M110 20 L170 46 L170 102 Q140 128 110 140 Q80 128 50 102 L50 46 Z"
                 fill="url(#steel)" stroke="#0b0f14" stroke-width="3"/>
-          <!-- doghouse silhouette -->
           <g transform="translate(110,86)">
             <polygon points="-45,-12 0,-42 45,-12 35,-12 35,35 -35,35 -35,-12"
                      fill="#0f1720" stroke="#0b0f14" stroke-width="3"/>
@@ -76,12 +73,12 @@
     </nav>
 
     <div class="meta">
-      <div class="pill dogtag">LAST SAVE <span id="lastSave">—</span></div>
+      <!-- Removed Last Save; keeping only Best Wave -->
       <div class="pill dogtag">BEST WAVE <span id="bestWave">0</span></div>
     </div>
 
     <p class="footnote intel">
-      Intel: Path is hot. Turrets can’t be placed on the dog run.
+      Tip: You cannot completely block the path from the enemies!
     </p>
   </section>
 
@@ -104,6 +101,7 @@
     </form>
   </dialog>
 </main>
+
 
 
 
