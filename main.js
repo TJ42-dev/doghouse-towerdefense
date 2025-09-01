@@ -120,7 +120,7 @@ const DIFFICULTY_SETTINGS = {
   hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 }
 };
 let difficulty = 'medium';
-let difficultySettings = DIFFICULTY_SETTINGS[difficulty];
+let difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
 
 sniperCostSpan && (sniperCostSpan.textContent = `$${SPECIALIZATION_COSTS.sniper}`);
 shotgunCostSpan && (shotgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.shotgun}`);
@@ -863,6 +863,7 @@ const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
 const BOSS_WAVE_INDEX = 4; // zero-based (wave 5)
 const HEALTH_SCALE_AFTER_BOSS = 0.2; // 20% more health per wave after boss
 const POST_WAVE_DELAY = 5; // delay after a wave clears
+const KILL_REWARD_SCALE_AFTER_BOSS = 1.1; // 10% more cash per kill after boss waves
 let rafId = null;
 let lastT = 0;
 let running = false;
@@ -888,7 +889,7 @@ function resetGame() {
   bullets = [];
   const opts = loadOpts();
   difficulty = opts.difficulty || 'medium';
-  difficultySettings = DIFFICULTY_SETTINGS[difficulty];
+  difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
   money = difficultySettings.startingCash;
   selectedTower = null;
   updateSelectedTowerInfo();
@@ -958,6 +959,9 @@ function startWave() {
 }
 
 function nextWave() {
+  if ((waveIndex + 1) % (BOSS_WAVE_INDEX + 1) === 0) {
+    difficultySettings.killReward = Math.round(difficultySettings.killReward * KILL_REWARD_SCALE_AFTER_BOSS);
+  }
   waveIndex++;
   waveActive = false;
   preWaveTimer = POST_WAVE_DELAY;
