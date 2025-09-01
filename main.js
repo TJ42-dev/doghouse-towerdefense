@@ -249,7 +249,7 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', startingCash: 0 };
+  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', startingCash: 250 };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') };
   } catch {
@@ -262,7 +262,7 @@ function syncUI() {
   if (optMute) optMute.checked = !!o.mute;
   if (optFullscreen) optFullscreen.checked = !!o.fullscreen;
   if (optGridSize) optGridSize.value = o.gridSize || 'medium';
-  if (optStartingCash) optStartingCash.value = o.startingCash ?? 0;
+  if (optStartingCash) optStartingCash.value = o.startingCash ?? 250;
 }
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
 saveBtn?.addEventListener('click', () => {
@@ -637,7 +637,8 @@ function resetGame() {
   catLives = [];
     const cols = 3, rows = 3;
     const startCellX = DOGHOUSE_DOOR_CELL.x + 2;
-    const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
+    const yOffset = GRID_ROWS === GRID_SIZES.medium.rows ? 5 : 1;
+    const startCellY = DOGHOUSE_DOOR_CELL.y - yOffset;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
