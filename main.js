@@ -101,6 +101,7 @@ let GRID_COLS = 36;
 let GRID_ROWS = 24;
 let CELL_PX = 26; // fixed pixel size for each grid cell
 const NUKE_SPLASH_RADIUS = CELL_PX * 2;
+const STRAY_ROCKET_RADIUS = CELL_PX;
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
 // Occupancy map mirrors walls & towers
@@ -243,7 +244,7 @@ function recalcEnemyPaths() {
 // Tower and enemy stats are loaded from external JSON for easier tuning
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
-let ROCKET_BASE = { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4, cost: 175 };
+let ROCKET_BASE = { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4.5, cost: 175 };
 let TOWER_TYPES = [];
 
 function updateBuildButtonLabels() {
@@ -1058,30 +1059,17 @@ function updateProjectiles(dt) {
           if (d < closestDist) { closestDist = d; closest = e; }
         }
         b.target = closest;
-        if (b.target && b.sentinel) b.sentinel = false;
-        if (!b.target) {
-          if (b.sentinel) {
-            const src = b.source || { x: b.x, y: b.y, range: 0 };
-            if (b.orbitR === undefined) {
-              const dist = Math.hypot(b.x - src.x, b.y - src.y);
-              b.orbitR = Math.min(dist, src.range * CELL_PX * 0.9);
-              b.orbitAng = Math.atan2(b.y - src.y, b.x - src.x);
-            }
-            const maxR = src.range * CELL_PX * 0.9;
-            b.orbitR = Math.min(maxR, b.orbitR + b.speed * dt);
-            b.orbitAng += (b.speed / b.orbitR) * dt;
-            b.x = src.x + Math.cos(b.orbitAng) * b.orbitR;
-            b.y = src.y + Math.sin(b.orbitAng) * b.orbitR;
-            b.angle = b.orbitAng + Math.PI / 2;
-            b.smoke -= dt;
-            if (b.smoke <= 0) {
-              smokes.push({ x: b.x, y: b.y, life: 0.5 });
-              b.smoke = 0.05;
-            }
-            return true;
+        if (b.target) {
+          b.orbitCenter = null;
+        } else {
+          if (!b.orbitCenter) {
+            b.orbitCenter = { x: b.x, y: b.y };
+            b.orbitAng = b.angle || 0;
           }
-          b.x += Math.cos(b.angle) * move;
-          b.y += Math.sin(b.angle) * move;
+          b.orbitAng += (b.speed / STRAY_ROCKET_RADIUS) * dt;
+          b.x = b.orbitCenter.x + Math.cos(b.orbitAng) * STRAY_ROCKET_RADIUS;
+          b.y = b.orbitCenter.y + Math.sin(b.orbitAng) * STRAY_ROCKET_RADIUS;
+          b.angle = b.orbitAng + Math.PI / 2;
           b.smoke -= dt;
           if (b.smoke <= 0) {
             smokes.push({ x: b.x, y: b.y, life: 0.5 });
@@ -1313,7 +1301,6 @@ function update(dt) {
             angle: baseAngle,
             turnRate: Math.PI,
             smoke: 0,
-            sentinel: true,
             variant: t.type
           });
           t.cooldown = 1 / t.fireRate;
