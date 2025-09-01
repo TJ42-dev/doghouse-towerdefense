@@ -37,6 +37,10 @@ const fireRateCost = document.getElementById('fireRateCost');
 const rangeValue = document.getElementById('rangeValue');
 const rangeNext = document.getElementById('rangeNext');
 const rangeCost = document.getElementById('rangeCost');
+const basicUpgrades = document.getElementById('basicUpgrades');
+const specialUpgrades = document.getElementById('specialUpgrades');
+const upgradeSniperBtn = document.getElementById('upgradeSniper');
+const upgradeShotgunBtn = document.getElementById('upgradeShotgun');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
@@ -346,6 +350,12 @@ upgradeFireRateBtn?.addEventListener('click', () => {
 upgradeRangeBtn?.addEventListener('click', () => {
   if (selectedTower && upgradeTower(selectedTower, 'range')) { rankUp(); updateSelectedTowerInfo(); }
 });
+upgradeSniperBtn?.addEventListener('click', () => {
+  if (selectedTower) { specializeTower(selectedTower, 'sniper'); updateSelectedTowerInfo(); }
+});
+upgradeShotgunBtn?.addEventListener('click', () => {
+  if (selectedTower) { specializeTower(selectedTower, 'shotgun'); updateSelectedTowerInfo(); }
+});
 sellBtn?.addEventListener('click', () => {
   if (selectedTower) {
     const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
@@ -376,33 +386,54 @@ pauseBtn?.addEventListener('click', () => {
 function updateSelectedTowerInfo() {
   if (!selectedTowerInfo) return;
   if (selectedTower) {
-    selectedTowerInfo.textContent = `Selected: ${selectedTower.type}`;
+    const isSpecial = selectedTower.type === 'sniper' || selectedTower.type === 'shotgun';
+    const fullyUpgraded = selectedTower.type === 'cannon' && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
-    const stats = {
-      damage: { value: damageValue, next: damageNext, cost: damageCost, btn: upgradeDamageBtn },
-      fireRate: { value: fireRateValue, next: fireRateNext, cost: fireRateCost, btn: upgradeFireRateBtn },
-      range: { value: rangeValue, next: rangeNext, cost: rangeCost, btn: upgradeRangeBtn }
-    };
-    for (const [stat, els] of Object.entries(stats)) {
-      const lvl = selectedTower.upgrades?.[stat] || 0;
-      const curr = selectedTower[stat];
-      const next = selectedTower.base[stat] * (1 + 0.1 * (lvl + 1));
-      const inc = next - curr;
-      if (els.value) {
-        els.value.textContent =
-          stat === 'fireRate' ? curr.toFixed(2) :
-          stat === 'range' ? curr.toFixed(1) :
-          Math.round(curr);
+    if (fullyUpgraded) {
+      selectedTowerInfo.textContent = 'Choose specialization';
+      if (basicUpgrades) basicUpgrades.style.display = 'none';
+      if (specialUpgrades) specialUpgrades.style.display = '';
+    } else {
+      if (basicUpgrades) basicUpgrades.style.display = '';
+      if (specialUpgrades) specialUpgrades.style.display = 'none';
+      selectedTowerInfo.textContent = isSpecial ? 'Tower Maxed out!' : `Selected: ${selectedTower.type}`;
+      const stats = {
+        damage: { value: damageValue, next: damageNext, cost: damageCost, btn: upgradeDamageBtn },
+        fireRate: { value: fireRateValue, next: fireRateNext, cost: fireRateCost, btn: upgradeFireRateBtn },
+        range: { value: rangeValue, next: rangeNext, cost: rangeCost, btn: upgradeRangeBtn }
+      };
+      for (const [stat, els] of Object.entries(stats)) {
+        const lvl = selectedTower.upgrades?.[stat] || 0;
+        const curr = selectedTower[stat];
+        const next = selectedTower.base[stat] * (1 + 0.1 * (lvl + 1));
+        const inc = next - curr;
+        if (els.value) {
+          els.value.textContent =
+            stat === 'fireRate' ? curr.toFixed(2) :
+            stat === 'range' ? curr.toFixed(1) :
+            Math.round(curr);
+        }
+        if (els.next) {
+          const incText =
+            stat === 'fireRate' ? inc.toFixed(2) :
+            stat === 'range' ? inc.toFixed(1) :
+            Math.round(inc);
+          els.next.textContent = isSpecial ? '' : `(+${incText})`;
+          els.next.style.display = isSpecial ? 'none' : '';
+        }
+        if (els.cost) {
+          els.cost.textContent = isSpecial ? '' : `$${getUpgradeCost(selectedTower, stat)}`;
+          els.cost.style.display = isSpecial ? 'none' : '';
+        }
+        if (els.btn) {
+          if (isSpecial) {
+            els.btn.style.display = 'none';
+          } else {
+            els.btn.style.display = '';
+            els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
+          }
+        }
       }
-      if (els.next) {
-        const incText =
-          stat === 'fireRate' ? inc.toFixed(2) :
-          stat === 'range' ? inc.toFixed(1) :
-          Math.round(inc);
-        els.next.textContent = `(+${incText})`;
-      }
-      if (els.cost) els.cost.textContent = `$${getUpgradeCost(selectedTower, stat)}`;
-      if (els.btn) els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
     }
     if (sellBtn) {
       const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
@@ -415,7 +446,9 @@ function updateSelectedTowerInfo() {
     [damageValue, damageNext, damageCost, fireRateValue, fireRateNext, fireRateCost, rangeValue, rangeNext, rangeCost].forEach(el => {
       if (el) el.textContent = '-';
     });
-    [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn].forEach(btn => { if (btn) btn.disabled = true; });
+    [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn].forEach(btn => { if (btn) { btn.disabled = true; btn.style.display = ''; } });
+    if (basicUpgrades) basicUpgrades.style.display = '';
+    if (specialUpgrades) specialUpgrades.style.display = 'none';
     if (sellBtn) {
       sellBtn.textContent = 'Sell';
       sellBtn.disabled = true;
@@ -508,6 +541,27 @@ function upgradeTower(t, stat) {
   return true;
 }
 
+function specializeTower(t, kind) {
+  if (t.type !== 'cannon') return;
+  if (!t.upgrades) return;
+  const maxed = ['damage','fireRate','range'].every(s => t.upgrades[s] >= 10);
+  if (!maxed) return;
+  if (kind === 'sniper') {
+    const idx = 24; // wave 25 zero-based
+    const scale = 1 + (idx - BOSS_WAVE_INDEX) * HEALTH_SCALE_AFTER_BOSS;
+    t.type = 'sniper';
+    t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
+    t.fireRate = 0.2;
+    t.range = t.range * 1.5;
+  } else if (kind === 'shotgun') {
+    t.type = 'shotgun';
+    t.damage = Math.round(t.damage * 1.5);
+    // fireRate unchanged
+  }
+  t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
+  t.upgrades = { damage: 0, fireRate: 0, range: 0 };
+}
+
 // -------------------- Canvas setup --------------------
 function ensureCanvas() {
   if (!gameCanvas) {
@@ -569,6 +623,8 @@ const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_SRC = 'assets/cannon.svg';
 const LASER_SRC = 'assets/laser.svg';
 const WALL_SRC = 'assets/wall.svg';
+const SNIPER_SRC = 'assets/sniper.svg';
+const SHOTGUN_SRC = 'assets/shotgun.svg';
 const BOSS_SRC = 'assets/animals/dogs/german.png';
 const BOSS_STATS = { baseHealth: 500, baseSpeed: 1.2 };
 
@@ -613,7 +669,7 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [], boss: null, cat: null, cannon: null, laser: null, wall: null };
+let ASSETS = { dogs: [], boss: null, cat: null, cannon: null, laser: null, wall: null, sniper: null, shotgun: null };
 let assetsReady; // Promise
 
 async function ensureAssets() {
@@ -628,7 +684,9 @@ async function ensureAssets() {
           cat: await loadImage(CAT_SRC),
           cannon: await loadImage(CANNON_SRC),
           laser: await loadImage(LASER_SRC),
-          wall: await loadImage(WALL_SRC)
+          wall: await loadImage(WALL_SRC),
+          sniper: await loadImage(SNIPER_SRC),
+          shotgun: await loadImage(SHOTGUN_SRC)
         };
     })();
   }
@@ -850,6 +908,15 @@ function update(dt) {
           money += 10;
           t.kills = (t.kills || 0) + 1;
         }
+      } else if (t.type === 'shotgun') {
+        const angle = Math.atan2(target.y - t.y, target.x - t.x);
+        const spread = Math.PI / 12;
+        for (let i = -1; i <= 1; i++) {
+          const ang = angle + i * spread;
+          bullets.push({ x: t.x, y: t.y, dx: Math.cos(ang), dy: Math.sin(ang), speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t, straight: true });
+        }
+        t.cooldown = 1 / t.fireRate;
+        sfx(880, 0.07, 0.03, 'square');
       } else {
         bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t });
         t.cooldown = 1 / t.fireRate;
@@ -860,11 +927,31 @@ function update(dt) {
 
   // Bullets
   bullets = bullets.filter(b => {
+    const move = b.speed * dt;
+    if (b.straight) {
+      b.x += b.dx * move;
+      b.y += b.dy * move;
+      for (const e of enemies) {
+        if (Math.hypot(e.x - b.x, e.y - b.y) <= e.r) {
+          e.health -= b.damage;
+          bark();
+          if (e.health <= 0) {
+            enemies.splice(enemies.indexOf(e), 1);
+            money += 10;
+            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+          }
+          return false;
+        }
+      }
+      if (b.x < originPx.x || b.x > originPx.x + GRID_COLS * CELL_PX || b.y < originPx.y || b.y > originPx.y + GRID_ROWS * CELL_PX) {
+        return false;
+      }
+      return true;
+    }
     if (!b.target || !enemies.includes(b.target)) return false;
     const dx = b.target.x - b.x;
     const dy = b.target.y - b.y;
     const dist = Math.hypot(dx, dy);
-    const move = b.speed * dt;
     if (dist <= move) {
       b.target.health -= b.damage;
       bark();
@@ -967,7 +1054,9 @@ function render() {
 
     // Towers
     for (const t of towers) {
-      const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
+      const img = t.type === 'laser' ? ASSETS.laser :
+        t.type === 'sniper' ? ASSETS.sniper :
+        t.type === 'shotgun' ? ASSETS.shotgun : ASSETS.cannon;
       if (imgReady(img)) {
         const angle = t.target ? Math.atan2(t.target.y - t.y, t.target.x - t.x) : 0;
         ctx.save();
