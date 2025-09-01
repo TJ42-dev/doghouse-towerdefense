@@ -47,10 +47,10 @@ let ctx = null;
 
 // -------------------- Grid & Build --------------------
 // Fixed logical grid
-// Reduce the overall playfield size by trimming 7 columns from the right and
-// 7 rows from the top.
-const GRID_COLS = 29;
-const GRID_ROWS = 17;
+// Scale down the overall playfield while keeping the layout static
+// Trim extra columns on the right and rows on the bottom.
+const GRID_COLS = 24;
+const GRID_ROWS = 16;
 let CELL_PX = 22; // pixel size of a cell (computed on resize)
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
@@ -69,8 +69,8 @@ const WALL_COST = 10;
 const DOGHOUSE_DOOR_CELL = { x: 21, y: 13 };
 const DOGHOUSE_SPAWN_CELL = { x: 20, y: 13 };
 
-// Entry points for enemies (top-left only)
-const ENTRIES = [ { x: 0, y: 0 } ];
+// Entry point for dogs near the top-left doghouse
+const ENTRIES = [ { x: 2, y: 2 } ];
 
 // Pure helpers ------------------------------------------------------------
 const key = (x, y) => `${x},${y}`;
