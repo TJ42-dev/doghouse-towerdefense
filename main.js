@@ -41,8 +41,14 @@ const GRID_ROWS = 26;
 
 const DOGHOUSE_DOOR_CELL = { x: 28, y: 21 };
 const DOGHOUSE_SPAWN_CELL = { x: 27, y: 21 };
-const DOOR_TARGET = { gx: DOGHOUSE_SPAWN_CELL.x, gy: DOGHOUSE_SPAWN_CELL.y, r: 0.5 };
-const ENEMY_ENTRIES = [{ x: Math.floor(GRID_COLS / 2), y: 0 }];
+const DOOR_TARGET = { gx: DOGHOUSE_DOOR_CELL.x, gy: DOGHOUSE_DOOR_CELL.y, r: 0.5 };
+const ENEMY_ENTRIES = [
+  { x: 5, y: 0 },
+  { x: Math.floor(GRID_COLS / 2), y: 0 },
+  { x: GRID_COLS - 6, y: 0 },
+  { x: 0, y: Math.floor(GRID_ROWS / 2) },
+  { x: 0, y: GRID_ROWS - 6 }
+];
 
 let CELL_PX = 20; // size of one grid cell in pixels (computed on resize)
 let originPxX = 0; // playfield offset from canvas top-left in pixels
@@ -133,33 +139,57 @@ function updateCatLivesUI() {
 // Basic BFS pathfinding to navigate around walls
 function findPath(start, goal) {
   const key = (x, y) => `${x},${y}`;
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-  const queue = [start];
-  let qi = 0;
-  const visited = new Set([key(start.x, start.y)]);
-  const prev = new Map();
-  while (qi < queue.length) {
-    const cur = queue[qi++];
-    if (cur.x === goal.x && cur.y === goal.y) break;
-    for (const [dx,dy] of dirs) {
-      const nx = cur.x + dx, ny = cur.y + dy;
+  const dirs = [
+    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+    [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]
+  ];
+  const h = (x, y) => Math.hypot(x - goal.x, y - goal.y);
+  const open = [start];
+  const cameFrom = new Map();
+  const gScore = new Map([[key(start.x, start.y), 0]]);
+  const fScore = new Map([[key(start.x, start.y), h(start.x, start.y)]]);
+  const closed = new Set();
+
+  while (open.length) {
+    let bestIdx = 0;
+    let bestF = fScore.get(key(open[0].x, open[0].y)) ?? Infinity;
+    for (let i = 1; i < open.length; i++) {
+      const k = key(open[i].x, open[i].y);
+      const f = fScore.get(k) ?? Infinity;
+      if (f < bestF) { bestF = f; bestIdx = i; }
+    }
+    const current = open.splice(bestIdx, 1)[0];
+    const ck = key(current.x, current.y);
+    if (current.x === goal.x && current.y === goal.y) break;
+    closed.add(ck);
+
+    for (const [dx, dy, cost] of dirs) {
+      const nx = current.x + dx, ny = current.y + dy;
       if (nx < 0 || ny < 0 || nx >= GRID_COLS || ny >= GRID_ROWS) continue;
-      if (isBlocked(nx, ny)) continue;
-      const k = key(nx, ny);
-      if (visited.has(k)) continue;
-      visited.add(k);
-      queue.push({x:nx, y:ny});
-      prev.set(k, cur);
+      if (dx && dy) {
+        if (isBlocked(current.x + dx, current.y) || isBlocked(current.x, current.y + dy)) continue;
+      }
+      if (isBlocked(nx, ny) && !(nx === goal.x && ny === goal.y)) continue;
+      const nk = key(nx, ny);
+      if (closed.has(nk)) continue;
+      const tentative = (gScore.get(ck) ?? Infinity) + cost;
+      if (tentative < (gScore.get(nk) ?? Infinity)) {
+        cameFrom.set(nk, current);
+        gScore.set(nk, tentative);
+        fScore.set(nk, tentative + h(nx, ny));
+        if (!open.find(n => n.x === nx && n.y === ny)) open.push({ x: nx, y: ny });
+      }
     }
   }
+
   const path = [];
   let cur = goal;
   const goalKey = key(goal.x, goal.y);
-  if (!prev.has(goalKey) && (goal.x !== start.x || goal.y !== start.y)) return path;
+  if (!cameFrom.has(goalKey) && (goal.x !== start.x || goal.y !== start.y)) return path;
   while (cur.x !== start.x || cur.y !== start.y) {
     path.push(cur);
     const k = key(cur.x, cur.y);
-    cur = prev.get(k);
+    cur = cameFrom.get(k);
     if (!cur) break;
   }
   path.reverse();
@@ -485,9 +515,11 @@ function resetGame() {
 }
 
 function spawnEnemy() {
-  const entry = ENEMY_ENTRIES[0];
-  const x = entry.x + 0.5;
-  const y = entry.y - 0.5;
+  const entry = ENEMY_ENTRIES[Math.floor(Math.random() * ENEMY_ENTRIES.length)];
+  let x = entry.x + 0.5;
+  let y = entry.y + 0.5;
+  if (entry.y === 0) y -= 1;
+  if (entry.x === 0) x -= 1;
   const r = 0.5;
   let stats;
   let img;
@@ -560,7 +592,12 @@ function update(dt) {
       e.goalCell = goalCell;
     }
 
-    if (e.path && e.path.length && isBlocked(e.path[0].x, e.path[0].y)) {
+    if (
+      e.path &&
+      e.path.length &&
+      isBlocked(e.path[0].x, e.path[0].y) &&
+      !(e.path[0].x === goalCell.x && e.path[0].y === goalCell.y)
+    ) {
       e.path = findPath(curCell, goalCell);
     }
 
@@ -586,7 +623,7 @@ function update(dt) {
     }
     const gx = Math.floor(e.x);
     const gy = Math.floor(e.y);
-    if (isBlocked(gx, gy)) {
+    if (isBlocked(gx, gy) && !(gx === goalCell.x && gy === goalCell.y)) {
       e.x = prevX; e.y = prevY;
       e.path = findPath(curCell, goalCell);
     }
