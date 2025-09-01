@@ -112,9 +112,22 @@ function canPlace(cell) {
   if (!inBounds(cell)) return false;
   if (occupancy.has(key(cell.x, cell.y))) return false;
   addOccupancy(cell.x, cell.y);
-  const ok = ENTRIES.every(e => findPath(e, DOGHOUSE_DOOR_CELL).length > 0);
+  const goal = DOGHOUSE_DOOR_CELL;
+  const ok =
+    ENTRIES.every(e => findPath(e, goal).length > 0) &&
+    enemies.every(en =>
+      findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0
+    );
   removeOccupancy(cell.x, cell.y);
   return ok;
+}
+
+function recalcEnemyPaths() {
+  const goal = DOGHOUSE_DOOR_CELL;
+  for (const en of enemies) {
+    const start = pxToCell({ x: en.x, y: en.y });
+    en.path = findPath(start, goal);
+  }
 }
 
 // Tower and enemy stats are loaded from external JSON for easier tuning
@@ -251,6 +264,7 @@ sellBtn?.addEventListener('click', () => {
     towers = towers.filter(t => t !== selectedTower);
     selectedTower = null;
     updateSelectedTowerInfo();
+    recalcEnemyPaths();
   }
 });
 quitInMenuBtn?.addEventListener('click', () => endGame());
@@ -815,6 +829,7 @@ function onCanvasClick(e) {
       addOccupancy(gx, gy);
       walls.push({ x: gx, y: gy });
       firstPlacementDone = true;
+      recalcEnemyPaths();
     }
   } else if (selectedBuild === 'cannon') {
     if (canPlace(cell)) {
@@ -835,6 +850,7 @@ function onCanvasClick(e) {
         target: null
       });
       firstPlacementDone = true;
+      recalcEnemyPaths();
     }
   } else if (selectedBuild === 'laser') {
     if (canPlace(cell)) {
@@ -855,6 +871,7 @@ function onCanvasClick(e) {
         target: null
       });
       firstPlacementDone = true;
+      recalcEnemyPaths();
     }
   }
 }
