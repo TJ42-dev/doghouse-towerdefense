@@ -956,23 +956,7 @@ function update(dt) {
         const angle = Math.atan2(target.y - t.y, target.x - t.x);
         const dx = Math.cos(angle);
         const dy = Math.sin(angle);
-        const rangePx = t.range * CELL_PX;
-        for (const e of [...enemies]) {
-          const ex = e.x - t.x;
-          const ey = e.y - t.y;
-          const along = ex * dx + ey * dy;
-          const perp = Math.abs(ex * dy - ey * dx);
-          if (along > 0 && along <= rangePx && perp <= e.r) {
-            e.health -= t.damage;
-            bark();
-            if (e.health <= 0) {
-              enemies.splice(enemies.indexOf(e), 1);
-              money += 10;
-              t.kills = (t.kills || 0) + 1;
-            }
-          }
-        }
-        // Extend beam visuals to the edge of the grid regardless of targeting range
+        // Determine where the beam hits the edge of the grid
         const minX = originPx.x;
         const maxX = originPx.x + GRID_COLS * CELL_PX;
         const minY = originPx.y;
@@ -984,6 +968,22 @@ function update(dt) {
         else if (dy < 0) edgeT = Math.min(edgeT, (minY - t.y) / dy);
         const endX = t.x + dx * edgeT;
         const endY = t.y + dy * edgeT;
+        // Damage every enemy intersected by the beam up to the edge
+        for (const e of [...enemies]) {
+          const ex = e.x - t.x;
+          const ey = e.y - t.y;
+          const along = ex * dx + ey * dy;
+          const perp = Math.abs(ex * dy - ey * dx);
+          if (along > 0 && along <= edgeT && perp <= e.r) {
+            e.health -= t.damage;
+            bark();
+            if (e.health <= 0) {
+              enemies.splice(enemies.indexOf(e), 1);
+              money += 10;
+              t.kills = (t.kills || 0) + 1;
+            }
+          }
+        }
         // Railgun beam is wider for a more powerful visual effect
         beams.push({ x1: t.x, y1: t.y, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
