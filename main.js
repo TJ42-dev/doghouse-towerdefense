@@ -1,5 +1,6 @@
 // -------------------- Options & DOM --------------------
 const LS_KEY = 'godot_web_options';
+const BEST_WAVE_KEY = 'godot_web_best_wave';
 const startBtn = document.getElementById('startBtn');
 const optionsBtn = document.getElementById('optionsBtn');
 const quitBtn = document.getElementById('quitBtn');         // main page "Quit"
@@ -8,10 +9,13 @@ const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
+const optGridSize = document.getElementById('optGridSize');
+const optStartingCash = document.getElementById('optStartingCash');
 const saveBtn = document.getElementById('saveOptions');
 const menu = document.querySelector('.menu');
 const container = document.querySelector('.container');
 const hoverMenu = document.getElementById('hoverMenu');
+const hoverMenuHeader = document.getElementById('hoverMenuHeader');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 const wallBtn = document.getElementById('wallBtn');
@@ -38,6 +42,7 @@ const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
 const contextSellBtn = document.getElementById('contextSell');
 const contextStats = document.getElementById('contextStats');
+const bestWaveSpan = document.getElementById('bestWave');
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
@@ -47,10 +52,10 @@ let ctx = null;
 
 // -------------------- Grid & Build --------------------
 // Fixed logical grid
-const GRID_COLS = 36;
+let GRID_COLS = 36;
 // Trim top and bottom rows so only the visible play area is usable
-const GRID_ROWS = 24;
-let CELL_PX = 22; // pixel size of a cell (computed on resize)
+let GRID_ROWS = 24;
+let CELL_PX = 22; // fixed pixel size for each grid cell
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 
 // Occupancy map mirrors walls & towers
@@ -60,15 +65,36 @@ let selectedBuild = null;
 let towers = [];
 let bullets = [];
 let beams = [];
+let catLives = [];
 let money = 0;
 const WALL_COST = 10;
 
 // Landmarks
-const DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
-const DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
+let DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
+let DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
 
 // Entry points for enemies (top-left only)
 const ENTRIES = [ { x: 0, y: 0 } ];
+
+const GRID_SIZES = {
+  large: { cols: 36, rows: 24 },
+  medium: { cols: 30, rows: 20 },
+  small: { cols: 24, rows: 16 }
+};
+
+function updateLandmarks() {
+  DOGHOUSE_DOOR_CELL = { x: GRID_COLS - 8, y: GRID_ROWS - 4 };
+  DOGHOUSE_SPAWN_CELL = { x: GRID_COLS - 9, y: GRID_ROWS - 4 };
+}
+
+function applyGridSize(size) {
+  const g = GRID_SIZES[size] || GRID_SIZES.medium;
+  GRID_COLS = g.cols;
+  GRID_ROWS = g.rows;
+  updateLandmarks();
+  initOccupancy();
+  resizeCanvas();
+}
 
 // Pure helpers ------------------------------------------------------------
 const key = (x, y) => `${x},${y}`;
@@ -225,17 +251,55 @@ function victory() {
 
 // -------------------- Options helpers --------------------
 function loadOpts() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) ?? { mute:false, fullscreen:true }; }
-  catch { return { mute:false, fullscreen:true }; }
+  const defaults = { mute: false, fullscreen: true, gridSize: 'medium', startingCash: 250 };
+  try {
+    return { ...defaults, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') };
+  } catch {
+    return { ...defaults };
+  }
 }
 function saveOpts(o) { localStorage.setItem(LS_KEY, JSON.stringify(o)); }
 function syncUI() {
   const o = loadOpts();
   if (optMute) optMute.checked = !!o.mute;
   if (optFullscreen) optFullscreen.checked = !!o.fullscreen;
+  if (optGridSize) optGridSize.value = o.gridSize || 'medium';
+  if (optStartingCash) optStartingCash.value = o.startingCash ?? 250;
 }
 optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
-saveBtn?.addEventListener('click', () => { saveOpts({ mute: optMute?.checked, fullscreen: optFullscreen?.checked }); });
+saveBtn?.addEventListener('click', () => {
+  const opts = {
+    mute: optMute?.checked,
+    fullscreen: optFullscreen?.checked,
+    gridSize: optGridSize?.value,
+    startingCash: parseInt(optStartingCash?.value, 10) || 0
+  };
+  saveOpts(opts);
+  applyGridSize(opts.gridSize);
+});
+
+function loadBestWave() {
+  try {
+    return parseInt(localStorage.getItem(BEST_WAVE_KEY), 10) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function recordBestWave(wave) {
+  const best = loadBestWave();
+  if (wave > best) {
+    localStorage.setItem(BEST_WAVE_KEY, wave);
+  }
+}
+
+function syncBestWave() {
+  if (bestWaveSpan) bestWaveSpan.textContent = loadBestWave();
+}
+
+ensureCanvas();
+applyGridSize(loadOpts().gridSize);
+syncBestWave();
 
 // ----- Hover Menu -----
 function activateTab(name) {
@@ -251,8 +315,7 @@ sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selected
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 
 let drag = null;
-hoverMenu?.addEventListener('mousedown', (e) => {
-  if (e.target.tagName === 'BUTTON') return;
+hoverMenuHeader?.addEventListener('mousedown', (e) => {
   drag = { x: e.offsetX, y: e.offsetY };
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', stopDrag);
@@ -427,22 +490,30 @@ function ensureCanvas() {
 function resizeCanvas() {
   if (!gameCanvas || !ctx) return;
   const ratio = window.devicePixelRatio || 1;
-  const w = Math.max(320, Math.floor(window.innerWidth));
-  const h = Math.max(240, Math.floor(window.innerHeight));
+  const vp = window.visualViewport;
+  const scale = vp?.scale || 1;
+  const w = Math.max(
+    320,
+    Math.floor((vp ? vp.width * scale : window.innerWidth * scale))
+  );
+  const h = Math.max(
+    240,
+    Math.floor((vp ? vp.height * scale : window.innerHeight * scale))
+  );
   gameCanvas.style.width = w + 'px';
   gameCanvas.style.height = h + 'px';
   gameCanvas.width = Math.floor(w * ratio);
   gameCanvas.height = Math.floor(h * ratio);
+  gameCanvas.style.transformOrigin = '0 0';
+  gameCanvas.style.transform = `scale(${1 / scale})`;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
-  // Base cell size strictly within the visible canvas to avoid clipping
-  CELL_PX = Math.floor(Math.min(w / GRID_COLS, h / GRID_ROWS));
   const playW = CELL_PX * GRID_COLS;
   const playH = CELL_PX * GRID_ROWS;
   originPx = {
     x: Math.floor((w - playW) / 2),
-    y: Math.floor((h - playH) / 2)
+    y: Math.floor((h - playH) / 2 + h * 0.15)
   };
   towers.forEach(t => {
     const p = cellToPx({ x: t.gx, y: t.gy });
@@ -562,14 +633,13 @@ const player = { x: 0, y: 0, r: 0 };
 let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 const INITIAL_LIVES = 9;
-let catLives = [];
 
 function resetGame() {
   enemies = [];
   selectedBuild = null;
   towers = [];
   bullets = [];
-  money = 0;
+  money = loadOpts().startingCash || 0;
   selectedTower = null;
   updateSelectedTowerInfo();
   initOccupancy();
@@ -589,7 +659,8 @@ function resetGame() {
   catLives = [];
     const cols = 3, rows = 3;
     const startCellX = DOGHOUSE_DOOR_CELL.x + 2;
-    const startCellY = DOGHOUSE_DOOR_CELL.y - 1;
+    const yOffset = GRID_ROWS === GRID_SIZES.medium.rows ? 5 : 1;
+    const startCellY = DOGHOUSE_DOOR_CELL.y - yOffset;
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -933,12 +1004,14 @@ function bindInputs() {
   gameCanvas.addEventListener('mousemove', onMouseMove);
   gameCanvas.addEventListener('click', onCanvasClick);
   window.addEventListener('resize', resizeCanvas);
+  window.visualViewport?.addEventListener('resize', resizeCanvas);
   window.addEventListener('keydown', onKey);
 }
 function unbindInputs() {
   gameCanvas.removeEventListener('mousemove', onMouseMove);
   gameCanvas.removeEventListener('click', onCanvasClick);
   window.removeEventListener('resize', resizeCanvas);
+  window.visualViewport?.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKey);
 }
 function onMouseMove(e) {
@@ -1100,9 +1173,12 @@ function endGame() {
     contextMenu && (contextMenu.style.display = 'none');
     pauseBtn && (pauseBtn.textContent = 'Pause');
 
-    const msg = `Game Over at wave ${waveIndex + 1} after ${waveElapsed.toFixed(1)}s.`;
-    alert(msg);
-  }
+  const waveNum = waveIndex + 1;
+  recordBestWave(waveNum);
+  syncBestWave();
+  const msg = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
+  alert(msg);
+}
 
 // -------------------- Hooks --------------------
 startBtn?.addEventListener('click', () => { startGame(); });

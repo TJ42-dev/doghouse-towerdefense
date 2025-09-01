@@ -101,6 +101,20 @@
 /* Dialog header rename is purely cosmetic; keep existing dialog styles */
 .dialog-content h2 { letter-spacing: .5px; }
 
+.dialog-content .row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  margin: .5rem 0;
+  text-align: center;
+}
+
+.dialog-content .row input,
+.dialog-content .row select {
+  text-align: center;
+}
+
 /* Responsive tweaks unchanged */
 @media (max-width: 520px) {
   .hero { grid-template-columns: 1fr; text-align: center; }
@@ -222,10 +236,10 @@ html { background: #070a10; } /* safety net */
   background: rgba(0,0,0,0.6);
   padding: 0.25rem;
   border-radius: 12px;
-  cursor: move;
   z-index: 20;
   min-width: 220px;
   user-select: none;
+  color: #fff;
 }
 .tab-buttons {
   display: flex;
@@ -258,6 +272,14 @@ html { background: #070a10; } /* safety net */
 .hover-menu .btn.sm {
   width: auto;
   display: inline-block;
+}
+
+.menu-header {
+  cursor: move;
+  color: #fff;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
 }
 
 .build-actions {
@@ -300,6 +322,7 @@ html { background: #070a10; } /* safety net */
   border-radius: 4px;
   padding: 0.5rem;
   z-index: 40;
+  color: #fff;
 }
 
 #contextStats {
