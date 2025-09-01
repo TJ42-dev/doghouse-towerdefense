@@ -34,17 +34,13 @@ let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
 let ctx = null;
 
 // -------------------- Grid & Build --------------------
-// Fixed playfield grid (green area inside 800x600 background)
-const GRID_COLS = 36;
-const GRID_ROWS = 26;
-const PLAYFIELD_ORIGIN_X = 40;
-const PLAYFIELD_ORIGIN_Y = 40;
-const PLAYFIELD_WIDTH = 720;
-const PLAYFIELD_HEIGHT = 520;
+// Fixed playfield grid
+const GRID_COLS = 38;
+const GRID_ROWS = 28;
 
-let CELL = 20; // size of one grid cell in pixels (computed on resize)
-let OFFSET_X = 0; // playfield offset from canvas top-left in pixels
-let OFFSET_Y = 0;
+let CELL_PX = 20; // size of one grid cell in pixels (computed on resize)
+let originPxX = 0; // playfield offset from canvas top-left in pixels
+let originPxY = 0;
 let walls = [];
 let selectedBuild = null;
 let towers = [];
@@ -61,16 +57,18 @@ function isWallAt(gx, gy) {
   return walls.some(w => w.x === gx && w.y === gy) || towers.some(t => t.gx === gx && t.gy === gy);
 }
 
-function cellToPixel(cx, cy) {
-  return { x: OFFSET_X + cx * CELL, y: OFFSET_Y + cy * CELL };
+function cellToPx(cell) {
+  return {
+    x: originPxX + (cell.x + 0.5) * CELL_PX,
+    y: originPxY + (cell.y + 0.5) * CELL_PX,
+  };
 }
 
-function cellCenterToPixel(gx, gy) {
-  return cellToPixel(gx + 0.5, gy + 0.5);
-}
-
-function pixelToCell(px, py) {
-  return { x: (px - OFFSET_X) / CELL, y: (py - OFFSET_Y) / CELL };
+function pxToCell(px) {
+  return {
+    x: Math.min(GRID_COLS - 1, Math.max(0, Math.floor((px.x - originPxX) / CELL_PX))),
+    y: Math.min(GRID_ROWS - 1, Math.max(0, Math.floor((px.y - originPxY) / CELL_PX))),
+  };
 }
 
 // Basic BFS pathfinding to navigate around walls
@@ -263,13 +261,11 @@ function resizeCanvas() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
   ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   ctx.textBaseline = 'top';
-  const scale = Math.min(gameCanvas.clientWidth / (PLAYFIELD_WIDTH + PLAYFIELD_ORIGIN_X * 2),
-                        gameCanvas.clientHeight / (PLAYFIELD_HEIGHT + PLAYFIELD_ORIGIN_Y * 2));
-  CELL = Math.floor((PLAYFIELD_WIDTH * scale) / GRID_COLS);
-  const pfW = CELL * GRID_COLS;
-  const pfH = CELL * GRID_ROWS;
-  OFFSET_X = Math.floor((gameCanvas.clientWidth - pfW) / 2);
-  OFFSET_Y = Math.floor((gameCanvas.clientHeight - pfH) / 2);
+  CELL_PX = Math.floor(Math.min(gameCanvas.clientWidth / GRID_COLS, gameCanvas.clientHeight / GRID_ROWS));
+  const pfW = CELL_PX * GRID_COLS;
+  const pfH = CELL_PX * GRID_ROWS;
+  originPxX = Math.floor((gameCanvas.clientWidth - pfW) / 2);
+  originPxY = Math.floor((gameCanvas.clientHeight - pfH) / 2);
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -607,25 +603,27 @@ function drawBG() {
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   for (let i = 0; i <= GRID_COLS; i++) {
     ctx.beginPath();
-    const x = OFFSET_X + i * CELL;
-    ctx.moveTo(x, OFFSET_Y);
-    ctx.lineTo(x, OFFSET_Y + GRID_ROWS * CELL);
+    const x = originPxX + i * CELL_PX;
+    ctx.moveTo(x, originPxY);
+    ctx.lineTo(x, originPxY + GRID_ROWS * CELL_PX);
     ctx.stroke();
   }
   for (let i = 0; i <= GRID_ROWS; i++) {
     ctx.beginPath();
-    const y = OFFSET_Y + i * CELL;
-    ctx.moveTo(OFFSET_X, y);
-    ctx.lineTo(OFFSET_X + GRID_COLS * CELL, y);
+    const y = originPxY + i * CELL_PX;
+    ctx.moveTo(originPxX, y);
+    ctx.lineTo(originPxX + GRID_COLS * CELL_PX, y);
     ctx.stroke();
   }
   for (const wObj of walls) {
-    const pos = cellToPixel(wObj.x, wObj.y);
+    const center = cellToPx({ x: wObj.x, y: wObj.y });
+    const px = center.x - CELL_PX / 2;
+    const py = center.y - CELL_PX / 2;
     if (imgReady(ASSETS.wall)) {
-      ctx.drawImage(ASSETS.wall, pos.x, pos.y, CELL, CELL);
+      ctx.drawImage(ASSETS.wall, px, py, CELL_PX, CELL_PX);
     } else {
       ctx.fillStyle = 'rgba(120,120,120,0.5)';
-      ctx.fillRect(pos.x, pos.y, CELL, CELL);
+      ctx.fillRect(px, py, CELL_PX, CELL_PX);
     }
   }
 }
@@ -652,46 +650,48 @@ function render() {
   // Towers
   for (const t of towers) {
     const img = t.type === 'laser' ? ASSETS.laser : ASSETS.cannon;
-    const center = cellCenterToPixel(t.gx, t.gy);
+    const center = cellToPx({ x: t.gx, y: t.gy });
     if (imgReady(img)) {
-      const angle = t.target ? Math.atan2(t.target.y - (t.gy + 0.5), t.target.x - (t.gx + 0.5)) : 0;
+      const cx = t.gx + 0.5;
+      const cy = t.gy + 0.5;
+      const angle = t.target ? Math.atan2(t.target.y - cy, t.target.x - cx) : 0;
       ctx.save();
       ctx.translate(center.x, center.y);
       ctx.rotate(angle);
-      ctx.drawImage(img, -CELL / 2, -CELL / 2, CELL, CELL);
+      ctx.drawImage(img, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
       ctx.restore();
     } else {
-      const pos = cellToPixel(t.gx, t.gy);
       ctx.fillStyle = '#888';
-      ctx.fillRect(pos.x, pos.y, CELL, CELL);
+      ctx.fillRect(center.x - CELL_PX / 2, center.y - CELL_PX / 2, CELL_PX, CELL_PX);
     }
   }
 
   // Cat lives
   for (const life of catLives) {
     if (!life.alive) continue;
-    const pos = cellCenterToPixel(life.gx, life.gy);
-    const rPx = life.r * CELL;
+    const pos = cellToPx({ x: life.gx, y: life.gy });
+    const rPx = life.r * CELL_PX;
     if (imgReady(ASSETS.cat)) {
-      ctx.drawImage(ASSETS.cat, pos.x - rPx, pos.y - rPx, rPx*2, rPx*2);
+      ctx.drawImage(ASSETS.cat, pos.x - rPx, pos.y - rPx, rPx * 2, rPx * 2);
     } else {
       ctx.beginPath();
       ctx.fillStyle = '#5bd9ff';
-      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI*2);
+      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   // Enemies (safe draw)
   for (const e of enemies) {
-    const pos = cellToPixel(e.x, e.y);
-    const rPx = e.r * CELL;
+    const pos = cellToPx({ x: e.x, y: e.y });
+    const rPx = e.r * CELL_PX;
     if (imgReady(e.img)) {
-      ctx.drawImage(e.img, pos.x - rPx, pos.y - rPx, rPx*2, rPx*2);
+      ctx.drawImage(e.img, pos.x - rPx, pos.y - rPx, rPx * 2, rPx * 2);
     } else {
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI*2);
-      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.arc(pos.x, pos.y, rPx, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
     }
   }
 
@@ -699,8 +699,8 @@ function render() {
   ctx.strokeStyle = '#0ff';
   ctx.lineWidth = 2;
   for (const beam of beams) {
-    const p1 = cellToPixel(beam.x1, beam.y1);
-    const p2 = cellToPixel(beam.x2, beam.y2);
+    const p1 = cellToPx({ x: beam.x1, y: beam.y1 });
+    const p2 = cellToPx({ x: beam.x2, y: beam.y2 });
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
@@ -709,10 +709,10 @@ function render() {
 
   // Bullets
   for (const b of bullets) {
-    const pos = cellToPixel(b.x, b.y);
+    const pos = cellToPx({ x: b.x, y: b.y });
     ctx.beginPath();
     ctx.fillStyle = '#ff0';
-    ctx.arc(pos.x, pos.y, CELL / 6, 0, Math.PI*2);
+    ctx.arc(pos.x, pos.y, CELL_PX / 6, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -748,10 +748,13 @@ function onMouseMove(e) {
 }
 function onCanvasClick(e) {
   const r = gameCanvas.getBoundingClientRect();
-  const cell = pixelToCell(e.clientX - r.left, e.clientY - r.top);
-  const gx = Math.floor(cell.x);
-  const gy = Math.floor(cell.y);
-  if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
+  const px = { x: e.clientX - r.left, y: e.clientY - r.top };
+  if (px.x < originPxX || px.y < originPxY ||
+      px.x >= originPxX + GRID_COLS * CELL_PX ||
+      px.y >= originPxY + GRID_ROWS * CELL_PX) return;
+  const cell = pxToCell(px);
+  const gx = cell.x;
+  const gy = cell.y;
 
   if (!selectedBuild) {
     const t = towers.find(t => t.gx === gx && t.gy === gy);
