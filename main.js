@@ -1050,19 +1050,17 @@ function nextWave() {
   waveElapsed = 0;
 }
 
+function findFastestEnemy(list) {
+  return list.reduce((best, e) => (!best || e.speed > best.speed ? e : best), null);
+}
+
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
     if (b.type === 'rocket') {
       b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
       const move = b.speed * dt;
       if (!b.target || !enemies.includes(b.target)) {
-        let closest = null;
-        let closestDist = Infinity;
-        for (const e of enemies) {
-          const d = Math.hypot(e.x - b.x, e.y - b.y);
-          if (d < closestDist) { closestDist = d; closest = e; }
-        }
-        b.target = closest;
+        b.target = findFastestEnemy(enemies);
         if (b.target) {
           b.orbitCenter = null;
         } else {
@@ -1269,12 +1267,17 @@ function update(dt) {
   for (const t of towers) {
     t.cooldown -= dt;
     if (t.anim) t.anim -= dt;
-    const rangePx = t.range * CELL_PX;
+    const isRocketTower = t.type === 'rocket' || t.type === 'hellfire' || t.type === 'nuke';
     let target = null;
-    let closest = rangePx;
-    for (const e of enemies) {
-      const d = Math.hypot(e.x - t.x, e.y - t.y);
-      if (d <= closest) { target = e; closest = d; }
+    if (isRocketTower) {
+      target = findFastestEnemy(enemies);
+    } else {
+      const rangePx = t.range * CELL_PX;
+      let closest = rangePx;
+      for (const e of enemies) {
+        const d = Math.hypot(e.x - t.x, e.y - t.y);
+        if (d <= closest) { target = e; closest = d; }
+      }
     }
     t.target = target;
     if (target) {
