@@ -8,5 +8,6 @@
 - Added a 5s delay before waves begin after the previous wave is cleared.
 - Fixed upgrade menu height so Sell button doesn't shift when specialization options appear.
 - Added difficulty selection with easy/medium/hard settings affecting rewards, starting cash, and enemy health.
+- Added free mode difficulty with medium enemy health and 99999 starting cash.
 - Kill rewards increase slightly after clearing each boss wave.
 - Introduced Rocket Launcher tower with homing rockets and smoke trails.

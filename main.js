@@ -119,7 +119,8 @@ const SPECIALIZATION_COSTS = {
 const DIFFICULTY_SETTINGS = {
   easy: { startingCash: 500, killReward: 15, waveReward: 75, healthMultiplier: 0.8 },
   medium: { startingCash: 350, killReward: 10, waveReward: 50, healthMultiplier: 1 },
-  hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 }
+  hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 },
+  free: { startingCash: 99999, killReward: 10, waveReward: 50, healthMultiplier: 1 }
 };
 let difficulty = 'medium';
 let difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
