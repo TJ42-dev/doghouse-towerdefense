@@ -1057,11 +1057,22 @@ function updateProjectiles(dt) {
       const move = b.speed * dt;
       const rangePx = (b.source?.range || Infinity) * CELL_PX;
 
-      if (b.target && !enemies.includes(b.target)) b.target = null;
+      // Drop the target if it no longer exists or is outside the tower's range
+      if (
+        b.target &&
+        (!enemies.includes(b.target) ||
+          (b.source &&
+            Math.hypot(
+              b.target.x - b.source.x,
+              b.target.y - b.source.y
+            ) > rangePx))
+      ) {
+        b.target = null;
+      }
 
       if (!b.target) {
-        // Find the nearest enemy within the tower's range that isn't already
-        // targeted by another rocket
+        // Prefer enemies not already claimed by another rocket; fall back to
+        // the nearest enemy if all are taken
         const taken = new Set(
           bullets
             .filter(
@@ -1075,8 +1086,9 @@ function updateProjectiles(dt) {
         );
         let closest = null;
         let closestDist = Infinity;
+        let fallback = null;
+        let fallbackDist = Infinity;
         for (const e of enemies) {
-          if (taken.has(e)) continue;
           if (b.source) {
             const distToTower = Math.hypot(
               e.x - b.source.x,
@@ -1085,12 +1097,15 @@ function updateProjectiles(dt) {
             if (distToTower > rangePx) continue;
           }
           const distToRocket = Math.hypot(e.x - b.x, e.y - b.y);
-          if (distToRocket < closestDist) {
+          if (!taken.has(e) && distToRocket < closestDist) {
             closestDist = distToRocket;
             closest = e;
+          } else if (distToRocket < fallbackDist) {
+            fallbackDist = distToRocket;
+            fallback = e;
           }
         }
-        b.target = closest;
+        b.target = closest || fallback;
       }
 
       if (!b.target) {
