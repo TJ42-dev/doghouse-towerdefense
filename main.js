@@ -31,6 +31,7 @@ const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
 const contextSellBtn = document.getElementById('contextSell');
+const contextStats = document.getElementById('contextStats');
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
@@ -315,20 +316,26 @@ function updateSelectedTowerInfo() {
 
 gameCanvas?.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  if (!contextMenu || !contextSellBtn) return;
+  if (!contextMenu || !contextSellBtn || !contextStats) return;
   const r = gameCanvas.getBoundingClientRect();
   const cell = pxToCell({ x: e.clientX - r.left, y: e.clientY - r.top });
   const t = towers.find(tt => tt.gx === cell.x && tt.gy === cell.y);
   const w = walls.find(ww => ww.x === cell.x && ww.y === cell.y);
+  if (!t && !w) {
+    contextMenu.style.display = 'none';
+    contextTarget = null;
+    rangePreview = null;
+    if (selectedBuild) selectedBuild = null;
+    return;
+  }
   contextTarget = { gx: cell.x, gy: cell.y };
   if (t) {
-    contextSellBtn.textContent = `$${t.cost || 0}`;
+    contextStats.innerHTML = `Damage: ${Math.round(t.damage)}<br>Kills: ${t.kills || 0}<br>Sell: $${t.cost || 0}`;
+    contextSellBtn.textContent = '$';
     rangePreview = { x: t.x, y: t.y, r: t.range * CELL_PX };
-  } else if (w) {
-    contextSellBtn.textContent = `$${WALL_COST}`;
-    rangePreview = null;
   } else {
-    contextSellBtn.textContent = 'X';
+    contextStats.innerHTML = `Sell: $${WALL_COST}`;
+    contextSellBtn.textContent = '$';
     rangePreview = null;
   }
   contextMenu.style.left = e.clientX + 'px';
@@ -697,9 +704,10 @@ function update(dt) {
         if (target.health <= 0) {
           enemies.splice(enemies.indexOf(target), 1);
           money += 10;
+          t.kills = (t.kills || 0) + 1;
         }
       } else {
-        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage });
+        bullets.push({ x: t.x, y: t.y, target, speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t });
         t.cooldown = 1 / t.fireRate;
         sfx(880, 0.07, 0.03, 'square');
       }
@@ -719,6 +727,7 @@ function update(dt) {
       if (b.target.health <= 0) {
         enemies.splice(enemies.indexOf(b.target), 1);
         money += 10;
+        if (b.source) b.source.kills = (b.source.kills || 0) + 1;
       }
       return false;
     }
@@ -960,7 +969,8 @@ function onCanvasClick(e) {
         range: CANNON_BASE.range,
         cost: CANNON_BASE.cost,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
-        target: null
+        target: null,
+        kills: 0
       });
       firstPlacementDone = true;
       recalcEnemyPaths();
@@ -982,7 +992,8 @@ function onCanvasClick(e) {
         range: LASER_BASE.range,
         cost: LASER_BASE.cost,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
-        target: null
+        target: null,
+        kills: 0
       });
       firstPlacementDone = true;
       recalcEnemyPaths();
