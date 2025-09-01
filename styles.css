@@ -138,6 +138,50 @@
   .menu .btn.lg { font-size: 1.02rem; padding: 1.05rem 1.2rem; }
 }
 
+/* Full-bleed dark backdrop behind everything (handles any UA white) */
+html { background: #070a10; } /* safety net */
+.container.menu-page.war { position: relative; z-index: 0; }
+.container.menu-page.war::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(120% 140% at 70% 0%, #0f141d 0%, #0b0f16 55%, #080c12 100%),
+    repeating-linear-gradient(180deg, rgba(255,255,255,.02) 0 2px, transparent 2px 5px);
+  filter: contrast(1.02) brightness(.98);
+}
+
+/* Force the menu card to stay dark, no translucent “light” showing through */
+.menu-card.battle {
+  background: linear-gradient(180deg, #131a25 0%, #0d141c 45%, #0a0f16 100%) !important;
+  border: 1px solid rgba(255,255,255,.06);
+}
+.menu-card.battle::before { opacity: .22; } /* subtler scanlines */
+.menu-card.battle::after  { opacity: .55; } /* keep the hazard stripe but darker */
+
+/* Ensure no stray white backgrounds from generic sections/cards */
+.menu-page.war,
+.menu-page.war .menu-card,
+.menu-page.war section.menu-card { background-color: transparent !important; }
+
+/* Dialogs: match the dark theme too (optional but consistent) */
+.menu-page.war dialog {
+  background: #0d1118;
+  color: #e9ecf1;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* Keep the expanded, centered layout from the last pass */
+.container.menu-page.war { width: min(860px, 94vw); }
+.menu-card.battle.focused {
+  padding: 2rem 2rem 2.25rem;
+  min-height: clamp(520px, 76vh, 820px);
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+}
+.menu-card.battle.focused .menu { align-self: center; }
 
 #gameCanvas {
   position: fixed;
