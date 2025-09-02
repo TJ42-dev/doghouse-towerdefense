@@ -818,6 +818,7 @@ function cssCenter() {
 // Add new dog heads here. Omit baseHealth/baseSpeed to use balanced defaults.
 let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
 let DOG_TYPES = [];
+const HEALTH_SCALE_PER_WAVE = 0.375; // enemy health increases 37.5% each wave
 const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const CANNON_TURRET_SRC = 'assets/towers/turrets/cannon_turret.svg';
