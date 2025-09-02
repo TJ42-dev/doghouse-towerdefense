@@ -100,6 +100,8 @@ let GRID_COLS = 36;
 // Trim top and bottom rows so only the visible play area is usable
 let GRID_ROWS = 24;
 let CELL_PX = 26; // fixed pixel size for each grid cell
+const TOWER_SCALE = 1.25; // render tower sprites 25% larger
+const TOWER_PX = CELL_PX * TOWER_SCALE;
 const NUKE_SPLASH_RADIUS = CELL_PX * 2;
 const STRAY_ROCKET_RADIUS = CELL_PX;
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
@@ -1569,22 +1571,27 @@ function render() {
       if (imgReady(art.base)) {
         ctx.save();
         ctx.translate(t.x, t.y);
-        ctx.drawImage(art.base, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
+        ctx.drawImage(art.base, -TOWER_PX / 2, -TOWER_PX / 2, TOWER_PX, TOWER_PX);
         if (imgReady(art.turret)) {
           const angle = t.angle || 0;
           ctx.rotate(angle);
-          ctx.drawImage(art.turret, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
+          ctx.drawImage(art.turret, -TOWER_PX / 2, -TOWER_PX / 2, TOWER_PX, TOWER_PX);
           if ((t.type === 'rocket' || t.type === 'hellfire') && t.anim > 0) {
             ctx.beginPath();
             ctx.fillStyle = 'orange';
-            ctx.arc(CELL_PX / 2, 0, 6 * (t.anim / 0.1), 0, Math.PI * 2);
+            ctx.arc(TOWER_PX / 2, 0, 6 * (t.anim / 0.1), 0, Math.PI * 2);
             ctx.fill();
           }
         }
         ctx.restore();
       } else {
         ctx.fillStyle = '#888';
-        ctx.fillRect(originPx.x + t.gx * CELL_PX, originPx.y + t.gy * CELL_PX, CELL_PX, CELL_PX);
+        ctx.fillRect(
+          originPx.x + t.gx * CELL_PX - (TOWER_PX - CELL_PX) / 2,
+          originPx.y + t.gy * CELL_PX - (TOWER_PX - CELL_PX) / 2,
+          TOWER_PX,
+          TOWER_PX
+        );
       }
     }
 
