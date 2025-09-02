@@ -97,7 +97,7 @@ let GRID_COLS = 36;
 // Trim top and bottom rows so only the visible play area is usable
 let GRID_ROWS = 24;
 let CELL_PX = 26; // fixed pixel size for each grid cell
-const TOWER_SCALE = 1.25; // render tower sprites 25% larger
+const TOWER_SCALE = 1.75; // render tower sprites 25% larger
 const TOWER_PX = CELL_PX * TOWER_SCALE;
 const NUKE_SPLASH_RADIUS = CELL_PX * 2;
 const STRAY_ROCKET_RADIUS = CELL_PX;
