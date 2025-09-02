@@ -100,6 +100,8 @@ let GRID_COLS = 36;
 // Trim top and bottom rows so only the visible play area is usable
 let GRID_ROWS = 24;
 let CELL_PX = 26; // fixed pixel size for each grid cell
+const TOWER_SCALE = 1.25; // render tower sprites 25% larger
+const TOWER_PX = CELL_PX * TOWER_SCALE;
 const NUKE_SPLASH_RADIUS = CELL_PX * 2;
 const STRAY_ROCKET_RADIUS = CELL_PX;
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
@@ -818,26 +820,27 @@ function cssCenter() {
 // Add new dog heads here. Omit baseHealth/baseSpeed to use balanced defaults.
 let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
 let DOG_TYPES = [];
+const HEALTH_SCALE_PER_WAVE = 0.375; // enemy health increases 37.5% each wave
 const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const CANNON_TURRET_SRC = 'assets/towers/turrets/cannon_turret.svg';
-const LASER_BASE_SRC = 'assets/towers/bases/laser.svg';
-const LASER_TURRET_SRC = 'assets/towers/turrets/laser.svg';
-const ROCKET_BASE_SRC = 'assets/towers/bases/rocket.svg';
-const ROCKET_TURRET_SRC = 'assets/towers/turrets/rocket.svg';
-const NUKE_BASE_SRC = 'assets/towers/bases/nuke.svg';
-const NUKE_TURRET_SRC = 'assets/towers/turrets/nuke.svg';
-const HELLFIRE_BASE_SRC = 'assets/towers/bases/hellfire.svg';
-const HELLFIRE_TURRET_SRC = 'assets/towers/turrets/hellfire.svg';
-const DUAL_LASER_BASE_SRC = 'assets/towers/bases/laser_dual.svg';
-const DUAL_LASER_TURRET_SRC = 'assets/towers/turrets/laser_dual.svg';
-const RAILGUN_BASE_SRC = 'assets/towers/bases/railgun.svg';
-const RAILGUN_TURRET_SRC = 'assets/towers/turrets/railgun.svg';
+const LASER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const LASER_TURRET_SRC = 'assets/towers/turrets/lazer_turret.svg';
+const ROCKET_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const ROCKET_TURRET_SRC = 'assets/towers/turrets/rocket_launcher_turret.svg';
+const NUKE_BASE_SRC = 'assets/towers/bases/nuke_base.svg';
+const NUKE_TURRET_SRC = 'assets/towers/turrets/nuke_turret.svg';
+const HELLFIRE_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const HELLFIRE_TURRET_SRC = 'assets/towers/turrets/hellfire_turret.svg';
+const DUAL_LASER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const DUAL_LASER_TURRET_SRC = 'assets/towers/turrets/dual_lazer_turret.svg';
+const RAILGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const RAILGUN_TURRET_SRC = 'assets/towers/turrets/railgun_turret.svg';
 const WALL_SRC = 'assets/wall.svg';
-const SNIPER_BASE_SRC = 'assets/towers/bases/sniper.svg';
-const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper.svg';
-const SHOTGUN_BASE_SRC = 'assets/towers/bases/shotgun.svg';
-const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun.svg';
+const SNIPER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper_turret.svg';
+const SHOTGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun_turret.svg';
 const TOWER_CONFIG_IDS = [
   'cannon',
   'laser',
@@ -1568,22 +1571,27 @@ function render() {
       if (imgReady(art.base)) {
         ctx.save();
         ctx.translate(t.x, t.y);
-        ctx.drawImage(art.base, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
+        ctx.drawImage(art.base, -TOWER_PX / 2, -TOWER_PX / 2, TOWER_PX, TOWER_PX);
         if (imgReady(art.turret)) {
           const angle = t.angle || 0;
           ctx.rotate(angle);
-          ctx.drawImage(art.turret, -CELL_PX / 2, -CELL_PX / 2, CELL_PX, CELL_PX);
+          ctx.drawImage(art.turret, -TOWER_PX / 2, -TOWER_PX / 2, TOWER_PX, TOWER_PX);
           if ((t.type === 'rocket' || t.type === 'hellfire') && t.anim > 0) {
             ctx.beginPath();
             ctx.fillStyle = 'orange';
-            ctx.arc(CELL_PX / 2, 0, 6 * (t.anim / 0.1), 0, Math.PI * 2);
+            ctx.arc(TOWER_PX / 2, 0, 6 * (t.anim / 0.1), 0, Math.PI * 2);
             ctx.fill();
           }
         }
         ctx.restore();
       } else {
         ctx.fillStyle = '#888';
-        ctx.fillRect(originPx.x + t.gx * CELL_PX, originPx.y + t.gy * CELL_PX, CELL_PX, CELL_PX);
+        ctx.fillRect(
+          originPx.x + t.gx * CELL_PX - (TOWER_PX - CELL_PX) / 2,
+          originPx.y + t.gy * CELL_PX - (TOWER_PX - CELL_PX) / 2,
+          TOWER_PX,
+          TOWER_PX
+        );
       }
     }
 
