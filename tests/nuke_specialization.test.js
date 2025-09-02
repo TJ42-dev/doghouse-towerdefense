@@ -5,21 +5,17 @@ const vm = require('vm');
 const content = fs.readFileSync('main.js', 'utf8');
 
 // Extract needed definitions from main.js
-const specCostsMatch = content.match(/const SPECIALIZATION_COSTS = (\{[^}]*\});/);
-const dogStatsMatch = content.match(/let DEFAULT_DOG_STATS = (\{[^}]*\});/);
-const healthScaleMatch = content.match(/const HEALTH_SCALE_PER_WAVE = ([^;]+);/);
+const balanceMatch = content.match(/const BALANCE = (\{[\s\S]*?\n\});/);
+if (!balanceMatch) throw new Error('BALANCE not found');
+const BALANCE = vm.runInNewContext('(' + balanceMatch[1] + ')');
 
-if (!specCostsMatch || !dogStatsMatch || !healthScaleMatch) {
-  throw new Error('Required game constants not found');
-}
-
-const context = { money: 999999, removeTowerProjectiles: () => {} };
-vm.runInNewContext(
-  `const SPECIALIZATION_COSTS = ${specCostsMatch[1]}
-   let DEFAULT_DOG_STATS = ${dogStatsMatch[1]}
-   const HEALTH_SCALE_PER_WAVE = ${healthScaleMatch[1]}`,
-  context
-);
+const context = {
+  money: 999999,
+  removeTowerProjectiles: () => {},
+  BALANCE,
+  DEFAULT_DOG_STATS: { ...BALANCE.defaultDogStats },
+  waveIndex: 25
+};
 
 // Extract specializeTower function
 const start = content.indexOf('function specializeTower');
