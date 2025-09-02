@@ -16,3 +16,4 @@
 - Replaced wall.svg with fence.png for the wall base asset.
 - Slower boss base health scaling after each boss wave.
 - Show '(MAX!)' instead of the cost when a tower stat reaches level 10.
+- Added placeholder rocket hit sound and silenced other bullet impacts.

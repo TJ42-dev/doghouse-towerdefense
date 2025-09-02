@@ -943,6 +943,7 @@ const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun_turret.svg';
 const WAVE_START_SOUND = 'assets/sounds/wave_start.wav';
 const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
 const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
+const ROCKET_HIT_SOUND = 'assets/sounds/rocket_hit.wav';
 const TOWER_CONFIG_IDS = [
   'cannon',
   'laser',
@@ -1276,7 +1277,9 @@ function updateProjectiles(dt) {
       const hitRadius = b.target.r + 2;
       if (newDist <= hitRadius) {
         b.target.health -= b.damage;
-        bark();
+        if (b.variant === 'rocket' || b.variant === 'hellfire') {
+          playAudio(ROCKET_HIT_SOUND);
+        }
         if (b.variant === 'nuke') {
           const targetX = b.target.x;
           const targetY = b.target.y;
@@ -1312,7 +1315,6 @@ function updateProjectiles(dt) {
       for (const e of enemies) {
         if (Math.hypot(e.x - b.x, e.y - b.y) <= e.r) {
           e.health -= b.damage;
-          bark();
           if (e.health <= 0) {
             enemies.splice(enemies.indexOf(e), 1);
             money += killReward;
@@ -1338,7 +1340,6 @@ function updateProjectiles(dt) {
     const dist = Math.hypot(dx, dy);
     if (dist <= move) {
       b.target.health -= b.damage;
-      bark();
       if (b.target.health <= 0) {
         enemies.splice(enemies.indexOf(b.target), 1);
         money += killReward;
