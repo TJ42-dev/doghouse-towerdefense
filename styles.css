@@ -603,8 +603,8 @@ dialog::backdrop {
 /* Stats Overlay */
 .stats-overlay {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  bottom: 20px;
+  left: 20px;
   background: var(--game-panel);
   backdrop-filter: blur(10px);
   border: 1px solid var(--game-border);
@@ -620,6 +620,12 @@ dialog::backdrop {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+.up-next-banner {
+  color: var(--game-text);
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
 }
 
 .overlay-stats {

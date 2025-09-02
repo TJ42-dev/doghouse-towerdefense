@@ -9,6 +9,7 @@ const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
 const statsOverlay = document.getElementById('statsOverlay');
 const overlayStats = document.getElementById('overlayStats');
 const overlayHeader = document.querySelector('#statsOverlay .overlay-header');
+const upNextBanner = document.getElementById('upNextBanner');
 const gameOverPanel = document.getElementById('gameOverPanel');
 const gameOverText = document.getElementById('gameOverText');
 const retryBtn = document.getElementById('retryBtn');
@@ -1115,6 +1116,24 @@ function spawnEnemy(waveNum) {
   enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum, navVersion: NAV_VERSION });
 }
 
+function getNextWaveEnemyName() {
+  let nextWaveNum;
+  if (waveActive) {
+    nextWaveNum = waveIndex + waveQueue.length + 1;
+  } else {
+    nextWaveNum = waveIndex + 1;
+  }
+  if (!ASSETS.dogs || ASSETS.dogs.length === 0) return '';
+  if (nextWaveNum % 5 === 0) {
+    const boss = ASSETS.dogs.find(t => t.id === 'boss');
+    return boss ? boss.name : '';
+  }
+  const nonBoss = ASSETS.dogs.filter(t => t.id !== 'boss');
+  const nonBossIndex = (nextWaveNum - 1) - Math.floor((nextWaveNum - 1) / 5);
+  const type = nonBoss[nonBossIndex % nonBoss.length];
+  return type ? type.name : '';
+}
+
 function applyWaveEndRewards(completedWave) {
   // Slightly increase kill reward every wave
   killReward += (completedWave >= 30) ? 3 : (completedWave > 20) ? 2 : 1;
@@ -1122,7 +1141,7 @@ function applyWaveEndRewards(completedWave) {
   // Every 5 waves, buff enemy health and give bonus money
   if (completedWave % 5 === 0) {
     const stage = (completedWave >= 30) ? 3 : (completedWave > 20) ? 2 : 1;
-    const healthInc = (stage === 3) ? 0.025 : (stage === 2) ? 0.05 : 0.1;
+    const healthInc = (stage === 3) ? 0.05 : (stage === 2) ? 0.1 : 0.2;
     healthBuffMultiplier *= 1 + healthInc;
     money += (stage === 3) ? 1000 : (stage === 2) ? 500 : 0;
     killReward += (stage === 3) ? 20 : (stage === 2) ? 10 : 5;
@@ -1595,20 +1614,22 @@ function drawBG() {
 function drawHUD() {
   const statsEl = document.getElementById('gameStats');
   const overlayEl = overlayStats;
-  if (!statsEl && !overlayEl) return;
+  if (!statsEl && !overlayEl && !upNextBanner) return;
   let html = '';
+  html += `Wave: ${waveIndex + 1}<br>`;
+  html += `Enemies: ${enemies.length}<br>`;
   if (!waveActive) {
     if (firstPlacementDone && preWaveTimer > 0) {
       html += `Next wave in: ${preWaveTimer.toFixed(1)}s<br>`;
     }
-    html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
-    html += `Money: $${money}`;
   } else {
-    html += `Wave: ${waveIndex + 1}<br>`;
     html += `Time: ${Math.max(0, BALANCE.wave.time - waveElapsed).toFixed(1)}s<br>`;
-    html += `Enemies: ${enemies.length}<br>`;
-    html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
-    html += `Money: $${money}`;
+  }
+  html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
+  html += `Money: $${money}`;
+  if (upNextBanner) {
+    const nextName = getNextWaveEnemyName();
+    upNextBanner.textContent = nextName ? `Up Next: ${nextName}` : '';
   }
   updateBuildMenuAvailability();
   if (statsEl) statsEl.innerHTML = html;
@@ -1941,6 +1962,7 @@ async function startGame() {
   hoverMenu && (hoverMenu.style.display = 'flex');
   overlayHeader && (overlayHeader.style.display = 'flex');
   overlayStats && (overlayStats.style.display = 'block');
+  upNextBanner && (upNextBanner.style.display = 'block');
   gameOverPanel && (gameOverPanel.style.display = 'none');
 
   // Canvas
@@ -1990,6 +2012,7 @@ function endGame() {
   hoverMenu && (hoverMenu.style.display = 'none');
   overlayHeader && (overlayHeader.style.display = 'none');
   overlayStats && (overlayStats.style.display = 'none');
+  upNextBanner && (upNextBanner.style.display = 'none');
   nextWaveBtn && (nextWaveBtn.style.display = 'none');
   quitGameBtn && (quitGameBtn.style.display = 'none');
   statsOverlay && (statsOverlay.style.display = 'block');
