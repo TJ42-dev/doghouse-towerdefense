@@ -9,145 +9,139 @@
 </head>
 <body>
 
-<main class="container menu-page war" aria-labelledby="gameTitle">
-  <!-- ambient decor (sparks/embers) -->
-  <div class="decor" aria-hidden="true">
-    <span class="paw" style="--i:0; --x:8%; --d:0s"></span>
-    <span class="paw" style="--i:1; --x:22%; --d:.6s"></span>
-    <span class="paw" style="--i:2; --x:40%; --d:1.2s"></span>
-    <span class="paw" style="--i:3; --x:58%; --d:1.8s"></span>
-    <span class="paw" style="--i:4; --x:76%; --d:2.4s"></span>
-    <span class="paw" style="--i:5; --x:90%; --d:3s"></span>
-  </div>
+    <main class="container menu-page war" aria-labelledby="gameTitle">
+        <!-- ambient decor (sparks/embers) -->
+        <div class="decor" aria-hidden="true">
+            <span class="paw" style="--i:0; --x:8%; --d:0s"></span>
+            <span class="paw" style="--i:1; --x:22%; --d:.6s"></span>
+            <span class="paw" style="--i:2; --x:40%; --d:1.2s"></span>
+            <span class="paw" style="--i:3; --x:58%; --d:1.8s"></span>
+            <span class="paw" style="--i:4; --x:76%; --d:2.4s"></span>
+            <span class="paw" style="--i:5; --x:90%; --d:3s"></span>
+        </div>
 
-  <section class="menu-card battle focused" role="region" aria-label="Game menu">
-    <header class="hero">
-      <div class="logo" aria-hidden="true">
-        <!-- Tactical shield + crosshair doghouse badge -->
-        <svg viewBox="0 0 220 160" width="168" height="122" role="img" aria-label="Doghouse tactical badge">
-          <defs>
-            <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#9aa3ad"/>
-              <stop offset="1" stop-color="#444b53"/>
-            </linearGradient>
-            <linearGradient id="danger" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#ef4444"/>
-              <stop offset="1" stop-color="#f59e0b"/>
-            </linearGradient>
-          </defs>
-          <g stroke="url(#danger)" stroke-width="4" opacity=".8">
-            <circle cx="110" cy="80" r="58" fill="none"/>
-            <path d="M20 80h60M110 20v60M140 80h60M110 110v30" />
-          </g>
-          <path d="M110 20 L170 46 L170 102 Q140 128 110 140 Q80 128 50 102 L50 46 Z"
-                fill="url(#steel)" stroke="#0b0f14" stroke-width="3"/>
-          <g transform="translate(110,86)">
-            <polygon points="-45,-12 0,-42 45,-12 35,-12 35,35 -35,35 -35,-12"
-                     fill="#0f1720" stroke="#0b0f14" stroke-width="3"/>
-            <path d="M0,-2 a18,18 0 0 0 -18,18 v19 h36 v-19 a18,18 0 0 0 -18,-18z" fill="#ef4444"/>
-          </g>
-        </svg>
-      </div>
+        <section class="menu-card battle focused" role="region" aria-label="Game menu">
+            <header class="hero">
+                <div class="logo" aria-hidden="true">
+                    <!-- Tactical shield + crosshair doghouse badge -->
+                    <svg viewBox="0 0 220 160" width="168" height="122" role="img" aria-label="Doghouse tactical badge">
+                        <defs>
+                            <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stop-color="#9aa3ad"/>
+                                <stop offset="1" stop-color="#444b53"/>
+                            </linearGradient>
+                            <linearGradient id="danger" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0" stop-color="#ef4444"/>
+                                <stop offset="1" stop-color="#f59e0b"/>
+                            </linearGradient>
+                        </defs>
+                        <g stroke="url(#danger)" stroke-width="4" opacity=".8">
+                            <circle cx="110" cy="80" r="58" fill="none"/>
+                            <path d="M20 80h60M110 20v60M140 80h60M110 110v30" />
+                        </g>
+                        <path d="M110 20 L170 46 L170 102 Q140 128 110 140 Q80 128 50 102 L50 46 Z"
+                              fill="url(#steel)" stroke="#0b0f14" stroke-width="3"/>
+                        <g transform="translate(110,86)">
+                            <polygon points="-45,-12 0,-42 45,-12 35,-12 35,35 -35,35 -35,-12"
+                                     fill="#0f1720" stroke="#0b0f14" stroke-width="3"/>
+                            <path d="M0,-2 a18,18 0 0 0 -18,18 v19 h36 v-19 a18,18 0 0 0 -18,-18z" fill="#ef4444"/>
+                        </g>
+                    </svg>
+                </div>
 
-      <div class="titles">
-        <h1 id="gameTitle" class="title-glow">DOGHOUSE: TOWER DEFENCE</h1>
-        <p class="tagline mission">Operation CATSHIELD • Hold the line • No cat left behind</p>
-      </div>
-    </header>
+                <div class="titles">
+                    <h1 id="gameTitle" class="title-glow">DOGHOUSE: TOWER DEFENCE</h1>
+                    <p class="tagline mission">Operation CATSHIELD • Hold the line • No cat left behind</p>
+                </div>
+            </header>
 
-    <nav class="menu" role="menu" aria-label="Main menu">
-      <button id="startBtn" class="btn lg accent tactical" role="menuitem" autofocus>
-        <span class="btn-icon" aria-hidden="true">🎯</span>
-        Start Mission
-      </button>
+            <nav class="menu" role="menu" aria-label="Main menu">
+                <button id="startBtn" class="btn lg accent tactical" role="menuitem" autofocus>
+                    <span class="btn-icon" aria-hidden="true">🎯</span>
+                    Start Mission
+                </button>
 
-      <button id="optionsBtn" class="btn ghost outline tactical" role="menuitem" aria-haspopup="dialog" aria-controls="optionsDialog">
-        <span class="btn-icon" aria-hidden="true">⚙️</span>
-        Loadout
-      </button>
-      <button id="battlefieldBtn" class="btn ghost outline tactical" role="menuitem" aria-haspopup="dialog" aria-controls="battlefieldDialog">
-        <span class="btn-icon" aria-hidden="true">🗺️</span>
-        Battlefield
-      </button>
+                <button id="optionsBtn" class="btn ghost outline tactical" role="menuitem" aria-haspopup="dialog" aria-controls="optionsDialog">
+                    <span class="btn-icon" aria-hidden="true">⚙️</span>
+                    Loadout
+                </button>
+                <button id="battlefieldBtn" class="btn ghost outline tactical" role="menuitem" aria-haspopup="dialog" aria-controls="battlefieldDialog">
+                    <span class="btn-icon" aria-hidden="true">🗺️</span>
+                    Battlefield
+                </button>
 
+                <button id="quitBtn" class="btn ghost outline tactical" role="menuitem">
+                    <span class="btn-icon" aria-hidden="true">⏻</span>
+                    Stand Down
+                </button>
+            </nav>
 
+            <div class="meta">
+                <!-- Removed Last Save; keeping only Best Wave -->
+                <div class="pill dogtag">BEST WAVE <span id="bestWave">0</span></div>
+            </div>
 
-      <button id="quitBtn" class="btn ghost outline tactical" role="menuitem">
-        <span class="btn-icon" aria-hidden="true">⏻</span>
-        Stand Down
-      </button>
-    </nav>
+            <p class="footnote intel">
+                Tip: You cannot completely block the path from the enemies!
+            </p>
+        </section>
 
-    <div class="meta">
-      <!-- Removed Last Save; keeping only Best Wave -->
-      <div class="pill dogtag">BEST WAVE <span id="bestWave">0</span></div>
-    </div>
-
-    <p class="footnote intel">
-      Tip: You cannot completely block the path from the enemies!
-    </p>
-  </section>
-
-  <!-- existing dialog kept intact -->
-  <dialog id="optionsDialog">
-    <form method="dialog" class="dialog-content">
-      <h2>Loadout</h2>
-      <label class="row">
-        <span>Mute audio</span>
-        <input type="checkbox" id="optMute">
-      </label>
-      <label class="row">
-        <span>Start in fullscreen</span>
-        <input type="checkbox" id="optFullscreen" checked>
-      </label>
-      <label class="row">
-        <span>Override grid size</span>
-        <input type="checkbox" id="optGridOverride">
-      </label>
-        <label class="row">
-          <span>Grid size</span>
-          <select id="optGridSize" disabled>
-            <option value="large">large – 36×24</option>
-            <option value="medium" selected>medium – 30×20</option>
-            <option value="small">small – 24×16</option>
-          </select>
-        </label>
-        <label class="row">
-          <span>Difficulty</span>
-          <select id="optDifficulty">
-            <option value="easy">easy</option>
-            <option value="medium" selected>medium</option>
-            <option value="hard">hard</option>
-            <option value="free">free mode</option>
-          </select>
-        </label>
-        <menu class="dialog-actions">
-          <button value="cancel" class="btn ghost">Cancel</button>
-          <button id="saveOptions" value="default" class="btn tactical">Save</button>
-        </menu>
-      </form>
-  </dialog>
-  <dialog id="battlefieldDialog">
-    <form method="dialog" class="dialog-content">
-      <h2>Select Battlefield</h2>
-      <div id="battlefieldOptions" class="maps">
-        <label class="map-choice">
-          <input type="radio" name="battlefield" value="backyard" checked>
-          <img src="./assets/maps/backyard/backyard.png" alt="Backyard map preview">
-          <span>Backyard – Medium (30×20)</span>
-        </label>
-      </div>
-      <menu class="dialog-actions">
-        <button value="cancel" class="btn ghost">Cancel</button>
-        <button id="saveBattlefield" value="default" class="btn tactical">Save</button>
-      </menu>
-    </form>
-  </dialog>
-</main>
-
-
-
-
+        <!-- existing dialog kept intact -->
+        <dialog id="optionsDialog">
+            <form method="dialog" class="dialog-content">
+                <h2>Loadout</h2>
+                <label class="row">
+                    <span>Mute audio</span>
+                    <input type="checkbox" id="optMute">
+                </label>
+                <label class="row">
+                    <span>Start in fullscreen</span>
+                    <input type="checkbox" id="optFullscreen" checked>
+                </label>
+                <label class="row">
+                    <span>Override grid size</span>
+                    <input type="checkbox" id="optGridOverride">
+                </label>
+                <label class="row">
+                    <span>Grid size</span>
+                    <select id="optGridSize" disabled>
+                        <option value="large">large – 36×24</option>
+                        <option value="medium" selected>medium – 30×20</option>
+                        <option value="small">small – 24×16</option>
+                    </select>
+                </label>
+                <label class="row">
+                    <span>Difficulty</span>
+                    <select id="optDifficulty">
+                        <option value="easy">easy</option>
+                        <option value="medium" selected>medium</option>
+                        <option value="hard">hard</option>
+                        <option value="free">free mode</option>
+                    </select>
+                </label>
+                <menu class="dialog-actions">
+                    <button value="cancel" class="btn ghost">Cancel</button>
+                    <button id="saveOptions" value="default" class="btn tactical">Save</button>
+                </menu>
+            </form>
+        </dialog>
+        <dialog id="battlefieldDialog">
+            <form method="dialog" class="dialog-content">
+                <h2>Select Battlefield</h2>
+                <div id="battlefieldOptions" class="maps">
+                    <label class="map-choice">
+                        <input type="radio" name="battlefield" value="backyard" checked>
+                        <img src="./assets/maps/backyard/backyard.png" alt="Backyard map preview">
+                        <span>Backyard – Medium (30×20)</span>
+                    </label>
+                </div>
+                <menu class="dialog-actions">
+                    <button value="cancel" class="btn ghost">Cancel</button>
+                    <button id="saveBattlefield" value="default" class="btn tactical">Save</button>
+                </menu>
+            </form>
+        </dialog>
+    </main>
   <canvas id="gameCanvas"></canvas>
   <div id="statsOverlay" class="stats-overlay">
     <div class="overlay-header">
