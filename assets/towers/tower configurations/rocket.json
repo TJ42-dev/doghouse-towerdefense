@@ -4,5 +4,6 @@
   "fireRate": 0.4,
   "range": 5.5,
   "bulletSpeed": 4,
-  "cost": 175
+  "cost": 175,
+  "fireSound": "assets/towers/tower configurations/fire-placeholder.txt"
 }

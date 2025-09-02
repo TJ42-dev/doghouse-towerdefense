@@ -28,7 +28,6 @@ const upgradeRangeBtn = document.getElementById('upgradeRange');
 const maxDamageBtn = document.getElementById('maxDamage');
 const maxFireRateBtn = document.getElementById('maxFireRate');
 const maxRangeBtn = document.getElementById('maxRange');
-const sellBtn = document.getElementById('sellTower');
 const selectedTowerName = document.getElementById('selectedTowerName');
 const damageValue = document.getElementById('damageValue');
 const damageNext = document.getElementById('damageNext');
@@ -353,6 +352,16 @@ function victory() {
   setTimeout(() => sfx(880, 0.3, 0.06, 'square'), 200);
 }
 
+function playFireSound(t) {
+  const snd = t.fireSound;
+  if (snd && snd.endsWith('.wav')) {
+    const a = new Audio(snd);
+    a.play().catch(() => {});
+  } else {
+    sfx(880, 0.07, 0.03, 'square');
+  }
+}
+
 // -------------------- Options helpers --------------------
 function loadOpts() {
   const defaults = { mute: false, fullscreen: true, gridSize: 'medium', gridOverride: false, difficulty: 'medium' };
@@ -524,18 +533,6 @@ upgradeNukeBtn?.addEventListener('click', () => {
 upgradeHellfireBtn?.addEventListener('click', () => {
   if (selectedTower) { specializeTower(selectedTower, 'hellfire'); updateSelectedTowerInfo(); }
 });
-sellBtn?.addEventListener('click', () => {
-  if (selectedTower) {
-    const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
-    money += refund;
-    removeOccupancy(selectedTower.gx, selectedTower.gy);
-    removeTowerProjectiles(selectedTower);
-    towers = towers.filter(t => t !== selectedTower);
-    selectedTower = null;
-    updateSelectedTowerInfo();
-    recalcEnemyPaths();
-  }
-});
 quitInMenuBtn?.addEventListener('click', () => endGame());
 
 pauseBtn?.addEventListener('click', () => {
@@ -644,11 +641,6 @@ function updateSelectedTowerInfo() {
         }
       }
     }
-    if (sellBtn) {
-      const refund = Math.floor((selectedTower.spent || selectedTower.cost || 0) * 0.8);
-      sellBtn.textContent = `Sell ($${refund})`;
-      sellBtn.disabled = false;
-    }
   } else {
     selectedTowerName.textContent = 'No tower selected';
     selectedTowerName.classList.add('no-selection');
@@ -659,10 +651,6 @@ function updateSelectedTowerInfo() {
     [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn, maxDamageBtn, maxFireRateBtn, maxRangeBtn].forEach(btn => { if (btn) { btn.disabled = true; btn.style.display = ''; } });
     if (basicUpgrades) basicUpgrades.style.display = '';
     if (specialUpgrades) specialUpgrades.style.display = 'none';
-    if (sellBtn) {
-      sellBtn.textContent = 'Sell';
-      sellBtn.disabled = true;
-    }
   }
 }
 
@@ -812,6 +800,8 @@ function specializeTower(t, kind) {
   } else {
     return;
   }
+  const cfg = (typeof TOWER_TYPES !== 'undefined') ? TOWER_TYPES.find(x => x.id === t.type) : null;
+  if (cfg && cfg.fireSound) t.fireSound = cfg.fireSound;
   t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
   t.upgrades = { damage: 0, fireRate: 0, range: 0 };
 }
@@ -1408,7 +1398,7 @@ function update(dt) {
           });
           t.cooldown = 1 / t.fireRate;
           t.anim = 0.1;
-          sfx(200, 0.2, 0.04, 'sawtooth');
+          playFireSound(t);
         }
       } else if (t.cooldown <= 0 && target) {
         bullets.push({
@@ -1428,7 +1418,7 @@ function update(dt) {
         });
         t.cooldown = 1 / t.fireRate;
         t.anim = 0.1;
-        sfx(200, 0.2, 0.04, 'sawtooth');
+        playFireSound(t);
       }
     } else if (t.cooldown <= 0 && target) {
       const angle = t.angle;
@@ -1448,7 +1438,7 @@ function update(dt) {
           beams.push({ x1, y1, x2: target.x, y2: target.y, time: 0.05 });
         }
         t.cooldown = 1 / t.fireRate;
-        sfx(1200, 0.05, 0.04, 'sine');
+        playFireSound(t);
         if (target.health <= 0) {
             enemies.splice(enemies.indexOf(target), 1);
             money += killReward;
@@ -1491,7 +1481,7 @@ function update(dt) {
         // Railgun beam is wider for a more powerful visual effect
         beams.push({ x1: sx, y1: sy, x2: endX, y2: endY, time: 0.1, width: 10, colors: ['#ff0','#f0f','#0ff'] });
         t.cooldown = 1 / t.fireRate;
-        sfx(300, 0.2, 0.04, 'sawtooth');
+        playFireSound(t);
       } else if (t.type === 'shotgun') {
         const angle = t.angle;
         const spread = Math.PI / 12;
@@ -1502,14 +1492,14 @@ function update(dt) {
           bullets.push({ x: sx, y: sy, dx: Math.cos(ang), dy: Math.sin(ang), speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t, straight: true });
         }
         t.cooldown = 1 / t.fireRate;
-        sfx(880, 0.07, 0.03, 'square');
+        playFireSound(t);
       } else {
         const angle = t.angle;
         const sx = t.x + Math.cos(angle) * (CELL_PX / 2);
         const sy = t.y + Math.sin(angle) * (CELL_PX / 2);
         bullets.push({ x: sx, y: sy, target, speed: CANNON_BASE.bulletSpeed * CELL_PX, damage: t.damage, source: t });
         t.cooldown = 1 / t.fireRate;
-        sfx(880, 0.07, 0.03, 'square');
+        playFireSound(t);
       }
     }
   }
@@ -1831,6 +1821,7 @@ function onCanvasClick(e) {
         range: CANNON_BASE.range,
         cost: CANNON_BASE.cost,
         spent: CANNON_BASE.cost,
+        fireSound: CANNON_BASE.fireSound,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null,
         kills: 0
@@ -1857,6 +1848,7 @@ function onCanvasClick(e) {
         range: ROCKET_BASE.range,
         cost: ROCKET_BASE.cost,
         spent: ROCKET_BASE.cost,
+        fireSound: ROCKET_BASE.fireSound,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null,
         kills: 0,
@@ -1884,6 +1876,7 @@ function onCanvasClick(e) {
         range: LASER_BASE.range,
         cost: LASER_BASE.cost,
         spent: LASER_BASE.cost,
+        fireSound: LASER_BASE.fireSound,
         upgrades: { damage: 0, fireRate: 0, range: 0 },
         target: null,
         kills: 0
