@@ -8,6 +8,11 @@ const quitGameBtn = document.getElementById('quitGameBtn'); // in-game "Quit"
 const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
 const statsOverlay = document.getElementById('statsOverlay');
 const overlayStats = document.getElementById('overlayStats');
+const overlayHeader = document.querySelector('#statsOverlay .overlay-header');
+const gameOverPanel = document.getElementById('gameOverPanel');
+const gameOverText = document.getElementById('gameOverText');
+const retryBtn = document.getElementById('retryBtn');
+const gameOverQuitBtn = document.getElementById('gameOverQuitBtn');
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
@@ -575,7 +580,7 @@ upgradeNukeBtn?.addEventListener('click', () => {
 upgradeHellfireBtn?.addEventListener('click', () => {
   if (selectedTower) { specializeTower(selectedTower, 'hellfire'); updateSelectedTowerInfo(); }
 });
-quitInMenuBtn?.addEventListener('click', () => endGame());
+quitInMenuBtn?.addEventListener('click', () => returnToMenu());
 
 pauseBtn?.addEventListener('click', () => {
   if (running) {
@@ -1910,7 +1915,21 @@ function onCanvasClick(e) {
     }
   }
 }
-function onKey(e) { if (e.key === 'Escape') endGame(); }
+function onKey(e) {
+  if (e.key === 'Escape') {
+    endGame();
+  } else if (e.key === '1') {
+    if (money >= BALANCE.wallCost) selectedBuild = 'wall';
+  } else if (e.key === '2') {
+    if (money >= CANNON_BASE.cost) selectedBuild = 'cannon';
+  } else if (e.key === '3') {
+    if (money >= LASER_BASE.cost) selectedBuild = 'laser';
+  } else if (e.key === '4') {
+    if (money >= ROCKET_BASE.cost) selectedBuild = 'rocket';
+  } else if (e.key.toLowerCase() === 'x') {
+    selectedBuild = 'sell';
+  }
+}
 
 async function startGame() {
   // UI
@@ -1920,6 +1939,9 @@ async function startGame() {
   nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
   statsOverlay && (statsOverlay.style.display = 'block');
   hoverMenu && (hoverMenu.style.display = 'flex');
+  overlayHeader && (overlayHeader.style.display = 'flex');
+  overlayStats && (overlayStats.style.display = 'block');
+  gameOverPanel && (gameOverPanel.style.display = 'none');
 
   // Canvas
   
@@ -1961,25 +1983,43 @@ function endGame() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
   unbindInputs();
-
-  // UI restore
-  gameCanvas && (gameCanvas.style.display = 'none');
-  quitGameBtn && (quitGameBtn.style.display = 'none');
-  nextWaveBtn && (nextWaveBtn.style.display = 'none');
+  selectedTower = null;
+  updateSelectedTowerInfo();
+  selectedBuild = null;
+  contextMenu && (contextMenu.style.display = 'none');
   hoverMenu && (hoverMenu.style.display = 'none');
-  statsOverlay && (statsOverlay.style.display = 'none');
-  container && (container.style.display = 'block');
-    menu && (menu.style.display = '');
-    selectedTower = null;
-    updateSelectedTowerInfo();
-    contextMenu && (contextMenu.style.display = 'none');
-    pauseBtn && (pauseBtn.textContent = 'Pause');
+  overlayHeader && (overlayHeader.style.display = 'none');
+  overlayStats && (overlayStats.style.display = 'none');
+  nextWaveBtn && (nextWaveBtn.style.display = 'none');
+  quitGameBtn && (quitGameBtn.style.display = 'none');
+  statsOverlay && (statsOverlay.style.display = 'block');
+  gameOverPanel && (gameOverPanel.style.display = 'block');
+  pauseBtn && (pauseBtn.textContent = 'Pause');
 
   const waveNum = waveIndex; // waves completed
   recordBestWave(waveNum);
   syncBestWave();
-  const msg = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
-  alert(msg);
+  if (gameOverText) {
+    gameOverText.textContent = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
+  }
+}
+
+function returnToMenu() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  unbindInputs();
+  gameCanvas && (gameCanvas.style.display = 'none');
+  hoverMenu && (hoverMenu.style.display = 'none');
+  statsOverlay && (statsOverlay.style.display = 'none');
+  gameOverPanel && (gameOverPanel.style.display = 'none');
+  container && (container.style.display = 'block');
+  menu && (menu.style.display = '');
+  selectedTower = null;
+  updateSelectedTowerInfo();
+  selectedBuild = null;
+  contextMenu && (contextMenu.style.display = 'none');
+  pauseBtn && (pauseBtn.textContent = 'Pause');
 }
 
 // -------------------- Hooks --------------------
@@ -2017,3 +2057,5 @@ nextWaveBtn?.addEventListener('click', () => {
   if (!running) return;
   queueWave();
 });
+retryBtn?.addEventListener('click', () => startGame());
+gameOverQuitBtn?.addEventListener('click', () => returnToMenu());
