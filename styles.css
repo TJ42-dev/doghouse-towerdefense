@@ -949,6 +949,42 @@ dialog::backdrop {
   cursor: not-allowed;
 }
 
+/* Consolidated Basic Upgrades */
+.basic-upgrade-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.basic-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.basic-option + .basic-option {
+  border-top: 1px solid var(--game-border);
+  padding-top: 0.5rem;
+}
+
+.basic-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.basic-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.basic-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Special Upgrades */
 .special-upgrade-box {
   display: flex;
