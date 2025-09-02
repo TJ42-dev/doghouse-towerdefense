@@ -13,3 +13,4 @@
 - Introduced Rocket Launcher tower with homing rockets and smoke trails.
 - Rocket launchers keep up to three persistent rockets between waves, regenerating missing rockets even when no wave is active.
 - Sentry rockets now visibly launch from their tower before spiraling outward to patrol for targets.
+- Replaced wall.svg with fence.png for the wall base asset.
