@@ -201,50 +201,55 @@
         <div class="no-selection">No tower selected</div>
       </div>
       
-      <div id="upgradeOptions" class="upgrade-container">
-        <div id="basicUpgrades" class="upgrade-section">
-          <h4 class="section-title">Basic Upgrades</h4>
-          <div class="upgrade-item basic-upgrade-box">
-            <div class="basic-option">
-              <div class="basic-stats">
-                <span class="upgrade-label">Damage</span>
-                <span id="damageValue" class="current-value">-</span>
-                <span id="damageNext" class="next-value">(+0)</span>
-                <span id="damageCost" class="upgrade-cost">$0</span>
-              </div>
-              <div class="basic-action">
-                <button id="upgradeDamage" class="btn upgrade-btn">+</button>
-                <button id="maxDamage" class="btn upgrade-btn">Max</button>
-              </div>
-            </div>
+<div id="upgradeOptions" class="upgrade-container">
+  <div id="basicUpgrades" class="upgrade-section">
+    <h4 class="section-title">Basic Upgrades</h4>
 
-            <div class="basic-option">
-              <div class="basic-stats">
-                <span class="upgrade-label">Speed</span>
-                <span id="fireRateValue" class="current-value">-</span>
-                <span id="fireRateNext" class="next-value">(+0)</span>
-                <span id="fireRateCost" class="upgrade-cost">$0</span>
-              </div>
-              <div class="basic-action">
-                <button id="upgradeFireRate" class="btn upgrade-btn">+</button>
-                <button id="maxFireRate" class="btn upgrade-btn">Max</button>
-              </div>
-            </div>
-
-            <div class="basic-option">
-              <div class="basic-stats">
-                <span class="upgrade-label">Range</span>
-                <span id="rangeValue" class="current-value">-</span>
-                <span id="rangeNext" class="next-value">(+0)</span>
-                <span id="rangeCost" class="upgrade-cost">$0</span>
-              </div>
-              <div class="basic-action">
-                <button id="upgradeRange" class="btn upgrade-btn">+</button>
-                <button id="maxRange" class="btn upgrade-btn">Max</button>
-              </div>
-            </div>
-          </div>
+    <div class="upgrade-item basic-upgrade-box">
+      <!-- Damage -->
+      <div class="basic-option">
+        <div class="basic-stats">
+          <span class="upgrade-label">Damage</span>
+          <span id="damageValue" class="current-value">-</span>
+          <span id="damageNext" class="next-value">(+0)</span>
+          <span id="damageCost" class="upgrade-cost">$0</span>
         </div>
+        <div class="basic-action">
+          <button id="upgradeDamage" class="upgrade-btn small" aria-label="Increase Damage by 1">+</button>
+          <button id="maxDamage" class="upgrade-btn big" aria-label="Increase Damage by many">+++</button>
+        </div>
+      </div>
+
+      <!-- Speed -->
+      <div class="basic-option">
+        <div class="basic-stats">
+          <span class="upgrade-label">Speed</span>
+          <span id="fireRateValue" class="current-value">-</span>
+          <span id="fireRateNext" class="next-value">(+0)</span>
+          <span id="fireRateCost" class="upgrade-cost">$0</span>
+        </div>
+        <div class="basic-action">
+          <button id="upgradeFireRate" class="upgrade-btn small" aria-label="Increase Speed by 1">+</button>
+          <button id="maxFireRate" class="upgrade-btn big" aria-label="Increase Speed by many">+++</button>
+        </div>
+      </div>
+
+      <!-- Range -->
+      <div class="basic-option">
+        <div class="basic-stats">
+          <span class="upgrade-label">Range</span>
+          <span id="rangeValue" class="current-value">-</span>
+          <span id="rangeNext" class="next-value">(+0)</span>
+          <span id="rangeCost" class="upgrade-cost">$0</span>
+        </div>
+        <div class="basic-action">
+          <button id="upgradeRange" class="upgrade-btn small" aria-label="Increase Range by 1">+</button>
+          <button id="maxRange" class="upgrade-btn big" aria-label="Increase Range by many">+++</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
         <div id="specialUpgrades" class="upgrade-section" style="display:none;">
           <h4 class="section-title">Special Variants</h4>
