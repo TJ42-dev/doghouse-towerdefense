@@ -21,10 +21,7 @@ const hoverMenu = document.getElementById('hoverMenu');
 const hoverMenuHeader = document.getElementById('hoverMenuHeader');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
-const wallBtn = document.getElementById('wallBtn');
-const cannonBtn = document.getElementById('cannonBtn');
-const laserBtn = document.getElementById('laserBtn');
-const rocketBtn = document.getElementById('rocketBtn');
+const buildList = document.getElementById('buildList');
 const cancelBuildBtn = document.getElementById('cancelBuildBtn');
 const sellBuildBtn = document.getElementById('sellBuildBtn');
 const upgradeDamageBtn = document.getElementById('upgradeDamage');
@@ -249,13 +246,41 @@ let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
 let ROCKET_BASE = { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4.5, cost: 175 };
 let TOWER_TYPES = [];
 
-function updateBuildButtonLabels() {
-  if (wallBtn) wallBtn.textContent = `Wall $${WALL_COST}`;
-  if (cannonBtn) cannonBtn.textContent = `Cannon $${CANNON_BASE.cost}`;
-  if (laserBtn) laserBtn.textContent = `Laser $${LASER_BASE.cost}`;
-  if (rocketBtn) rocketBtn.textContent = `Rocket $${ROCKET_BASE.cost}`;
+function getBuildItems() {
+  return [
+    { id: 'wall', name: 'Wall', cost: WALL_COST, damage: 0, range: 0, fireRate: 0 },
+    { id: 'cannon', name: 'Cannon', ...CANNON_BASE },
+    { id: 'laser', name: 'Laser', ...LASER_BASE },
+    { id: 'rocket', name: 'Rocket', ...ROCKET_BASE }
+  ];
 }
-updateBuildButtonLabels();
+
+function updateBuildMenuAvailability() {
+  if (!buildList) return;
+  const builds = getBuildItems();
+  buildList.querySelectorAll('.build-item').forEach(btn => {
+    const b = builds.find(x => x.id === btn.dataset.build);
+    if (b) btn.disabled = money < b.cost;
+  });
+}
+
+function renderBuildMenu() {
+  if (!buildList) return;
+  buildList.innerHTML = '';
+  getBuildItems().forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'build-item';
+    btn.dataset.build = b.id;
+    btn.innerHTML = `<div class="title">${b.name} $${b.cost}</div>` +
+      `<div class="stats">DMG ${b.damage} • RNG ${b.range} • SPD ${b.fireRate}</div>`;
+    btn.addEventListener('click', () => {
+      if (money >= b.cost) selectedBuild = b.id;
+    });
+    buildList.appendChild(btn);
+  });
+  updateBuildMenuAvailability();
+}
+renderBuildMenu();
 
 // Basic BFS pathfinding to navigate around walls
 function findPath(start, goal) {
@@ -423,19 +448,6 @@ function activateTab(name) {
   tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${name}`));
 }
 tabButtons.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
-
-wallBtn?.addEventListener('click', () => {
-  if (money >= WALL_COST) selectedBuild = 'wall';
-});
-cannonBtn?.addEventListener('click', () => {
-  if (money >= CANNON_BASE.cost) selectedBuild = 'cannon';
-});
-laserBtn?.addEventListener('click', () => {
-  if (money >= LASER_BASE.cost) selectedBuild = 'laser';
-});
-rocketBtn?.addEventListener('click', () => {
-  if (money >= ROCKET_BASE.cost) selectedBuild = 'rocket';
-});
 sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selectedTower = null; updateSelectedTowerInfo(); });
 cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 
@@ -872,7 +884,7 @@ async function loadData() {
       if (laser) LASER_BASE = { ...LASER_BASE, ...laser };
       const rocket = TOWER_TYPES.find(t => t.id === 'rocket');
       if (rocket) ROCKET_BASE = { ...ROCKET_BASE, ...rocket };
-      updateBuildButtonLabels();
+      renderBuildMenu();
     }
     if (dogJson) {
       DEFAULT_DOG_STATS = { ...DEFAULT_DOG_STATS, ...(dogJson.default || {}) };
@@ -958,9 +970,10 @@ let running = false;
 let waveActive = false;
 let preWaveTimer = START_DELAY;
 let waveElapsed = 0; // time into current wave
+// waveIndex tracks how many waves have been completed
 let waveIndex = 0;
-let enemiesSpawnedInWave = 0;
-let spawnTimer = 0; // secs until next spawn
+// queue of active waves, each with {waveNum, enemiesSpawned, total, spawnTimer}
+let waveQueue = [];
 let spawnInterval = SPAWN_INTERVAL;
 let firstPlacementDone = false;
 
@@ -991,9 +1004,8 @@ function resetGame() {
   preWaveTimer = START_DELAY;
   waveElapsed = 0;
   waveIndex = 0;
-  enemiesSpawnedInWave = 0;
+  waveQueue = [];
   spawnInterval = SPAWN_INTERVAL;
-  spawnTimer = 0;
   firstPlacementDone = false;
   const c = cssCenter();
   player.x = c.x; player.y = c.y; player.r = 0;
@@ -1007,11 +1019,10 @@ function resetGame() {
   }
 }
 
-function spawnEnemy() {
+function spawnEnemy(waveNum) {
   const entry = currentMap.entries[0];
   const p = cellToPx(entry);
   const r = CELL_PX / 2;
-  const waveNum = waveIndex + 1;
   let type;
   if (waveNum % 5 === 0) {
     type = ASSETS.dogs.find(t => t.id === 'boss') || {};
@@ -1028,38 +1039,34 @@ function spawnEnemy() {
   const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const path = findPath(entry, goalCell);
 
-  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0 });
-  enemiesSpawnedInWave++;
+  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum });
 }
 
-function startWave() {
-  waveActive = true;
-  preWaveTimer = 0;
-  waveElapsed = 0;
-  enemiesSpawnedInWave = 0;
-  spawnTimer = 0;
-  spawnInterval = SPAWN_INTERVAL;
-  beams = [];
-  horn();
-}
-
-function nextWave() {
-  const completedWave = waveIndex + 1;
-  const nextWaveNum = waveIndex + 2;
-  const stageNext = nextWaveNum >= 30 ? 3 : nextWaveNum > 20 ? 2 : 1;
-  // increase kill reward slightly every wave
-  killReward += stageNext === 3 ? 3 : stageNext === 2 ? 2 : 1;
-  if (completedWave % 5 === 0) {
-    const stageCompleted = completedWave >= 30 ? 3 : completedWave > 20 ? 2 : 1;
-    const healthInc = stageCompleted === 3 ? 0.025 : stageCompleted === 2 ? 0.05 : 0.1;
-    healthBuffMultiplier *= 1 + healthInc;
-    killReward += stageCompleted === 3 ? 20 : stageCompleted === 2 ? 10 : 5;
-    money += stageCompleted === 3 ? 1000 : stageCompleted === 2 ? 500 : 0;
+function queueWave() {
+  const nextWaveNum = waveIndex + waveQueue.length + 1;
+  if (!waveActive) {
+    waveActive = true;
+    preWaveTimer = 0;
+    waveElapsed = 0;
+    spawnInterval = SPAWN_INTERVAL;
+    beams = [];
+    horn();
   }
-  waveIndex++;
-  waveActive = false;
-  preWaveTimer = POST_WAVE_DELAY;
-  waveElapsed = 0;
+  if (nextWaveNum > 1) {
+    const completedWave = nextWaveNum - 1;
+    const stageNext = nextWaveNum >= 30 ? 3 : nextWaveNum > 20 ? 2 : 1;
+    // increase kill reward slightly every wave
+    killReward += stageNext === 3 ? 3 : stageNext === 2 ? 2 : 1;
+    if (completedWave % 5 === 0) {
+      const stageCompleted = completedWave >= 30 ? 3 : completedWave > 20 ? 2 : 1;
+      const healthInc = stageCompleted === 3 ? 0.025 : stageCompleted === 2 ? 0.05 : 0.1;
+      healthBuffMultiplier *= 1 + healthInc;
+      killReward += stageCompleted === 3 ? 20 : stageCompleted === 2 ? 10 : 5;
+      money += stageCompleted === 3 ? 1000 : stageCompleted === 2 ? 500 : 0;
+    }
+  }
+  const total = (nextWaveNum % 5 === 0) ? 1 : ENEMIES_PER_WAVE;
+  waveQueue.push({ waveNum: nextWaveNum, enemiesSpawned: 0, total, spawnTimer: 0 });
 }
 
 function updateProjectiles(dt) {
@@ -1243,14 +1250,15 @@ function update(dt) {
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
   }
 
-  const enemiesPerWave = ((waveIndex + 1) % 5 === 0) ? 1 : ENEMIES_PER_WAVE;
-
   if (waveActive) {
     waveElapsed += dt;
-    spawnTimer -= dt;
-    while (spawnTimer <= 0 && enemiesSpawnedInWave < enemiesPerWave) {
-      spawnEnemy();
-      spawnTimer += spawnInterval;
+    for (const w of waveQueue) {
+      w.spawnTimer -= dt;
+      while (w.spawnTimer <= 0 && w.enemiesSpawned < w.total) {
+        spawnEnemy(w.waveNum);
+        w.enemiesSpawned++;
+        w.spawnTimer += spawnInterval;
+      }
     }
   }
 
@@ -1469,20 +1477,31 @@ function update(dt) {
   if (!waveActive) {
     if (!firstPlacementDone) return;
     preWaveTimer -= dt;
-    if (preWaveTimer <= 0) startWave();
+    if (preWaveTimer <= 0) queueWave();
     return;
   }
 
-  if (waveActive && enemies.length === 0 && enemiesSpawnedInWave >= enemiesPerWave) {
-    money += difficultySettings.waveReward;
-    victory();
-    nextWave();
+  const currentWave = waveQueue[0];
+  if (currentWave && currentWave.enemiesSpawned >= currentWave.total) {
+    const remaining = enemies.some(e => e.waveNum === currentWave.waveNum);
+    if (!remaining) {
+      money += difficultySettings.waveReward;
+      victory();
+      waveQueue.shift();
+      waveIndex++;
+      waveElapsed = 0;
+      if (waveQueue.length === 0) {
+        waveActive = false;
+        preWaveTimer = POST_WAVE_DELAY;
+      }
+    }
   }
 
   if (catLives.every(l => !l.alive)) { endGame(); return; }
 
   if (waveElapsed >= WAVE_TIME) {
-    nextWave();
+    queueWave();
+    waveElapsed = 0;
   }
 }
 
@@ -1531,10 +1550,7 @@ function drawHUD() {
     html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
     html += `Money: $${money}`;
   }
-  if (wallBtn) wallBtn.disabled = money < WALL_COST;
-  if (cannonBtn) cannonBtn.disabled = money < CANNON_BASE.cost;
-  if (laserBtn) laserBtn.disabled = money < LASER_BASE.cost;
-  if (rocketBtn) rocketBtn.disabled = money < ROCKET_BASE.cost;
+  updateBuildMenuAvailability();
   if (statsEl) statsEl.innerHTML = html;
   if (overlayEl) overlayEl.innerHTML = html;
 }
@@ -1901,7 +1917,7 @@ function endGame() {
     contextMenu && (contextMenu.style.display = 'none');
     pauseBtn && (pauseBtn.textContent = 'Pause');
 
-  const waveNum = waveIndex + 1;
+  const waveNum = waveIndex + waveQueue.length;
   recordBestWave(waveNum);
   syncBestWave();
   const msg = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
@@ -1941,6 +1957,5 @@ quitGameBtn?.addEventListener('click', () => endGame());
 quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));
 nextWaveBtn?.addEventListener('click', () => {
   if (!running) return;
-  if (!waveActive) startWave();
-  else { nextWave(); startWave(); }
+  queueWave();
 });
