@@ -184,23 +184,16 @@
         <div class="tab-subtitle">Select a tower to build</div>
       </div>
       <div id="buildList" class="build-list"></div>
-      <div class="build-actions">
-        <button id="sellBuildBtn" class="btn sm ghost tactical" title="Sell Mode">
-          <span class="btn-icon">💰</span>
-          Sell
-        </button>
-        <button id="cancelBuildBtn" class="btn sm ghost tactical" title="Cancel Build">
-          <span class="btn-icon">❌</span>
-          Cancel
-        </button>
-      </div>
     </div>
 
     <div id="tab-upgrade" class="tab-content">
       <div id="selectedTowerInfo" class="tower-info">
-        <div class="no-selection">No tower selected</div>
+        <div class="tower-header">
+          <span id="selectedTowerName" class="tower-name no-selection">No tower selected</span>
+          <button id="sellTower" class="btn tactical sell-btn" disabled>Sell</button>
+        </div>
       </div>
-      
+
 <div id="upgradeOptions" class="upgrade-container">
   <div id="basicUpgrades" class="upgrade-section">
     <h4 class="section-title">Basic Upgrades</h4>
@@ -306,12 +299,6 @@
         </div>
       </div>
       
-      <div class="tower-actions">
-        <button id="sellTower" class="btn tactical sell-btn">
-          <span class="btn-icon">💰</span>
-          Sell Tower
-        </button>
-      </div>
     </div>
 
     <div id="tab-stats" class="tab-content">
