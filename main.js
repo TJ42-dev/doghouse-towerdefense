@@ -1861,7 +1861,7 @@ async function startGame() {
   quitGameBtn && (quitGameBtn.style.display = 'inline-block');
   nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
   statsOverlay && (statsOverlay.style.display = 'block');
-  hoverMenu && (hoverMenu.style.display = 'block');
+  hoverMenu && (hoverMenu.style.display = 'flex');
 
   // Canvas
   
