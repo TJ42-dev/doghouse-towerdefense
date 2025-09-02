@@ -8,6 +8,11 @@ const quitGameBtn = document.getElementById('quitGameBtn'); // in-game "Quit"
 const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
 const statsOverlay = document.getElementById('statsOverlay');
 const overlayStats = document.getElementById('overlayStats');
+const overlayHeader = document.querySelector('#statsOverlay .overlay-header');
+const gameOverPanel = document.getElementById('gameOverPanel');
+const gameOverText = document.getElementById('gameOverText');
+const retryBtn = document.getElementById('retryBtn');
+const gameOverQuitBtn = document.getElementById('gameOverQuitBtn');
 const dlg = document.getElementById('optionsDialog');
 const optMute = document.getElementById('optMute');
 const optFullscreen = document.getElementById('optFullscreen');
@@ -102,10 +107,13 @@ const TOWER_PX = CELL_PX * TOWER_SCALE;
 const NUKE_SPLASH_RADIUS = CELL_PX * 2;
 const STRAY_ROCKET_RADIUS = CELL_PX;
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
+let gridCache = null, gridCtx = null;
 
 // Occupancy map mirrors walls & towers
 let occupancy = new Set();
 let walls = [];
+let NAV_VERSION = 0;
+function bumpNav() { NAV_VERSION++; }
 let selectedBuild = null;
 let towers = [];
 let bullets = [];
@@ -114,31 +122,41 @@ let beams = [];
 let explosions = [];
 let catLives = [];
 let money = 0;
-const WALL_COST = 10;
-const SPECIALIZATION_COSTS = {
-  sniper: 950,
-  shotgun: 1200,
-  dualLaser: 1500,
-  railgun: 2500,
-  nuke: 3000,
-  hellfire: 2000
-};
-
-const DIFFICULTY_SETTINGS = {
-  easy: { startingCash: 500, killReward: 15, waveReward: 75, healthMultiplier: 0.8 },
-  medium: { startingCash: 350, killReward: 10, waveReward: 50, healthMultiplier: 1 },
-  hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 },
-  free: { startingCash: 99999, killReward: 10, waveReward: 50, healthMultiplier: 1 }
+const BALANCE = {
+  wallCost: 10,
+  specializationCosts: {
+    sniper: 950,
+    shotgun: 1200,
+    dualLaser: 1500,
+    railgun: 2500,
+    nuke: 3000,
+    hellfire: 2000
+  },
+  difficulties: {
+    easy: { startingCash: 500, killReward: 15, waveReward: 75, healthMultiplier: 0.8 },
+    medium: { startingCash: 350, killReward: 10, waveReward: 50, healthMultiplier: 1 },
+    hard: { startingCash: 250, killReward: 8, waveReward: 40, healthMultiplier: 1.2 },
+    free: { startingCash: 99999, killReward: 10, waveReward: 50, healthMultiplier: 1 }
+  },
+  defaultDogStats: { baseHealth: 100, baseSpeed: 1.0 },
+  healthScalePerWave: 0.375, // enemy health increases 37.5% each wave
+  wave: {
+    time: 60, // seconds per wave
+    enemiesPerWave: 10,
+    startDelay: 15, // secs before first wave
+    spawnInterval: 0.5, // seconds between enemy spawns
+    postWaveDelay: 5 // delay after a wave clears
+  }
 };
 let difficulty = 'medium';
-let difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
+let difficultySettings = { ...BALANCE.difficulties[difficulty] };
 
-sniperCostSpan && (sniperCostSpan.textContent = `$${SPECIALIZATION_COSTS.sniper}`);
-shotgunCostSpan && (shotgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.shotgun}`);
-dualLaserCostSpan && (dualLaserCostSpan.textContent = `$${SPECIALIZATION_COSTS.dualLaser}`);
-railgunCostSpan && (railgunCostSpan.textContent = `$${SPECIALIZATION_COSTS.railgun}`);
-nukeCostSpan && (nukeCostSpan.textContent = `$${SPECIALIZATION_COSTS.nuke}`);
-hellfireCostSpan && (hellfireCostSpan.textContent = `$${SPECIALIZATION_COSTS.hellfire}`);
+sniperCostSpan && (sniperCostSpan.textContent = `$${BALANCE.specializationCosts.sniper}`);
+shotgunCostSpan && (shotgunCostSpan.textContent = `$${BALANCE.specializationCosts.shotgun}`);
+dualLaserCostSpan && (dualLaserCostSpan.textContent = `$${BALANCE.specializationCosts.dualLaser}`);
+railgunCostSpan && (railgunCostSpan.textContent = `$${BALANCE.specializationCosts.railgun}`);
+nukeCostSpan && (nukeCostSpan.textContent = `$${BALANCE.specializationCosts.nuke}`);
+hellfireCostSpan && (hellfireCostSpan.textContent = `$${BALANCE.specializationCosts.hellfire}`);
 
 // Landmarks
 let DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
@@ -163,6 +181,23 @@ function applyGridSize(size) {
   updateLandmarks();
   initOccupancy();
   resizeCanvas();
+}
+
+function rebuildGridCache() {
+  const w = GRID_COLS * CELL_PX, h = GRID_ROWS * CELL_PX;
+  gridCache = document.createElement('canvas');
+  gridCache.width = w; gridCache.height = h;
+  gridCtx = gridCache.getContext('2d');
+  gridCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+  gridCtx.lineWidth = 1;
+  for (let i = 0; i <= GRID_COLS; i++) {
+    gridCtx.beginPath();
+    gridCtx.moveTo(i * CELL_PX, 0); gridCtx.lineTo(i * CELL_PX, h); gridCtx.stroke();
+  }
+  for (let j = 0; j <= GRID_ROWS; j++) {
+    gridCtx.beginPath();
+    gridCtx.moveTo(0, j * CELL_PX); gridCtx.lineTo(w, j * CELL_PX); gridCtx.stroke();
+  }
 }
 
 // Pure helpers ------------------------------------------------------------
@@ -201,9 +236,11 @@ function isWallAt(gx, gy) {
 
 function addOccupancy(x, y) {
   occupancy.add(key(x, y));
+  bumpNav();
 }
 function removeOccupancy(x, y) {
   occupancy.delete(key(x, y));
+  bumpNav();
 }
 
 function initOccupancy() {
@@ -211,6 +248,7 @@ function initOccupancy() {
   // are placed during gameplay.
   occupancy = new Set();
   walls = [];
+  bumpNav();
 }
 
 function removeTowerProjectiles(t) {
@@ -220,13 +258,14 @@ function removeTowerProjectiles(t) {
 function canPlace(cell) {
   if (!inBounds(cell)) return false;
   if (occupancy.has(key(cell.x, cell.y))) return false;
-  addOccupancy(cell.x, cell.y);
+  // Temporarily occupy to test pathing without bumping nav version
+  occupancy.add(key(cell.x, cell.y));
   const target = catLives.find(l => l.alive);
   const goal = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const ok =
     currentMap.entries.every(e => findPath(e, goal).length > 0) &&
     enemies.every(en => findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0);
-  removeOccupancy(cell.x, cell.y);
+  occupancy.delete(key(cell.x, cell.y));
   return ok;
 }
 
@@ -237,6 +276,7 @@ function recalcEnemyPaths() {
     const start = pxToCell({ x: en.x, y: en.y });
     en.path = findPath(start, goal);
     en.goalCell = goal;
+    en.navVersion = NAV_VERSION;
   }
 }
 
@@ -248,7 +288,7 @@ let TOWER_TYPES = [];
 
 function getBuildItems() {
   return [
-    { id: 'wall', name: 'Wall', cost: WALL_COST, damage: 0, range: 0, fireRate: 0 },
+    { id: 'wall', name: 'Wall', cost: BALANCE.wallCost, damage: 0, range: 0, fireRate: 0 },
     { id: 'cannon', name: 'Cannon', ...CANNON_BASE },
     { id: 'laser', name: 'Laser', ...LASER_BASE },
     { id: 'rocket', name: 'Rocket', ...ROCKET_BASE }
@@ -352,14 +392,21 @@ function victory() {
   setTimeout(() => sfx(880, 0.3, 0.06, 'square'), 200);
 }
 
+const audioCache = new Map();
+function playAudio(url) {
+  let a = audioCache.get(url);
+  if (!a) {
+    a = new Audio(url);
+    audioCache.set(url, a);
+  }
+  a.currentTime = 0;
+  a.play().catch(() => {});
+}
+
 function playFireSound(t) {
   const snd = t.fireSound;
-  if (snd && snd.endsWith('.wav')) {
-    const a = new Audio(snd);
-    a.play().catch(() => {});
-  } else {
-    sfx(880, 0.07, 0.03, 'square');
-  }
+  if (snd && snd.endsWith('.wav')) playAudio(snd);
+  else sfx(880, 0.07, 0.03, 'square');
 }
 
 // -------------------- Options helpers --------------------
@@ -398,7 +445,7 @@ saveBtn?.addEventListener('click', () => {
     gridSize: grid,
     gridOverride: override,
     difficulty,
-    startingCash: DIFFICULTY_SETTINGS[difficulty].startingCash
+    startingCash: BALANCE.difficulties[difficulty].startingCash
   };
   saveOpts(opts);
   applyGridSize(grid);
@@ -533,7 +580,7 @@ upgradeNukeBtn?.addEventListener('click', () => {
 upgradeHellfireBtn?.addEventListener('click', () => {
   if (selectedTower) { specializeTower(selectedTower, 'hellfire'); updateSelectedTowerInfo(); }
 });
-quitInMenuBtn?.addEventListener('click', () => endGame());
+quitInMenuBtn?.addEventListener('click', () => returnToMenu());
 
 pauseBtn?.addEventListener('click', () => {
   if (running) {
@@ -566,27 +613,27 @@ function updateSelectedTowerInfo() {
         const isRocket = selectedTower.type === 'rocket';
         if (upgradeSniperBtn) {
           upgradeSniperBtn.parentElement && (upgradeSniperBtn.parentElement.style.display = isCannon ? '' : 'none');
-          upgradeSniperBtn.disabled = money < SPECIALIZATION_COSTS.sniper;
+          upgradeSniperBtn.disabled = money < BALANCE.specializationCosts.sniper;
         }
         if (upgradeShotgunBtn) {
           upgradeShotgunBtn.parentElement && (upgradeShotgunBtn.parentElement.style.display = isCannon ? '' : 'none');
-          upgradeShotgunBtn.disabled = money < SPECIALIZATION_COSTS.shotgun;
+          upgradeShotgunBtn.disabled = money < BALANCE.specializationCosts.shotgun;
         }
         if (upgradeDualLaserBtn) {
           upgradeDualLaserBtn.parentElement && (upgradeDualLaserBtn.parentElement.style.display = isLaser ? '' : 'none');
-          upgradeDualLaserBtn.disabled = money < SPECIALIZATION_COSTS.dualLaser;
+          upgradeDualLaserBtn.disabled = money < BALANCE.specializationCosts.dualLaser;
         }
         if (upgradeRailgunBtn) {
           upgradeRailgunBtn.parentElement && (upgradeRailgunBtn.parentElement.style.display = isLaser ? '' : 'none');
-          upgradeRailgunBtn.disabled = money < SPECIALIZATION_COSTS.railgun;
+          upgradeRailgunBtn.disabled = money < BALANCE.specializationCosts.railgun;
         }
         if (upgradeNukeBtn) {
           upgradeNukeBtn.parentElement && (upgradeNukeBtn.parentElement.style.display = isRocket ? '' : 'none');
-          upgradeNukeBtn.disabled = money < SPECIALIZATION_COSTS.nuke;
+          upgradeNukeBtn.disabled = money < BALANCE.specializationCosts.nuke;
         }
         if (upgradeHellfireBtn) {
           upgradeHellfireBtn.parentElement && (upgradeHellfireBtn.parentElement.style.display = isRocket ? '' : 'none');
-          upgradeHellfireBtn.disabled = money < SPECIALIZATION_COSTS.hellfire;
+          upgradeHellfireBtn.disabled = money < BALANCE.specializationCosts.hellfire;
         }
       }
     } else {
@@ -675,7 +722,7 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
     contextSellBtn.textContent = '$';
     rangePreview = { x: t.x, y: t.y, r: t.range * CELL_PX };
   } else {
-    contextStats.innerHTML = `Sell: $${WALL_COST}`;
+    contextStats.innerHTML = `Sell: $${BALANCE.wallCost}`;
     contextSellBtn.textContent = '$';
     rangePreview = null;
   }
@@ -709,7 +756,7 @@ contextSellBtn?.addEventListener('click', () => {
     if (idx !== -1) {
       walls.splice(idx, 1);
       removeOccupancy(gx, gy);
-      money += WALL_COST;
+      money += BALANCE.wallCost;
     }
   }
   recalcEnemyPaths();
@@ -750,14 +797,14 @@ function specializeTower(t, kind) {
   if (!t.upgrades) return;
   const maxed = ['damage','fireRate','range'].every(s => t.upgrades[s] >= 10);
   if (!maxed) return;
-  const cost = SPECIALIZATION_COSTS[kind];
+  const cost = BALANCE.specializationCosts[kind];
   if (money < cost) return;
   money -= cost;
   t.spent = (t.spent || t.cost || 0) + cost;
   if (t.type === 'cannon') {
     if (kind === 'sniper') {
-      const idx = 24; // wave 25 zero-based
-      const scale = 1 + idx * HEALTH_SCALE_PER_WAVE;
+      const idx = Math.max(0, waveIndex - 1);
+      const scale = 1 + idx * BALANCE.healthScalePerWave;
       t.type = 'sniper';
       t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
       t.fireRate = 0.6;
@@ -782,8 +829,8 @@ function specializeTower(t, kind) {
     }
   } else if (t.type === 'rocket') {
     if (kind === 'nuke') {
-      const idx = 24; // wave 25 zero-based
-      const scale = 1 + idx * HEALTH_SCALE_PER_WAVE;
+      const idx = Math.max(0, waveIndex - 1);
+      const scale = 1 + idx * BALANCE.healthScalePerWave;
       removeTowerProjectiles(t);
       t.type = 'nuke';
       t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
@@ -852,6 +899,7 @@ function resizeCanvas() {
     const p = cellToPx({ x: l.gx, y: l.gy });
     l.x = p.x; l.y = p.y; l.r = CELL_PX / 2;
   });
+  rebuildGridCache();
 }
 function cssCenter() {
   const w = gameCanvas?.clientWidth || window.innerWidth;
@@ -861,9 +909,8 @@ function cssCenter() {
 
 // -------------------- Enemy definitions & asset loader --------------------
 // Add new dog heads here. Omit baseHealth/baseSpeed to use balanced defaults.
-let DEFAULT_DOG_STATS = { baseHealth: 100, baseSpeed: 1.0 };
+let DEFAULT_DOG_STATS = { ...BALANCE.defaultDogStats };
 let DOG_TYPES = [];
-const HEALTH_SCALE_PER_WAVE = 0.375; // enemy health increases 37.5% each wave
 const CAT_SRC = 'assets/animals/cat.png';
 const CANNON_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const CANNON_TURRET_SRC = 'assets/towers/turrets/cannon_turret.svg';
@@ -989,23 +1036,18 @@ function imgReady(img) {
 }
 
 // -------------------- Tiny Dodge Game --------------------
-const WAVE_TIME = 60; // seconds per wave
-const ENEMIES_PER_WAVE = 10;
-const START_DELAY = 15; // secs before first wave
-const SPAWN_INTERVAL = 0.5; // seconds between enemy spawns
-const POST_WAVE_DELAY = 5; // delay after a wave clears
 let rafId = null;
 let lastT = 0;
 let running = false;
 
 let waveActive = false;
-let preWaveTimer = START_DELAY;
+let preWaveTimer = BALANCE.wave.startDelay;
 let waveElapsed = 0; // time into current wave
 // waveIndex tracks how many waves have been completed
 let waveIndex = 0;
 // queue of active waves, each with {waveNum, enemiesSpawned, total, spawnTimer}
 let waveQueue = [];
-let spawnInterval = SPAWN_INTERVAL;
+let spawnInterval = BALANCE.wave.spawnInterval;
 let firstPlacementDone = false;
 
 const player = { x: 0, y: 0, r: 0 };
@@ -1024,7 +1066,7 @@ function resetGame() {
   explosions = [];
   const opts = loadOpts();
   difficulty = opts.difficulty || 'medium';
-  difficultySettings = { ...DIFFICULTY_SETTINGS[difficulty] };
+  difficultySettings = { ...BALANCE.difficulties[difficulty] };
   money = difficultySettings.startingCash;
   killReward = difficultySettings.killReward;
   healthBuffMultiplier = 1;
@@ -1032,11 +1074,11 @@ function resetGame() {
   updateSelectedTowerInfo();
   initOccupancy();
   waveActive = false;
-  preWaveTimer = START_DELAY;
+  preWaveTimer = BALANCE.wave.startDelay;
   waveElapsed = 0;
   waveIndex = 0;
   waveQueue = [];
-  spawnInterval = SPAWN_INTERVAL;
+  spawnInterval = BALANCE.wave.spawnInterval;
   firstPlacementDone = false;
   const c = cssCenter();
   player.x = c.x; player.y = c.y; player.r = 0;
@@ -1070,7 +1112,21 @@ function spawnEnemy(waveNum) {
   const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const path = findPath(entry, goalCell);
 
-  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum });
+  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum, navVersion: NAV_VERSION });
+}
+
+function applyWaveEndRewards(completedWave) {
+  // Slightly increase kill reward every wave
+  killReward += (completedWave >= 30) ? 3 : (completedWave > 20) ? 2 : 1;
+
+  // Every 5 waves, buff enemy health and give bonus money
+  if (completedWave % 5 === 0) {
+    const stage = (completedWave >= 30) ? 3 : (completedWave > 20) ? 2 : 1;
+    const healthInc = (stage === 3) ? 0.025 : (stage === 2) ? 0.05 : 0.1;
+    healthBuffMultiplier *= 1 + healthInc;
+    money += (stage === 3) ? 1000 : (stage === 2) ? 500 : 0;
+    killReward += (stage === 3) ? 20 : (stage === 2) ? 10 : 5;
+  }
 }
 
 function queueWave() {
@@ -1079,24 +1135,11 @@ function queueWave() {
     waveActive = true;
     preWaveTimer = 0;
     waveElapsed = 0;
-    spawnInterval = SPAWN_INTERVAL;
+    spawnInterval = BALANCE.wave.spawnInterval;
     beams = [];
     horn();
   }
-  if (nextWaveNum > 1) {
-    const completedWave = nextWaveNum - 1;
-    const stageNext = nextWaveNum >= 30 ? 3 : nextWaveNum > 20 ? 2 : 1;
-    // increase kill reward slightly every wave
-    killReward += stageNext === 3 ? 3 : stageNext === 2 ? 2 : 1;
-    if (completedWave % 5 === 0) {
-      const stageCompleted = completedWave >= 30 ? 3 : completedWave > 20 ? 2 : 1;
-      const healthInc = stageCompleted === 3 ? 0.025 : stageCompleted === 2 ? 0.05 : 0.1;
-      healthBuffMultiplier *= 1 + healthInc;
-      killReward += stageCompleted === 3 ? 20 : stageCompleted === 2 ? 10 : 5;
-      money += stageCompleted === 3 ? 1000 : stageCompleted === 2 ? 500 : 0;
-    }
-  }
-  const total = (nextWaveNum % 5 === 0) ? 1 : ENEMIES_PER_WAVE;
+  const total = (nextWaveNum % 5 === 0) ? 1 : BALANCE.wave.enemiesPerWave;
   waveQueue.push({ waveNum: nextWaveNum, enemiesSpawned: 0, total, spawnTimer: 0 });
 }
 
@@ -1302,19 +1345,13 @@ function update(dt) {
     const curCell = pxToCell({ x: e.x, y: e.y });
 
     if (
-      !e.path ||
-      !e.path.length ||
-      !e.goalCell ||
-      e.goalCell.x !== goalCell.x ||
-      e.goalCell.y !== goalCell.y
+      !e.path || !e.path.length ||
+      !e.goalCell || e.goalCell.x !== goalCell.x || e.goalCell.y !== goalCell.y ||
+      e.navVersion !== NAV_VERSION
     ) {
       e.path = findPath(curCell, goalCell);
       e.goalCell = goalCell;
-    }
-
-    if (e.path && e.path.length && isWallAt(e.path[0].x, e.path[0].y)) {
-      e.path = findPath(curCell, goalCell);
-      e.goalCell = goalCell;
+      e.navVersion = NAV_VERSION;
     }
 
     let dest = cellToPx(goalCell);
@@ -1339,6 +1376,8 @@ function update(dt) {
     if (isWallAt(gx.x, gx.y)) {
       e.x = prevX; e.y = prevY;
       e.path = findPath(curCell, goalCell);
+      e.goalCell = goalCell;
+      e.navVersion = NAV_VERSION;
     }
 
     e.velX = (e.x - prevX) / dt;
@@ -1518,19 +1557,21 @@ function update(dt) {
     if (!remaining) {
       money += difficultySettings.waveReward;
       victory();
+      const completedWave = currentWave.waveNum;
+      applyWaveEndRewards(completedWave);
       waveQueue.shift();
       waveIndex++;
       waveElapsed = 0;
       if (waveQueue.length === 0) {
         waveActive = false;
-        preWaveTimer = POST_WAVE_DELAY;
+        preWaveTimer = BALANCE.wave.postWaveDelay;
       }
     }
   }
 
   if (catLives.every(l => !l.alive)) { endGame(); return; }
 
-  if (waveElapsed >= WAVE_TIME) {
+  if (waveElapsed >= BALANCE.wave.time) {
     queueWave();
     waveElapsed = 0;
   }
@@ -1539,19 +1580,7 @@ function update(dt) {
 function drawBG() {
   const w = gameCanvas.clientWidth, h = gameCanvas.clientHeight;
   ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  // Ensure grid lines stay consistent even after drawing wide beams
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= GRID_COLS; i++) {
-    ctx.beginPath();
-    const x = originPx.x + i * CELL_PX;
-    ctx.moveTo(x, originPx.y); ctx.lineTo(x, originPx.y + GRID_ROWS * CELL_PX); ctx.stroke();
-  }
-  for (let i = 0; i <= GRID_ROWS; i++) {
-    ctx.beginPath();
-    const y = originPx.y + i * CELL_PX;
-    ctx.moveTo(originPx.x, y); ctx.lineTo(originPx.x + GRID_COLS * CELL_PX, y); ctx.stroke();
-  }
+  if (gridCache) ctx.drawImage(gridCache, originPx.x, originPx.y);
   for (const wObj of walls) {
     const x = originPx.x + wObj.x * CELL_PX;
     const y = originPx.y + wObj.y * CELL_PX;
@@ -1576,7 +1605,7 @@ function drawHUD() {
     html += `Money: $${money}`;
   } else {
     html += `Wave: ${waveIndex + 1}<br>`;
-    html += `Time: ${Math.max(0, WAVE_TIME - waveElapsed).toFixed(1)}s<br>`;
+    html += `Time: ${Math.max(0, BALANCE.wave.time - waveElapsed).toFixed(1)}s<br>`;
     html += `Enemies: ${enemies.length}<br>`;
     html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
     html += `Money: $${money}`;
@@ -1787,7 +1816,7 @@ function onCanvasClick(e) {
       if (idx !== -1) {
         walls.splice(idx, 1);
         removeOccupancy(gx, gy);
-        money += WALL_COST;
+        money += BALANCE.wallCost;
       }
     }
     recalcEnemyPaths();
@@ -1795,8 +1824,8 @@ function onCanvasClick(e) {
   }
 
   if (selectedBuild === 'wall') {
-    if (canPlace(cell) && money >= WALL_COST) {
-      money -= WALL_COST;
+    if (canPlace(cell) && money >= BALANCE.wallCost) {
+      money -= BALANCE.wallCost;
       addOccupancy(gx, gy);
       walls.push({ x: gx, y: gy });
       firstPlacementDone = true;
@@ -1886,7 +1915,21 @@ function onCanvasClick(e) {
     }
   }
 }
-function onKey(e) { if (e.key === 'Escape') endGame(); }
+function onKey(e) {
+  if (e.key === 'Escape') {
+    endGame();
+  } else if (e.key === '1') {
+    if (money >= BALANCE.wallCost) selectedBuild = 'wall';
+  } else if (e.key === '2') {
+    if (money >= CANNON_BASE.cost) selectedBuild = 'cannon';
+  } else if (e.key === '3') {
+    if (money >= LASER_BASE.cost) selectedBuild = 'laser';
+  } else if (e.key === '4') {
+    if (money >= ROCKET_BASE.cost) selectedBuild = 'rocket';
+  } else if (e.key.toLowerCase() === 'x') {
+    selectedBuild = 'sell';
+  }
+}
 
 async function startGame() {
   // UI
@@ -1896,6 +1939,9 @@ async function startGame() {
   nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
   statsOverlay && (statsOverlay.style.display = 'block');
   hoverMenu && (hoverMenu.style.display = 'flex');
+  overlayHeader && (overlayHeader.style.display = 'flex');
+  overlayStats && (overlayStats.style.display = 'block');
+  gameOverPanel && (gameOverPanel.style.display = 'none');
 
   // Canvas
   
@@ -1937,25 +1983,43 @@ function endGame() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
   unbindInputs();
-
-  // UI restore
-  gameCanvas && (gameCanvas.style.display = 'none');
-  quitGameBtn && (quitGameBtn.style.display = 'none');
-  nextWaveBtn && (nextWaveBtn.style.display = 'none');
+  selectedTower = null;
+  updateSelectedTowerInfo();
+  selectedBuild = null;
+  contextMenu && (contextMenu.style.display = 'none');
   hoverMenu && (hoverMenu.style.display = 'none');
-  statsOverlay && (statsOverlay.style.display = 'none');
-  container && (container.style.display = 'block');
-    menu && (menu.style.display = '');
-    selectedTower = null;
-    updateSelectedTowerInfo();
-    contextMenu && (contextMenu.style.display = 'none');
-    pauseBtn && (pauseBtn.textContent = 'Pause');
+  overlayHeader && (overlayHeader.style.display = 'none');
+  overlayStats && (overlayStats.style.display = 'none');
+  nextWaveBtn && (nextWaveBtn.style.display = 'none');
+  quitGameBtn && (quitGameBtn.style.display = 'none');
+  statsOverlay && (statsOverlay.style.display = 'block');
+  gameOverPanel && (gameOverPanel.style.display = 'block');
+  pauseBtn && (pauseBtn.textContent = 'Pause');
 
-  const waveNum = waveIndex + waveQueue.length;
+  const waveNum = waveIndex; // waves completed
   recordBestWave(waveNum);
   syncBestWave();
-  const msg = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
-  alert(msg);
+  if (gameOverText) {
+    gameOverText.textContent = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
+  }
+}
+
+function returnToMenu() {
+  running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  unbindInputs();
+  gameCanvas && (gameCanvas.style.display = 'none');
+  hoverMenu && (hoverMenu.style.display = 'none');
+  statsOverlay && (statsOverlay.style.display = 'none');
+  gameOverPanel && (gameOverPanel.style.display = 'none');
+  container && (container.style.display = 'block');
+  menu && (menu.style.display = '');
+  selectedTower = null;
+  updateSelectedTowerInfo();
+  selectedBuild = null;
+  contextMenu && (contextMenu.style.display = 'none');
+  pauseBtn && (pauseBtn.textContent = 'Pause');
 }
 
 // -------------------- Hooks --------------------
@@ -1993,3 +2057,5 @@ nextWaveBtn?.addEventListener('click', () => {
   if (!running) return;
   queueWave();
 });
+retryBtn?.addEventListener('click', () => startGame());
+gameOverQuitBtn?.addEventListener('click', () => returnToMenu());

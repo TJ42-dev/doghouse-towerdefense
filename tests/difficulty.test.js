@@ -3,13 +3,13 @@ const fs = require('fs');
 const vm = require('vm');
 
 const content = fs.readFileSync('main.js', 'utf8');
-const match = content.match(/const DIFFICULTY_SETTINGS = (\{[\s\S]*?\n\});/);
-if (!match) throw new Error('DIFFICULTY_SETTINGS not found');
-const DIFFICULTY_SETTINGS = vm.runInNewContext('(' + match[1] + ')');
+const match = content.match(/const BALANCE = (\{[\s\S]*?\n\});/);
+if (!match) throw new Error('BALANCE not found');
+const BALANCE = vm.runInNewContext('(' + match[1] + ')');
 
-assert.strictEqual(DIFFICULTY_SETTINGS.free.startingCash, 99999);
+assert.strictEqual(BALANCE.difficulties.free.startingCash, 99999);
 assert.strictEqual(
-  DIFFICULTY_SETTINGS.free.healthMultiplier,
-  DIFFICULTY_SETTINGS.medium.healthMultiplier
+  BALANCE.difficulties.free.healthMultiplier,
+  BALANCE.difficulties.medium.healthMultiplier
 );
 console.log('difficulty tests passed');

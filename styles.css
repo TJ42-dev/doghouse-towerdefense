@@ -628,6 +628,19 @@ dialog::backdrop {
   line-height: 1.4;
 }
 
+.game-over-panel {
+  display: none;
+  color: var(--game-text);
+  text-align: center;
+}
+
+.game-over-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
 /* Hover Menu */
 .hover-menu {
   position: fixed;
