@@ -142,104 +142,226 @@
             </form>
         </dialog>
     </main>
-  <canvas id="gameCanvas"></canvas>
-  <div id="statsOverlay" class="stats-overlay">
-    <div class="overlay-header">
-      <button id="nextWaveBtn" class="btn sm">Next Wave</button>
-      <button id="quitGameBtn" class="btn sm">Quit Game</button>
-    </div>
-    <div id="overlayStats"></div>
+<canvas id="gameCanvas"></canvas>
+
+<div id="statsOverlay" class="stats-overlay">
+  <div class="overlay-header">
+    <button id="nextWaveBtn" class="btn sm tactical">Next Wave</button>
+    <button id="quitGameBtn" class="btn sm tactical ghost">Quit Game</button>
+  </div>
+  <div id="overlayStats" class="overlay-stats"></div>
+</div>
+
+<div id="hoverMenu" class="hover-menu">
+  <div id="hoverMenuHeader" class="menu-header">
+    <span class="header-title">Command Center</span>
+    <div class="header-indicator"></div>
+  </div>
+  
+  <div class="tab-navigation">
+    <button class="tab-btn active" data-tab="build">
+      <span class="tab-icon">🔨</span>
+      <span class="tab-label">Build</span>
+    </button>
+    <button class="tab-btn" data-tab="upgrade">
+      <span class="tab-icon">⚡</span>
+      <span class="tab-label">Upgrade</span>
+    </button>
+    <button class="tab-btn" data-tab="stats">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Stats</span>
+    </button>
+    <button class="tab-btn" data-tab="options">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">Options</span>
+    </button>
   </div>
 
-  <div id="hoverMenu" class="hover-menu">
-    <div id="hoverMenuHeader" class="menu-header">Build Menu</div>
-    <div class="tab-buttons">
-      <button class="tab-btn active" data-tab="build">Build</button>
-      <button class="tab-btn" data-tab="upgrade">Upgrade</button>
-      <button class="tab-btn" data-tab="stats">Stats</button>
-      <button class="tab-btn" data-tab="options">Options</button>
-    </div>
-      <div id="tab-build" class="tab-content active">
-        <div id="buildList" class="build-list"></div>
-        <div class="build-actions">
-          <button id="sellBuildBtn" class="btn sm ghost">$</button>
-          <button id="cancelBuildBtn" class="btn sm ghost">X</button>
-        </div>
+  <div class="tab-container">
+    <div id="tab-build" class="tab-content active">
+      <div class="tab-header">
+        <h3>Build Towers</h3>
+        <div class="tab-subtitle">Select a tower to build</div>
       </div>
+      <div id="buildList" class="build-list"></div>
+      <div class="build-actions">
+        <button id="sellBuildBtn" class="btn sm ghost tactical" title="Sell Mode">
+          <span class="btn-icon">💰</span>
+          Sell
+        </button>
+        <button id="cancelBuildBtn" class="btn sm ghost tactical" title="Cancel Build">
+          <span class="btn-icon">❌</span>
+          Cancel
+        </button>
+      </div>
+    </div>
+
     <div id="tab-upgrade" class="tab-content">
-      <div id="selectedTowerInfo">No tower selected</div>
-      <div id="upgradeOptions">
-        <div id="basicUpgrades">
-          <div class="upgrade-row">
-            <span class="label">Damage</span>
-            <span id="damageValue" class="value">-</span>
-            <span id="damageNext" class="next">(+0)</span>
-            <span id="damageCost" class="cost">$0</span>
-            <button id="upgradeDamage" class="btn sm">+</button>
-          </div>
-          <div class="upgrade-row">
-            <span class="label">Speed</span>
-            <span id="fireRateValue" class="value">-</span>
-            <span id="fireRateNext" class="next">(+0)</span>
-            <span id="fireRateCost" class="cost">$0</span>
-            <button id="upgradeFireRate" class="btn sm">+</button>
-          </div>
-          <div class="upgrade-row">
-            <span class="label">Range</span>
-            <span id="rangeValue" class="value">-</span>
-            <span id="rangeNext" class="next">(+0)</span>
-            <span id="rangeCost" class="cost">$0</span>
-            <button id="upgradeRange" class="btn sm">+</button>
-          </div>
-        </div>
-        <div id="specialUpgrades" style="display:none;">
-          <div class="upgrade-row">
-            <span class="label">Sniper</span>
-            <span id="sniperCost" class="cost"></span>
-            <button id="upgradeSniper" class="btn sm">Select</button>
-          </div>
-          <div class="upgrade-row">
-            <span class="label">Shotgun</span>
-            <span id="shotgunCost" class="cost"></span>
-            <button id="upgradeShotgun" class="btn sm">Select</button>
-          </div>
-          <div class="upgrade-row">
-            <span class="label">Dual Laser</span>
-            <span id="dualLaserCost" class="cost"></span>
-            <button id="upgradeDualLaser" class="btn sm">Select</button>
-          </div>
-          <div class="upgrade-row">
-            <span class="label">Railgun</span>
-            <span id="railgunCost" class="cost"></span>
-            <button id="upgradeRailgun" class="btn sm">Select</button>
-          </div>
-          <div class="upgrade-row">
-            <span class="label">Nuke</span>
-            <span id="nukeCost" class="cost"></span>
-            <button id="upgradeNuke" class="btn sm">Select</button>
-          </div>
-          <div class="upgrade-row">
-            <span class="label">Hellfire</span>
-            <span id="hellfireCost" class="cost"></span>
-            <button id="upgradeHellfire" class="btn sm">Select</button>
-          </div>
-        </div>
+      <div class="tab-header">
+        <h3>Tower Upgrades</h3>
+        <div class="tab-subtitle">Enhance your selected tower</div>
       </div>
-      <button id="sellTower" class="btn">Sell</button>
-    </div>
-    <div id="tab-stats" class="tab-content">
-      <div id="gameStats"></div>
-    </div>
-      <div id="tab-options" class="tab-content">
-        <button id="pauseBtn" class="btn">Pause</button>
-        <button id="quitInMenuBtn" class="btn">Quit</button>
+      
+      <div id="selectedTowerInfo" class="tower-info">
+        <div class="no-selection">No tower selected</div>
       </div>
-  </div>
+      
+      <div id="upgradeOptions" class="upgrade-container">
+        <div id="basicUpgrades" class="upgrade-section">
+          <h4 class="section-title">Basic Upgrades</h4>
+          <div class="upgrade-grid">
+            <div class="upgrade-item">
+              <div class="upgrade-header">
+                <span class="upgrade-label">Damage</span>
+                <span class="upgrade-icon">⚔️</span>
+              </div>
+              <div class="upgrade-details">
+                <span id="damageValue" class="current-value">-</span>
+                <span id="damageNext" class="next-value">(+0)</span>
+              </div>
+              <div class="upgrade-footer">
+                <span id="damageCost" class="upgrade-cost">$0</span>
+                <button id="upgradeDamage" class="btn sm upgrade-btn">+</button>
+              </div>
+            </div>
 
-    <div id="contextMenu" class="context-menu">
-      <div id="contextStats"></div>
-      <button id="contextSell" class="btn sm">$</button>
+            <div class="upgrade-item">
+              <div class="upgrade-header">
+                <span class="upgrade-label">Speed</span>
+                <span class="upgrade-icon">⚡</span>
+              </div>
+              <div class="upgrade-details">
+                <span id="fireRateValue" class="current-value">-</span>
+                <span id="fireRateNext" class="next-value">(+0)</span>
+              </div>
+              <div class="upgrade-footer">
+                <span id="fireRateCost" class="upgrade-cost">$0</span>
+                <button id="upgradeFireRate" class="btn sm upgrade-btn">+</button>
+              </div>
+            </div>
+
+            <div class="upgrade-item">
+              <div class="upgrade-header">
+                <span class="upgrade-label">Range</span>
+                <span class="upgrade-icon">🎯</span>
+              </div>
+              <div class="upgrade-details">
+                <span id="rangeValue" class="current-value">-</span>
+                <span id="rangeNext" class="next-value">(+0)</span>
+              </div>
+              <div class="upgrade-footer">
+                <span id="rangeCost" class="upgrade-cost">$0</span>
+                <button id="upgradeRange" class="btn sm upgrade-btn">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="specialUpgrades" class="upgrade-section" style="display:none;">
+          <h4 class="section-title">Special Variants</h4>
+          <div class="special-upgrade-grid">
+            <div class="special-upgrade-item">
+              <div class="special-header">
+                <span class="special-icon">🎯</span>
+                <span class="special-name">Sniper</span>
+              </div>
+              <span id="sniperCost" class="special-cost"></span>
+              <button id="upgradeSniper" class="btn sm special-btn">Select</button>
+            </div>
+
+            <div class="special-upgrade-item">
+              <div class="special-header">
+                <span class="special-icon">🔫</span>
+                <span class="special-name">Shotgun</span>
+              </div>
+              <span id="shotgunCost" class="special-cost"></span>
+              <button id="upgradeShotgun" class="btn sm special-btn">Select</button>
+            </div>
+
+            <div class="special-upgrade-item">
+              <div class="special-header">
+                <span class="special-icon">🔴</span>
+                <span class="special-name">Dual Laser</span>
+              </div>
+              <span id="dualLaserCost" class="special-cost"></span>
+              <button id="upgradeDualLaser" class="btn sm special-btn">Select</button>
+            </div>
+
+            <div class="special-upgrade-item">
+              <div class="special-header">
+                <span class="special-icon">⚡</span>
+                <span class="special-name">Railgun</span>
+              </div>
+              <span id="railgunCost" class="special-cost"></span>
+              <button id="upgradeRailgun" class="btn sm special-btn">Select</button>
+            </div>
+
+            <div class="special-upgrade-item">
+              <div class="special-header">
+                <span class="special-icon">💥</span>
+                <span class="special-name">Nuke</span>
+              </div>
+              <span id="nukeCost" class="special-cost"></span>
+              <button id="upgradeNuke" class="btn sm special-btn">Select</button>
+            </div>
+
+            <div class="special-upgrade-item">
+              <div class="special-header">
+                <span class="special-icon">🔥</span>
+                <span class="special-name">Hellfire</span>
+              </div>
+              <span id="hellfireCost" class="special-cost"></span>
+              <button id="upgradeHellfire" class="btn sm special-btn">Select</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="tower-actions">
+        <button id="sellTower" class="btn tactical sell-btn">
+          <span class="btn-icon">💰</span>
+          Sell Tower
+        </button>
+      </div>
     </div>
+
+    <div id="tab-stats" class="tab-content">
+      <div class="tab-header">
+        <h3>Battle Statistics</h3>
+        <div class="tab-subtitle">Current game performance</div>
+      </div>
+      <div id="gameStats" class="stats-display"></div>
+    </div>
+
+    <div id="tab-options" class="tab-content">
+      <div class="tab-header">
+        <h3>Game Options</h3>
+        <div class="tab-subtitle">Control your game session</div>
+      </div>
+      <div class="options-list">
+        <button id="pauseBtn" class="btn tactical full-width">
+          <span class="btn-icon">⏸️</span>
+          Pause Game
+        </button>
+        <button id="quitInMenuBtn" class="btn tactical ghost full-width">
+          <span class="btn-icon">🚪</span>
+          Quit to Menu
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="contextMenu" class="context-menu">
+  <div class="context-header">Tower Info</div>
+  <div id="contextStats" class="context-stats"></div>
+  <div class="context-actions">
+    <button id="contextSell" class="btn sm tactical">
+      <span class="btn-icon">💰</span>
+      Sell
+    </button>
+  </div>
+</div>
 
   <script src="./main.js" defer></script>
 </body>
