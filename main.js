@@ -969,9 +969,8 @@ let preWaveTimer = START_DELAY;
 let waveElapsed = 0; // time into current wave
 // waveIndex tracks how many waves have been completed
 let waveIndex = 0;
-// queue of upcoming/active waves, each with {waveNum, enemiesSpawned, total}
+// queue of active waves, each with {waveNum, enemiesSpawned, total, spawnTimer}
 let waveQueue = [];
-let spawnTimer = 0; // secs until next spawn
 let spawnInterval = SPAWN_INTERVAL;
 let firstPlacementDone = false;
 
@@ -1004,7 +1003,6 @@ function resetGame() {
   waveIndex = 0;
   waveQueue = [];
   spawnInterval = SPAWN_INTERVAL;
-  spawnTimer = 0;
   firstPlacementDone = false;
   const c = cssCenter();
   player.x = c.x; player.y = c.y; player.r = 0;
@@ -1038,7 +1036,7 @@ function spawnEnemy(waveNum) {
   const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const path = findPath(entry, goalCell);
 
-  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0 });
+  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum });
 }
 
 function queueWave() {
@@ -1047,7 +1045,6 @@ function queueWave() {
     waveActive = true;
     preWaveTimer = 0;
     waveElapsed = 0;
-    spawnTimer = 0;
     spawnInterval = SPAWN_INTERVAL;
     beams = [];
     horn();
@@ -1066,7 +1063,7 @@ function queueWave() {
     }
   }
   const total = (nextWaveNum % 5 === 0) ? 1 : ENEMIES_PER_WAVE;
-  waveQueue.push({ waveNum: nextWaveNum, enemiesSpawned: 0, total });
+  waveQueue.push({ waveNum: nextWaveNum, enemiesSpawned: 0, total, spawnTimer: 0 });
 }
 
 function updateProjectiles(dt) {
@@ -1252,13 +1249,13 @@ function update(dt) {
 
   if (waveActive) {
     waveElapsed += dt;
-    spawnTimer -= dt;
-    while (spawnTimer <= 0) {
-      const w = waveQueue.find(w => w.enemiesSpawned < w.total);
-      if (!w) break;
-      spawnEnemy(w.waveNum);
-      w.enemiesSpawned++;
-      spawnTimer += spawnInterval;
+    for (const w of waveQueue) {
+      w.spawnTimer -= dt;
+      while (w.spawnTimer <= 0 && w.enemiesSpawned < w.total) {
+        spawnEnemy(w.waveNum);
+        w.enemiesSpawned++;
+        w.spawnTimer += spawnInterval;
+      }
     }
   }
 
@@ -1482,15 +1479,18 @@ function update(dt) {
   }
 
   const currentWave = waveQueue[0];
-  if (currentWave && currentWave.enemiesSpawned >= currentWave.total && enemies.length === 0) {
-    money += difficultySettings.waveReward;
-    victory();
-    waveQueue.shift();
-    waveIndex++;
-    waveElapsed = 0;
-    if (waveQueue.length === 0) {
-      waveActive = false;
-      preWaveTimer = POST_WAVE_DELAY;
+  if (currentWave && currentWave.enemiesSpawned >= currentWave.total) {
+    const remaining = enemies.some(e => e.waveNum === currentWave.waveNum);
+    if (!remaining) {
+      money += difficultySettings.waveReward;
+      victory();
+      waveQueue.shift();
+      waveIndex++;
+      waveElapsed = 0;
+      if (waveQueue.length === 0) {
+        waveActive = false;
+        preWaveTimer = POST_WAVE_DELAY;
+      }
     }
   }
 
