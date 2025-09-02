@@ -668,8 +668,16 @@ function updateSelectedTowerInfo() {
           els.next.style.display = isSpecial ? 'none' : '';
         }
         if (els.cost) {
-          els.cost.textContent = isSpecial ? '' : `$${getUpgradeCost(selectedTower, stat)}`;
-          els.cost.style.display = isSpecial ? 'none' : '';
+          if (isSpecial) {
+            els.cost.textContent = '';
+            els.cost.style.display = 'none';
+          } else if (lvl >= 10) {
+            els.cost.textContent = '(MAX!)';
+            els.cost.style.display = '';
+          } else {
+            els.cost.textContent = `$${getUpgradeCost(selectedTower, stat)}`;
+            els.cost.style.display = '';
+          }
         }
         if (els.btn) {
           if (isSpecial) {
@@ -935,6 +943,8 @@ const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun_turret.svg';
 const WAVE_START_SOUND = 'assets/sounds/wave_start.wav';
 const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
 const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
+const ROCKET_HIT_SOUND = 'assets/sounds/rocket_hit.wav';
+const NUKE_HIT_SOUND = 'assets/sounds/nuke_hit.wav';
 const TOWER_CONFIG_IDS = [
   'cannon',
   'laser',
@@ -1159,7 +1169,8 @@ function applyWaveEndRewards(completedWave) {
     const healthInc = (stage === 3) ? 0.15 : (stage === 2) ? 0.2 : 0.3;
     healthBuffMultiplier *= 1 + healthInc;
     const bossCount = completedWave / 5;
-    bossBaseHealthBonus += 250 * Math.pow(2, bossCount - 1);
+    // Scale boss base health linearly to avoid runaway difficulty
+    bossBaseHealthBonus += 250 * bossCount;
     money += (stage === 3) ? 1000 : (stage === 2) ? 500 : 0;
     killReward += (stage === 3) ? 20 : (stage === 2) ? 10 : 5;
   }
@@ -1267,8 +1278,11 @@ function updateProjectiles(dt) {
       const hitRadius = b.target.r + 2;
       if (newDist <= hitRadius) {
         b.target.health -= b.damage;
-        bark();
+        if (b.variant === 'rocket' || b.variant === 'hellfire') {
+          playAudio(ROCKET_HIT_SOUND);
+        }
         if (b.variant === 'nuke') {
+          playAudio(NUKE_HIT_SOUND);
           const targetX = b.target.x;
           const targetY = b.target.y;
           for (let i = enemies.length - 1; i >= 0; i--) {
@@ -1303,7 +1317,6 @@ function updateProjectiles(dt) {
       for (const e of enemies) {
         if (Math.hypot(e.x - b.x, e.y - b.y) <= e.r) {
           e.health -= b.damage;
-          bark();
           if (e.health <= 0) {
             enemies.splice(enemies.indexOf(e), 1);
             money += killReward;
@@ -1329,7 +1342,6 @@ function updateProjectiles(dt) {
     const dist = Math.hypot(dx, dy);
     if (dist <= move) {
       b.target.health -= b.damage;
-      bark();
       if (b.target.health <= 0) {
         enemies.splice(enemies.indexOf(b.target), 1);
         money += killReward;
