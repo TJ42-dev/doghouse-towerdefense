@@ -1056,6 +1056,9 @@ let mouse = { x: 0, y: 0, active: false };
 let enemies = [];
 const INITIAL_LIVES = 9;
 let killReward = 0;
+const WAVE1_DEBUFF = 0.5; // enemies start at half health on wave 1
+let wave1DebuffActive = true;
+let bossBaseHealthBonus = 0;
 let healthBuffMultiplier = 1;
 
 function resetGame() {
@@ -1071,6 +1074,8 @@ function resetGame() {
   money = difficultySettings.startingCash;
   killReward = difficultySettings.killReward;
   healthBuffMultiplier = 1;
+  bossBaseHealthBonus = 0;
+  wave1DebuffActive = true;
   selectedTower = null;
   updateSelectedTowerInfo();
   initOccupancy();
@@ -1108,7 +1113,14 @@ function spawnEnemy(waveNum) {
   const stats = { ...DEFAULT_DOG_STATS, ...type };
   const img = imgReady(type.img) ? type.img : null;
   const speed = 2.5 * stats.baseSpeed; // cells per second
-  let health = stats.baseHealth * difficultySettings.healthMultiplier * healthBuffMultiplier;
+  let baseHealth = stats.baseHealth;
+  if (type.id === 'boss') {
+    baseHealth += bossBaseHealthBonus;
+  }
+  let health = baseHealth * difficultySettings.healthMultiplier * healthBuffMultiplier;
+  if (waveNum === 1 && wave1DebuffActive) {
+    health *= WAVE1_DEBUFF;
+  }
   const target = catLives.find(l => l.alive);
   const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
   const path = findPath(entry, goalCell);
@@ -1141,10 +1153,15 @@ function applyWaveEndRewards(completedWave) {
   // Every 5 waves, buff enemy health and give bonus money
   if (completedWave % 5 === 0) {
     const stage = (completedWave >= 30) ? 3 : (completedWave > 20) ? 2 : 1;
-    const healthInc = (stage === 3) ? 0.05 : (stage === 2) ? 0.1 : 0.2;
+    const healthInc = (stage === 3) ? 0.15 : (stage === 2) ? 0.2 : 0.3;
     healthBuffMultiplier *= 1 + healthInc;
+    const bossCount = completedWave / 5;
+    bossBaseHealthBonus += 250 * Math.pow(2, bossCount - 1);
     money += (stage === 3) ? 1000 : (stage === 2) ? 500 : 0;
     killReward += (stage === 3) ? 20 : (stage === 2) ? 10 : 5;
+  }
+  if (completedWave === 1 && wave1DebuffActive) {
+    wave1DebuffActive = false;
   }
 }
 
