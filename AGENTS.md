@@ -24,8 +24,7 @@
 2. **JSON update** (`assets/enemies/enemies.json`)
    - Add an object with `id`, `name`, `src` (path to image), `baseHealth`, `baseSpeed`, and optional `sound` property.
 3. **Placeholder assets**
-   - Image: copy or generate a simple placeholder PNG.
-   - Sound: duplicate an existing WAV or create a short silent clip.
+   - Image: generate a simple placeholder svg with "-replace_me" in the file name.
 4. **Store everything as shown above.**
 
 ## Testing
