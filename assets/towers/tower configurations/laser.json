@@ -4,5 +4,5 @@
   "fireRate": 0.4,
   "range": 4,
   "cost": 100,
-  "fireSound": "assets/towers/tower configurations/laser-fire.txt"
+  "fireSound": "assets/towers/tower configurations/laser-fire.wav"
 }
