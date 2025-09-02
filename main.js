@@ -932,6 +932,9 @@ const SNIPER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper_turret.svg';
 const SHOTGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun_turret.svg';
+const WAVE_START_SOUND = 'assets/sounds/wave_start.wav';
+const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
+const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
 const TOWER_CONFIG_IDS = [
   'cannon',
   'laser',
@@ -1167,15 +1170,16 @@ function applyWaveEndRewards(completedWave) {
 
 function queueWave() {
   const nextWaveNum = waveIndex + waveQueue.length + 1;
+  const isBossWave = nextWaveNum % 5 === 0;
   if (!waveActive) {
     waveActive = true;
     preWaveTimer = 0;
     waveElapsed = 0;
     spawnInterval = BALANCE.wave.spawnInterval;
     beams = [];
-    horn();
+    playAudio(isBossWave ? BOSS_WAVE_START_SOUND : WAVE_START_SOUND);
   }
-  const total = (nextWaveNum % 5 === 0) ? 1 : BALANCE.wave.enemiesPerWave;
+  const total = isBossWave ? 1 : BALANCE.wave.enemiesPerWave;
   waveQueue.push({ waveNum: nextWaveNum, enemiesSpawned: 0, total, spawnTimer: 0 });
 }
 
@@ -1592,7 +1596,7 @@ function update(dt) {
     const remaining = enemies.some(e => e.waveNum === currentWave.waveNum);
     if (!remaining) {
       money += difficultySettings.waveReward;
-      victory();
+      playAudio(WAVE_COMPLETE_SOUND);
       const completedWave = currentWave.waveNum;
       applyWaveEndRewards(completedWave);
       waveQueue.shift();
