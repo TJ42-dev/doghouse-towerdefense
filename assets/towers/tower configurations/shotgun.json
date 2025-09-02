@@ -5,5 +5,5 @@
   "range": 4.5,
   "bulletSpeed": 5,
   "cost": 1200,
-  "fireSound": "assets/towers/tower configurations/fire-placeholder.txt"
+  "fireSound": "assets/towers/tower configurations/shotgun-fire.txt"
 }
