@@ -303,6 +303,38 @@ html { background: #070a10; } /* safety net */
   gap: 0.25rem;
 }
 
+.build-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.build-item {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid #fff;
+  color: #fff;
+  padding: 0.25rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.build-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.build-item .title {
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+}
+
+.build-item .stats {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
 .upgrade-row {
   display: flex;
   align-items: center;
