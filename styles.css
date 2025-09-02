@@ -940,8 +940,7 @@ dialog::backdrop {
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 0.15rem 0.3rem;
-  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem; /* keep Mainmenu */
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -961,54 +960,25 @@ dialog::backdrop {
   cursor: not-allowed;
 }
 
-/* Consolidated Basic Upgrades */
-.basic-upgrade-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+/* Special Upgrades Grid (Mainmenu) */
+.special-upgrade-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
 }
 
-.basic-option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-}
-
-.basic-option + .basic-option {
-  border-top: 1px solid var(--game-border);
-  padding-top: 0.5rem;
-}
-
-.basic-stats {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.basic-action {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.basic-upgrade-box .upgrade-label {
-  font-size: 0.8rem;
-}
-
-/* Special Upgrades */
-.special-upgrade-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.special-option {
+.special-upgrade-item {
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid var(--game-border);
+  border-radius: 4px;
+  padding: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.special-option + .special-option {
+/* Adjacent item spacing in grid */
+.special-upgrade-item + .special-upgrade-item {
   border-top: 1px solid var(--game-border);
   padding-top: 0.5rem;
 }
@@ -1069,6 +1039,7 @@ dialog::backdrop {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
 
 /* Stats Tab */
 .stats-display {
