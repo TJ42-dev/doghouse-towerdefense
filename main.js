@@ -27,6 +27,9 @@ const sellBuildBtn = document.getElementById('sellBuildBtn');
 const upgradeDamageBtn = document.getElementById('upgradeDamage');
 const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
 const upgradeRangeBtn = document.getElementById('upgradeRange');
+const maxDamageBtn = document.getElementById('maxDamage');
+const maxFireRateBtn = document.getElementById('maxFireRate');
+const maxRangeBtn = document.getElementById('maxRange');
 const sellBtn = document.getElementById('sellTower');
 const selectedTowerInfo = document.getElementById('selectedTowerInfo');
 const damageValue = document.getElementById('damageValue');
@@ -477,6 +480,36 @@ upgradeFireRateBtn?.addEventListener('click', () => {
 upgradeRangeBtn?.addEventListener('click', () => {
   if (selectedTower && upgradeTower(selectedTower, 'range')) { rankUp(); updateSelectedTowerInfo(); }
 });
+maxDamageBtn?.addEventListener('click', () => {
+  if (!selectedTower) return;
+  let upgraded = false;
+  while (selectedTower.upgrades?.damage < 10 && money >= getUpgradeCost(selectedTower, 'damage')) {
+    if (!upgradeTower(selectedTower, 'damage')) break;
+    upgraded = true;
+    rankUp();
+  }
+  if (upgraded) updateSelectedTowerInfo();
+});
+maxFireRateBtn?.addEventListener('click', () => {
+  if (!selectedTower) return;
+  let upgraded = false;
+  while (selectedTower.upgrades?.fireRate < 10 && money >= getUpgradeCost(selectedTower, 'fireRate')) {
+    if (!upgradeTower(selectedTower, 'fireRate')) break;
+    upgraded = true;
+    rankUp();
+  }
+  if (upgraded) updateSelectedTowerInfo();
+});
+maxRangeBtn?.addEventListener('click', () => {
+  if (!selectedTower) return;
+  let upgraded = false;
+  while (selectedTower.upgrades?.range < 10 && money >= getUpgradeCost(selectedTower, 'range')) {
+    if (!upgradeTower(selectedTower, 'range')) break;
+    upgraded = true;
+    rankUp();
+  }
+  if (upgraded) updateSelectedTowerInfo();
+});
 upgradeSniperBtn?.addEventListener('click', () => {
   if (selectedTower) { specializeTower(selectedTower, 'sniper'); updateSelectedTowerInfo(); }
 });
@@ -565,11 +598,13 @@ function updateSelectedTowerInfo() {
     } else {
       if (basicUpgrades) basicUpgrades.style.display = '';
       if (specialUpgrades) specialUpgrades.style.display = 'none';
-      selectedTowerInfo.textContent = isSpecial ? 'Tower Maxed out!' : `Selected: ${selectedTower.type}`;
+      const friendlyNames = { sniper: 'Sniper', shotgun: 'Shotgun', dualLaser: 'Dual Laser', railgun: 'Railgun', nuke: 'Nuke', hellfire: 'Hellfire' };
+      const typeName = friendlyNames[selectedTower.type] || selectedTower.type.charAt(0).toUpperCase() + selectedTower.type.slice(1);
+      selectedTowerInfo.textContent = isSpecial ? `${typeName} (Maxed)` : `Selected: ${selectedTower.type}`;
       const stats = {
-        damage: { value: damageValue, next: damageNext, cost: damageCost, btn: upgradeDamageBtn },
-        fireRate: { value: fireRateValue, next: fireRateNext, cost: fireRateCost, btn: upgradeFireRateBtn },
-        range: { value: rangeValue, next: rangeNext, cost: rangeCost, btn: upgradeRangeBtn }
+        damage: { value: damageValue, next: damageNext, cost: damageCost, btn: upgradeDamageBtn, maxBtn: maxDamageBtn },
+        fireRate: { value: fireRateValue, next: fireRateNext, cost: fireRateCost, btn: upgradeFireRateBtn, maxBtn: maxFireRateBtn },
+        range: { value: rangeValue, next: rangeNext, cost: rangeCost, btn: upgradeRangeBtn, maxBtn: maxRangeBtn }
       };
       for (const [stat, els] of Object.entries(stats)) {
         const lvl = selectedTower.upgrades?.[stat] || 0;
@@ -602,6 +637,14 @@ function updateSelectedTowerInfo() {
             els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
           }
         }
+        if (els.maxBtn) {
+          if (isSpecial) {
+            els.maxBtn.style.display = 'none';
+          } else {
+            els.maxBtn.style.display = '';
+            els.maxBtn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
+          }
+        }
       }
     }
     if (sellBtn) {
@@ -615,7 +658,7 @@ function updateSelectedTowerInfo() {
     [damageValue, damageNext, damageCost, fireRateValue, fireRateNext, fireRateCost, rangeValue, rangeNext, rangeCost].forEach(el => {
       if (el) el.textContent = '-';
     });
-    [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn].forEach(btn => { if (btn) { btn.disabled = true; btn.style.display = ''; } });
+    [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn, maxDamageBtn, maxFireRateBtn, maxRangeBtn].forEach(btn => { if (btn) { btn.disabled = true; btn.style.display = ''; } });
     if (basicUpgrades) basicUpgrades.style.display = '';
     if (specialUpgrades) specialUpgrades.style.display = 'none';
     if (sellBtn) {
