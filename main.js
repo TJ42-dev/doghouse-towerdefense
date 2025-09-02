@@ -944,6 +944,7 @@ const WAVE_START_SOUND = 'assets/sounds/wave_start.wav';
 const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
 const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
 const ROCKET_HIT_SOUND = 'assets/sounds/rocket_hit.wav';
+const NUKE_HIT_SOUND = 'assets/sounds/nuke_hit.wav';
 const TOWER_CONFIG_IDS = [
   'cannon',
   'laser',
@@ -1281,6 +1282,7 @@ function updateProjectiles(dt) {
           playAudio(ROCKET_HIT_SOUND);
         }
         if (b.variant === 'nuke') {
+          playAudio(NUKE_HIT_SOUND);
           const targetX = b.target.x;
           const targetY = b.target.y;
           for (let i = enemies.length - 1; i >= 0; i--) {
