@@ -5,5 +5,5 @@
   "range": 5.5,
   "bulletSpeed": 4,
   "cost": 3000,
-  "fireSound": "assets/towers/tower configurations/nuke-fire.txt"
+  "fireSound": "assets/towers/tower configurations/nuke-fire.wav"
 }
