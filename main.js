@@ -668,8 +668,16 @@ function updateSelectedTowerInfo() {
           els.next.style.display = isSpecial ? 'none' : '';
         }
         if (els.cost) {
-          els.cost.textContent = isSpecial ? '' : `$${getUpgradeCost(selectedTower, stat)}`;
-          els.cost.style.display = isSpecial ? 'none' : '';
+          if (isSpecial) {
+            els.cost.textContent = '';
+            els.cost.style.display = 'none';
+          } else if (lvl >= 10) {
+            els.cost.textContent = '(MAX!)';
+            els.cost.style.display = '';
+          } else {
+            els.cost.textContent = `$${getUpgradeCost(selectedTower, stat)}`;
+            els.cost.style.display = '';
+          }
         }
         if (els.btn) {
           if (isSpecial) {
@@ -927,7 +935,7 @@ const DUAL_LASER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const DUAL_LASER_TURRET_SRC = 'assets/towers/turrets/laser_dual_turret.svg';
 const RAILGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const RAILGUN_TURRET_SRC = 'assets/towers/turrets/railgun_turret.svg';
-const WALL_SRC = 'assets/wall.svg';
+const WALL_SRC = 'assets/towers/bases/fence.png';
 const SNIPER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper_turret.svg';
 const SHOTGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
@@ -1159,7 +1167,8 @@ function applyWaveEndRewards(completedWave) {
     const healthInc = (stage === 3) ? 0.15 : (stage === 2) ? 0.2 : 0.3;
     healthBuffMultiplier *= 1 + healthInc;
     const bossCount = completedWave / 5;
-    bossBaseHealthBonus += 250 * Math.pow(2, bossCount - 1);
+    // Scale boss base health linearly to avoid runaway difficulty
+    bossBaseHealthBonus += 250 * bossCount;
     money += (stage === 3) ? 1000 : (stage === 2) ? 500 : 0;
     killReward += (stage === 3) ? 20 : (stage === 2) ? 10 : 5;
   }
