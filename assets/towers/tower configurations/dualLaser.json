@@ -3,5 +3,6 @@
   "damage": 144,
   "fireRate": 0.8,
   "range": 4,
-  "cost": 1500
+  "cost": 1500,
+  "fireSound": "assets/towers/tower configurations/dualLaser-fire.txt"
 }

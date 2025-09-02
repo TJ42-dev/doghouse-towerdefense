@@ -1037,15 +1037,6 @@ dialog::backdrop {
   transform: translateY(-1px);
 }
 
-.sell-btn {
-  background: var(--game-accent);
-  color: white;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 
 /* Stats Tab */
 .stats-display {

@@ -4,5 +4,6 @@
   "fireRate": 0.6,
   "range": 6,
   "bulletSpeed": 8,
-  "cost": 950
+  "cost": 950,
+  "fireSound": "assets/towers/tower configurations/sniper-fire.txt"
 }
