@@ -22,8 +22,6 @@ const hoverMenuHeader = document.getElementById('hoverMenuHeader');
 const tabButtons = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 const buildList = document.getElementById('buildList');
-const cancelBuildBtn = document.getElementById('cancelBuildBtn');
-const sellBuildBtn = document.getElementById('sellBuildBtn');
 const upgradeDamageBtn = document.getElementById('upgradeDamage');
 const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
 const upgradeRangeBtn = document.getElementById('upgradeRange');
@@ -31,7 +29,7 @@ const maxDamageBtn = document.getElementById('maxDamage');
 const maxFireRateBtn = document.getElementById('maxFireRate');
 const maxRangeBtn = document.getElementById('maxRange');
 const sellBtn = document.getElementById('sellTower');
-const selectedTowerInfo = document.getElementById('selectedTowerInfo');
+const selectedTowerName = document.getElementById('selectedTowerName');
 const damageValue = document.getElementById('damageValue');
 const damageNext = document.getElementById('damageNext');
 const damageCost = document.getElementById('damageCost');
@@ -451,8 +449,6 @@ function activateTab(name) {
   tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${name}`));
 }
 tabButtons.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
-sellBuildBtn?.addEventListener('click', () => { selectedBuild = 'sell'; selectedTower = null; updateSelectedTowerInfo(); });
-cancelBuildBtn?.addEventListener('click', () => { selectedBuild = null; });
 
 let drag = null;
 hoverMenuHeader?.addEventListener('mousedown', (e) => {
@@ -557,13 +553,14 @@ pauseBtn?.addEventListener('click', () => {
 });
 
 function updateSelectedTowerInfo() {
-  if (!selectedTowerInfo) return;
+  if (!selectedTowerName) return;
   if (selectedTower) {
+    selectedTowerName.classList.remove('no-selection');
     const isSpecial = ['sniper','shotgun','dualLaser','railgun','nuke','hellfire'].includes(selectedTower.type);
     const fullyUpgraded = ['cannon','laser','rocket'].includes(selectedTower.type) && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
     if (fullyUpgraded) {
-      selectedTowerInfo.textContent = 'Choose specialization';
+      selectedTowerName.textContent = 'Choose specialization';
       if (basicUpgrades) basicUpgrades.style.display = 'none';
       if (specialUpgrades) {
         specialUpgrades.style.display = '';
@@ -600,7 +597,7 @@ function updateSelectedTowerInfo() {
       if (specialUpgrades) specialUpgrades.style.display = 'none';
       const friendlyNames = { sniper: 'Sniper', shotgun: 'Shotgun', dualLaser: 'Dual Laser', railgun: 'Railgun', nuke: 'Nuke', hellfire: 'Hellfire' };
       const typeName = friendlyNames[selectedTower.type] || selectedTower.type.charAt(0).toUpperCase() + selectedTower.type.slice(1);
-      selectedTowerInfo.textContent = isSpecial ? `${typeName} (Maxed)` : `Selected: ${selectedTower.type}`;
+      selectedTowerName.textContent = isSpecial ? `${typeName} (Maxed)` : `Selected: ${selectedTower.type}`;
       const stats = {
         damage: { value: damageValue, next: damageNext, cost: damageCost, btn: upgradeDamageBtn, maxBtn: maxDamageBtn },
         fireRate: { value: fireRateValue, next: fireRateNext, cost: fireRateCost, btn: upgradeFireRateBtn, maxBtn: maxFireRateBtn },
@@ -653,7 +650,8 @@ function updateSelectedTowerInfo() {
       sellBtn.disabled = false;
     }
   } else {
-    selectedTowerInfo.textContent = 'No tower selected';
+    selectedTowerName.textContent = 'No tower selected';
+    selectedTowerName.classList.add('no-selection');
     rangePreview = null;
     [damageValue, damageNext, damageCost, fireRateValue, fireRateNext, fireRateCost, rangeValue, rangeNext, rangeCost].forEach(el => {
       if (el) el.textContent = '-';

@@ -825,14 +825,6 @@ dialog::backdrop {
   color: var(--game-text-muted);
 }
 
-.build-actions {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
-  padding-top: 1rem;
-  border-top: 1px solid var(--game-border);
-}
-
 /* Upgrade Tab */
 .tower-info {
   background: rgba(15, 20, 25, 0.5);
@@ -841,6 +833,13 @@ dialog::backdrop {
   padding: 1rem;
   margin-bottom: 1.5rem;
   text-align: center;
+}
+
+.tower-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .no-selection {
@@ -1036,13 +1035,6 @@ dialog::backdrop {
   background: var(--game-accent);
   color: white;
   transform: translateY(-1px);
-}
-
-.tower-actions {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--game-border);
-  text-align: center;
 }
 
 .sell-btn {
