@@ -742,12 +742,17 @@ dialog::backdrop {
   flex: 1;
   overflow-y: auto;
   max-height: 500px;
+  scrollbar-width: none;
 }
 
 .tab-content {
   display: none;
   padding: 1.5rem;
   color: var(--game-text);
+}
+
+.tab-container::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-content.active {
@@ -782,6 +787,42 @@ dialog::backdrop {
   flex-direction: column;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.build-list::-webkit-scrollbar {
+  display: none;
+}
+
+.build-item {
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid var(--game-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  text-align: left;
+  color: var(--game-text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.build-item:hover {
+  border-color: var(--game-accent);
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.build-item .title {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.build-item .stats {
+  font-size: 0.75rem;
+  color: var(--game-text-muted);
 }
 
 .build-actions {
@@ -865,10 +906,6 @@ dialog::backdrop {
   font-size: 0.9rem;
 }
 
-.upgrade-icon {
-  font-size: 1.1rem;
-}
-
 .upgrade-details {
   display: flex;
   align-items: center;
@@ -903,8 +940,12 @@ dialog::backdrop {
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 0.3rem 0.6rem;
+  padding: 0.3rem 0.6rem; /* keep Mainmenu */
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -919,7 +960,7 @@ dialog::backdrop {
   cursor: not-allowed;
 }
 
-/* Special Upgrades Grid */
+/* Special Upgrades Grid (Mainmenu) */
 .special-upgrade-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -934,19 +975,18 @@ dialog::backdrop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all 0.2s ease;
 }
 
-.special-upgrade-item:hover {
-  border-color: var(--game-warning);
-  background: rgba(30, 41, 59, 0.5);
+/* Adjacent item spacing in grid */
+.special-upgrade-item + .special-upgrade-item {
+  border-top: 1px solid var(--game-border);
+  padding-top: 0.5rem;
 }
 
-.special-header {
+.special-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
 }
 
 .special-icon {
@@ -999,6 +1039,7 @@ dialog::backdrop {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
 
 /* Stats Tab */
 .stats-display {
@@ -1087,6 +1128,11 @@ dialog::backdrop {
 .btn.sm {
   padding: 0.5rem 0.75rem;
   font-size: 0.8rem;
+}
+
+.btn.xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
 }
 
 .btn.ghost {
