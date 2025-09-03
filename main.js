@@ -1000,7 +1000,7 @@ const WUNDERWAFFE_TURRET_SRC = 'assets/towers/turrets/D2_turret.svg';
 const WAVE_START_SOUND = 'assets/sounds/wave_start.wav';
 const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
 const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
-const ROCKET_HIT_SOUND = 'assets/sounds/rocket_hit.wav';
+const MISSLE_HIT_SOUND = 'assets/sounds/missle_hit.wav';
 const NUKE_HIT_SOUND = 'assets/sounds/nuke_hit.wav';
 const GAME_START_SOUND = 'assets/sounds/game_start.wav';
 const GAME_OVER_SOUND = 'assets/sounds/game_over.wav';
@@ -1359,7 +1359,7 @@ function updateProjectiles(dt) {
       const dist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
       if (dist <= fuseR) {
         if (b.variant === 'rocket' || b.variant === 'hellfire') {
-          playAudio(ROCKET_HIT_SOUND, () => {
+          playAudio(MISSLE_HIT_SOUND, () => {
             sfx(200, 0.15, 0.05, 'sawtooth');
           });
         }
