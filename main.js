@@ -211,12 +211,22 @@ function isWallAt(gx, gy) {
   return occupancy.has(key(gx, gy));
 }
 
-// --- sell mode cursor ---
+// --- sell mode cursor/ghost ---
 const SELL_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' ry='6' fill='black' fill-opacity='.15'/><text x='16' y='21' text-anchor='middle' font-family='system-ui,Segoe UI,Roboto' font-size='20' fill='#00e676'>$</text></svg>") 16 16, auto`;
+const SELL_POINTER_MODE = 'ghost'; // 'ghost' or 'cursor'
 
 function setSellCursor(on) {
   if (!gameCanvas) return;
   gameCanvas.style.cursor = on ? SELL_CURSOR : '';
+}
+
+function setSellPointer(on) {
+  if (!gameCanvas) return;
+  if (SELL_POINTER_MODE === 'ghost') {
+    gameCanvas.style.cursor = on ? 'none' : '';
+  } else {
+    setSellCursor(on);
+  }
 }
 
 function addOccupancy(x, y) {
@@ -363,7 +373,10 @@ function renderBuildMenu() {
     btn.innerHTML = `<div class="title">${b.name} $${b.cost}</div>` +
       `<div class="stats">DMG ${b.damage} • RNG ${b.range} • SPD ${b.fireRate}</div>`;
     btn.addEventListener('click', () => {
-      if (money >= b.cost) selectedBuild = b.id;
+      if (money >= b.cost) {
+        selectedBuild = b.id;
+        setSellPointer(false);
+      }
     });
     el.buildList.appendChild(btn);
   });
@@ -734,7 +747,10 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
     el.contextMenu.style.display = 'none';
     contextTarget = null;
     rangePreview = null;
-    if (selectedBuild) selectedBuild = null;
+    if (selectedBuild) {
+      selectedBuild = null;
+      setSellPointer(false);
+    }
     return;
   }
   contextTarget = { gx: cell.x, gy: cell.y };
@@ -1111,6 +1127,7 @@ let healthBuffMultiplier = 1;
 function resetGame() {
   enemies = [];
   selectedBuild = null;
+  setSellPointer(false);
   towers = [];
   bullets = [];
   smokes = [];
@@ -1751,6 +1768,21 @@ function drawBG() {
     }
   }
 }
+function drawSellGhost() {
+  const t = performance.now() / 1000;
+  const bob = Math.sin(t * 6) * 3; // 6Hz small oscillation
+
+  ctx.save();
+  ctx.translate(mouse.x, mouse.y + bob);
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.font = '24px system-ui, Segoe UI, Roboto, sans-serif';
+  ctx.fillText('$', 1.5, 1.5);
+  ctx.fillStyle = '#ffd54f';
+  ctx.fillText('$', 0, 0);
+  ctx.restore();
+}
+
 function drawHUD() {
   const statsEl = $id('gameStats');
   const overlayEl = el.overlayStats;
@@ -1931,8 +1963,12 @@ function render() {
     }
   }
 
-    drawHUD();
+  if (selectedBuild === 'sell' && mouse.active && SELL_POINTER_MODE === 'ghost') {
+    drawSellGhost();
   }
+
+  drawHUD();
+}
 
 function loop(ts) {
   if (!running) return;
@@ -2017,32 +2053,32 @@ function onKey(e) {
   } else if (e.key === '1') {
     if (money >= BALANCE.wallCost) {
       selectedBuild = 'wall';
-      setSellCursor(false);
+      setSellPointer(false);
     }
   } else if (e.key === '2') {
     if (money >= CANNON_BASE.cost) {
       selectedBuild = 'cannon';
-      setSellCursor(false);
+      setSellPointer(false);
     }
   } else if (e.key === '3') {
     if (money >= LASER_BASE.cost) {
       selectedBuild = 'laser';
-      setSellCursor(false);
+      setSellPointer(false);
     }
   } else if (e.key === '4') {
     if (money >= ROCKET_BASE.cost) {
       selectedBuild = 'rocket';
-      setSellCursor(false);
+      setSellPointer(false);
     }
   } else if (e.key === '5') {
     if (money >= TESLA_BASE.cost) {
       selectedBuild = 'tesla';
-      setSellCursor(false);
+      setSellPointer(false);
     }
   } else if (e.key.toLowerCase() === 'x') {
     const goSell = selectedBuild !== 'sell';
     selectedBuild = goSell ? 'sell' : null;
-    setSellCursor(goSell);
+    setSellPointer(goSell);
   }
 }
 
@@ -2104,7 +2140,7 @@ function endGame() {
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
-  setSellCursor(false);
+  setSellPointer(false);
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.hoverMenu && (el.hoverMenu.style.display = 'none');
   overlayHeader && (overlayHeader.style.display = 'none');
@@ -2138,7 +2174,7 @@ function returnToMenu() {
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
-  setSellCursor(false);
+  setSellPointer(false);
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
 }
