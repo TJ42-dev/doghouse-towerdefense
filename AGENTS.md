@@ -32,3 +32,19 @@
 
 ## Testing
 Run `node tests/railgun.test.js` after adding assets or modifying code.
+
+## Adding a new map
+1. **Files**
+   - Directory: `assets/maps/<map_id>/`
+   - Map image: `assets/maps/<map_id>/<map_id>.png` (placeholder image with `-replace_me` in name if needed)
+   - Config: `assets/maps/<map_id>/config.json`
+     - Include `name`, `img` (path to map image), `grid` size (`small`\|`medium`\|`large`),
+       `entries` array (enemy spawn cells), and `catLives` array of grid cells.
+2. **main.js**
+   - Add `<map_id>: './assets/maps/<map_id>/config.json'` to `MAP_CONFIG_FILES`.
+3. **Map selector** (`index.html`)
+   - In the `#battlefieldOptions` container, add a `<label class="map-choice">` block with a radio input
+     (`value="<map_id>"`), preview `<img>` pointing at the map image, and a description `<span>`.
+4. **Store everything as shown above and keep placeholder assets text-only.**
+5. **Testing**
+   - Run `node tests/railgun.test.js`.

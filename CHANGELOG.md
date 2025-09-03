@@ -1,3 +1,4 @@
+
 # Changelog
 
 ## Unreleased
@@ -17,3 +18,5 @@
 - Slower boss base health scaling after each boss wave.
 - Show '(MAX!)' instead of the cost when a tower stat reaches level 10.
 - Added placeholder rocket and nuke hit sounds and silenced other bullet impacts.
+- Added per-map config files for grid size, enemy entries, and cat lives; removed dog-specific spawn and door data.
+
