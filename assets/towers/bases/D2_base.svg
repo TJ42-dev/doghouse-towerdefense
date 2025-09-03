@@ -1,97 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-emitter-center="21,7.8" data-emitter-rx="2" data-emitter-ry="1.05">
-  <title id="title">Lab-kitten next to Tesla tower base (coat aligned further right)</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-shoulder-pivot="11.3,11.2">
+  <title id="title">Soldier Cat (black) – 24px sprite (curled tail, vest adjusted)</title>
 
-  <!-- ========== KITTEN (shifted left ~1.2px away from tower) ========== -->
-  <g id="kitten" transform="translate(-1.2,0)">
-    <!-- Body/Head/Tail -->
-    <g fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
-      <!-- tail -->
-      <path d="M13.1 17.9c-1.2.1-2 .9-2 1.8 0 .8.6 1.5 1.3 1.5.3 0 .6-.1.6-.4 0-.2-.1-.3-.3-.4-.6-.2-.6-1.1.4-1.5"></path>
-      <!-- body -->
-      <ellipse cx="15.6" cy="15.2" rx="3.6" ry="4.4"></ellipse>
-      <!-- feet -->
-      <ellipse cx="14.0" cy="19.0" rx=".8" ry=".5"></ellipse>
-      <ellipse cx="17.2" cy="19.0" rx=".8" ry=".5"></ellipse>
-      <!-- head -->
-      <circle cx="15.4" cy="9.2" r="3.2"></circle>
-      <!-- ears -->
-      <path d="M13.7 7.1 14.6 5.4 15.3 7.0Z"></path>
-      <path d="M16.0 7.0 16.8 5.4 17.6 7.2Z"></path>
-      <!-- eyes -->
-      <g stroke="none">
-        <ellipse cx="14.7" cy="9.0" rx=".45" ry=".55" fill="#fff"></ellipse>
-        <ellipse cx="16.3" cy="9.0" rx=".45" ry=".55" fill="#fff"></ellipse>
-        <circle cx="14.8" cy="9.1" r=".2" fill="currentColor"></circle>
-        <circle cx="16.4" cy="9.1" r=".2" fill="currentColor"></circle>
-      </g>
-      <!-- muzzle + nose -->
-      <ellipse cx="15.5" cy="10.2" rx="1.2" ry=".9" fill="#fff" stroke="none" opacity=".9"></ellipse>
-      <path d="M15.2 9.9h.5l-.25.28Z" fill="currentColor" stroke="none"></path>
-      <!-- whiskers -->
-      <path d="M13.7 10.3h1.2M16.1 10.3h1.2M13.8 10.6h1.1M16.2 10.6h1.1" stroke-width=".35" fill="none"></path>
+  <!-- ===== CAT BODY (uses currentColor) ===== -->
+  <g id="soldierCat" fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- tail (curled upward) -->
+    <path d="M8.9 19.2
+             C 7.2 17.6 7.9 15.3 9.9 14.5
+               12.0 13.7 13.7 15.3 13.1 17.1
+               12.7 18.2 11.6 18.9 10.6 18.6" fill="none" stroke="currentColor" stroke-width="1.2"></path>
+    <!-- body -->
+    <ellipse cx="10.2" cy="14.8" rx="4.6" ry="5.4"></ellipse>
+    <!-- feet -->
+    <ellipse cx="8.2" cy="19.6" rx="1.0" ry=".6"></ellipse>
+    <ellipse cx="12.2" cy="19.6" rx="1.0" ry=".6"></ellipse>
+    <!-- head -->
+    <circle cx="9.6" cy="7.9" r="3.8"></circle>
+    <!-- ears -->
+    <path d="M7.4 5.3 8.5 3.3 9.5 5.2Z"></path>
+    <path d="M10.6 5.2 11.6 3.3 12.6 5.3Z"></path>
+
+    <!-- eyes -->
+    <g stroke="none">
+      <ellipse cx="8.7" cy="7.8" rx=".55" ry=".7" fill="#fff"></ellipse>
+      <ellipse cx="10.6" cy="7.8" rx=".55" ry=".7" fill="#fff"></ellipse>
+      <circle cx="8.8" cy="7.9" r=".25" fill="currentColor"></circle>
+      <circle cx="10.7" cy="7.9" r=".25" fill="currentColor"></circle>
+      <circle cx="8.7" cy="7.7" r=".1" fill="#fff"></circle>
+      <circle cx="10.6" cy="7.7" r=".1" fill="#fff"></circle>
     </g>
 
-    <!-- Goggles -->
-    <g stroke-linecap="round" stroke-linejoin="round">
-      <!-- strap -->
-      <path d="M13.0 8.6c.7-1.0 4.1-1.0 5.0 0" fill="none" stroke="#5c6670" stroke-width=".8"></path>
-      <!-- frames & lenses -->
-      <g fill="#9ad0ff" stroke="#2c3e50" stroke-width=".55" opacity=".9">
-        <ellipse cx="14.7" cy="9.0" rx=".85" ry=".75"></ellipse>
-        <ellipse cx="16.3" cy="9.0" rx=".85" ry=".75"></ellipse>
-        <rect x="15.05" y="8.75" width=".9" height=".4" rx=".15"></rect>
-      </g>
-      <!-- glare + buckles -->
-      <circle cx="14.5" cy="8.8" r=".12" fill="#fff" opacity=".8"></circle>
-      <circle cx="16.1" cy="8.8" r=".12" fill="#fff" opacity=".8"></circle>
-      <circle cx="13.7" cy="9.0" r=".1" fill="#2c3e50"></circle>
-      <circle cx="17.3" cy="9.0" r=".1" fill="#2c3e50"></circle>
-    </g>
-
-    <!-- Lab coat (smaller, nudged further right) -->
-    <g fill="#ffffff" stroke="#8a8f98" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round" transform="translate(15,14) scale(0.9) translate(-15,-14) translate(1.4,0.4)">
-      <!-- coat body -->
-      <path d="M13.0 12.0c.6-1.0 1.8-1.8 2.6-1.8s2.0.8 2.6 1.8c.3.5.5 1.1.5 1.7 0 2.2-1.2 4.1-2.9 4.8-.6.3-1.8.3-2.4 0-1.7-.7-2.9-2.6-2.9-4.8 0-.6.2-1.2.5-1.7Z"></path>
-      <!-- lapels -->
-      <path d="M14.1 11.6l1.0 1.3 1.0-1.3" fill="none"></path>
-      <!-- center seam -->
-      <path d="M15.1 12.9v4.1" stroke="#a5acb6"></path>
-      <!-- buttons -->
-      <circle cx="15.1" cy="13.8" r=".13" fill="#a5acb6" stroke="none"></circle>
-      <circle cx="15.1" cy="15.0" r=".13" fill="#a5acb6" stroke="none"></circle>
-      <circle cx="15.1" cy="16.2" r=".13" fill="#a5acb6" stroke="none"></circle>
-      <!-- pocket + pen -->
-      <rect x="16.6" y="13.5" width="1.2" height=".9" rx=".15"></rect>
-      <path d="M17.0 13.45v.85" stroke="#2c3e50"></path>
-      <path d="M17.2 13.45v.75" stroke="#3bb273"></path>
-    </g>
+    <!-- muzzle + nose -->
+    <ellipse cx="9.6" cy="9.2" rx="1.5" ry="1.1" fill="#fff" stroke="none" opacity=".9"></ellipse>
+    <path d="M9.3 8.8h.6l-.3.35Z" fill="currentColor" stroke="none"></path>
+    <!-- whiskers -->
+    <path d="M7.2 9.3h1.5M10.6 9.3h1.5M7.3 9.7h1.4M10.7 9.7h1.4" fill="none" stroke="currentColor" stroke-width=".4"></path>
   </g>
 
-  <!-- ========== TESLA TOWER BASE (no top ball) ========== -->
-  <g stroke="#43464a" stroke-linejoin="round" stroke-linecap="round" stroke-width=".6">
-    <!-- emitter torus -->
-    <ellipse cx="21" cy="7.8" rx="2" ry="1.05" fill="#9aa3b1"></ellipse>
-    <!-- mast -->
-    <rect x="19.9" y="8.9" width="2.2" height="9.3" rx=".5" fill="#7b8591"></rect>
-    <!-- copper coil rings -->
-    <g stroke="#8b4e1f">
-      <path d="M20.2 10.2h1.6"></path>
-      <path d="M20.2 11.2h1.6"></path>
-      <path d="M20.2 12.2h1.6"></path>
-      <path d="M20.2 13.2h1.6"></path>
-      <path d="M20.2 14.2h1.6"></path>
-      <path d="M20.2 15.2h1.6"></path>
-      <path d="M20.2 16.2h1.6"></path>
-    </g>
-    <!-- base -->
-    <ellipse cx="21" cy="18.5" rx="1.5" ry=".5" fill="#9aa3b1"></ellipse>
-    <rect x="19" y="18.8" width="4" height="1.8" rx=".4" fill="#6f7a88"></rect>
-    <rect x="19.2" y="19.0" width="3.6" height=".7" rx=".2" fill="#444" stroke="#444"></rect>
-    <path d="M19.3 19.1l.5.6m.5-.6l.5.6m.5-.6l.5.6m.5-.6l.5.6" stroke="#f4c542"></path>
+  <!-- ===== CAMO HELMET (soldier) ===== -->
+  <g id="helmet" stroke="none">
+    <!-- shell (covers ears; eyes visible) -->
+    <path d="M5.2 4.8c2.7-1.8 6.1-1.8 8.8 0 .25.17.25.45 0 .7-.45.8-1.35 1.6-2.25 2.0-2.6-.6-4.2-.6-6.8 0-.9-.4-1.8-1.2-2.25-2.0-.15-.25-.15-.53 0-.7Z" fill="#4b6e2f"></path>
+    <!-- rim -->
+    <path d="M5.0 6.4c2.9-.55 6.0-.55 8.9 0-.25.45-.7.8-1.2.95-2.2-.35-4.3-.35-6.5 0-.5-.15-.95-.5-1.2-.95Z" fill="#3f5b28"></path>
+    <!-- blotches -->
+    <circle cx="7.2" cy="5.5" r=".35" fill="#2f4420"></circle>
+    <circle cx="9.8" cy="5.1" r=".38" fill="#6c8c40"></circle>
+    <circle cx="11.5" cy="6.0" r=".32" fill="#2f4420"></circle>
   </g>
 
-  <!-- Guides -->
+  <!-- ===== TACTICAL VEST (shifted right +0.7, down +0.2) ===== -->
+  <g id="vest" transform="translate(0.7,0.2)" stroke="#3f5b28" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- core vest -->
+    <path d="M6.8 12.0c.7-1.2 2.1-2.1 3.4-2.1s2.7.9 3.4 2.1c.4.6.6 1.3.6 2 0 2.6-1.4 4.8-3.4 5.6-.7.3-2.1.3-2.8 0-2-.8-3.4-3-3.4-5.6 0-.7.2-1.4.6-2Z" fill="#4b6e2f"></path>
+    <!-- MOLLE rows -->
+    <path d="M7.6 13.0h4.0M7.2 14.0h4.8M7.0 15.0h5.2" stroke="#2f4420"></path>
+    <!-- front pouches -->
+    <rect x="7.3" y="13.2" width="1.6" height="1.1" rx=".15" fill="#3f5b28"></rect>
+    <rect x="9.5" y="13.2" width="1.6" height="1.1" rx=".15" fill="#3f5b28"></rect>
+    <!-- shoulder pads -->
+    <rect x="7.0" y="11.5" width="1.6" height=".7" rx=".2" fill="#3f5b28"></rect>
+    <rect x="10.8" y="11.5" width="1.6" height=".7" rx=".2" fill="#3f5b28"></rect>
+    <!-- name tape -->
+    <rect x="8.2" y="16.1" width="2.8" height=".6" rx=".2" fill="#6c8c40" stroke="none"></rect>
+  </g>
+
+  <!-- ===== DOG TAGS ===== -->
+  <g id="dogTags" stroke="#7b8591" stroke-width=".4" fill="#cfd6de" stroke-linecap="round">
+    <path d="M9.6 10.8c-.4.5-.4 1.0 0 1.3" fill="none"></path>
+    <path d="M10.6 10.8c-.4.5-.4 1.0 0 1.3" fill="none"></path>
+    <rect x="9.1" y="11.7" width=".9" height=".6" rx=".15"></rect>
+    <rect x="10.1" y="11.9" width=".9" height=".6" rx=".15"></rect>
+  </g>
+
+  <!-- ===== SHOULDER PIVOT (invisible guide) ===== -->
   <g opacity="0">
-    <circle id="emitterCenter" cx="21" cy="7.8" r="0.01"></circle>
+    <circle id="shoulderPivot" cx="11.3" cy="11.2" r="0.01"></circle>
   </g>
 </svg>

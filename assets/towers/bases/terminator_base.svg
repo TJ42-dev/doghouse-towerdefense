@@ -1,97 +1,98 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-emitter-center="21,7.8" data-emitter-rx="2" data-emitter-ry="1.05">
-  <title id="title">Lab-kitten next to Tesla tower base (coat aligned further right)</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-emitter-center="20,6.9" data-arc-a="18.8,5.6" data-arc-b="21.2,5.6" data-arc-c="18.6,7.6" data-arc-d="21.4,7.6">
+  <title id="title">Terminator Cat + Upgraded Tesla Tower (cat closer)</title>
 
-  <!-- ========== KITTEN (shifted left ~1.2px away from tower) ========== -->
-  <g id="kitten" transform="translate(-1.2,0)">
-    <!-- Body/Head/Tail -->
-    <g fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
-      <!-- tail -->
-      <path d="M13.1 17.9c-1.2.1-2 .9-2 1.8 0 .8.6 1.5 1.3 1.5.3 0 .6-.1.6-.4 0-.2-.1-.3-.3-.4-.6-.2-.6-1.1.4-1.5"></path>
-      <!-- body -->
-      <ellipse cx="15.6" cy="15.2" rx="3.6" ry="4.4"></ellipse>
-      <!-- feet -->
-      <ellipse cx="14.0" cy="19.0" rx=".8" ry=".5"></ellipse>
-      <ellipse cx="17.2" cy="19.0" rx=".8" ry=".5"></ellipse>
-      <!-- head -->
-      <circle cx="15.4" cy="9.2" r="3.2"></circle>
-      <!-- ears -->
-      <path d="M13.7 7.1 14.6 5.4 15.3 7.0Z"></path>
-      <path d="M16.0 7.0 16.8 5.4 17.6 7.2Z"></path>
-      <!-- eyes -->
-      <g stroke="none">
-        <ellipse cx="14.7" cy="9.0" rx=".45" ry=".55" fill="#fff"></ellipse>
-        <ellipse cx="16.3" cy="9.0" rx=".45" ry=".55" fill="#fff"></ellipse>
-        <circle cx="14.8" cy="9.1" r=".2" fill="currentColor"></circle>
-        <circle cx="16.4" cy="9.1" r=".2" fill="currentColor"></circle>
-      </g>
-      <!-- muzzle + nose -->
-      <ellipse cx="15.5" cy="10.2" rx="1.2" ry=".9" fill="#fff" stroke="none" opacity=".9"></ellipse>
-      <path d="M15.2 9.9h.5l-.25.28Z" fill="currentColor" stroke="none"></path>
-      <!-- whiskers -->
-      <path d="M13.7 10.3h1.2M16.1 10.3h1.2M13.8 10.6h1.1M16.2 10.6h1.1" stroke-width=".35" fill="none"></path>
+  <!-- ===== TERMINATOR CAT (moved closer) ===== -->
+  <g id="terminatorCat" transform="translate(-0.8,0)" stroke="#43464a" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- segmented tail -->
+    <path d="M8.0 18.6c-1.0.1-1.7.8-1.7 1.6 0 .7.5 1.3 1.1 1.3.3 0 .5-.1.5-.3 0-.2-.1-.3-.3-.4-.5-.2-.5-.9.4-1.3" fill="#8e97a3"></path>
+    <!-- torso plating -->
+    <ellipse cx="10.8" cy="14.8" rx="3.9" ry="4.6" fill="#8e97a3"></ellipse>
+    <path d="M8.2 12.8h5.2m-5.6 1.6h6m-5.2 1.6h4.6" stroke="#66707e"></path>
+    <!-- vent panel -->
+    <rect x="9.1" y="15.8" width="3.2" height="1.3" rx=".2" fill="#7b8591" stroke="#66707e"></rect>
+    <path d="M9.5 16.0h2.4m-2.4.6h2.4" stroke="#5c6571" stroke-width=".4"></path>
+    <!-- feet (metal pads) -->
+    <ellipse cx="9.2" cy="19.6" rx=".9" ry=".55" fill="#8e97a3"></ellipse>
+    <ellipse cx="12.6" cy="19.6" rx=".9" ry=".55" fill="#8e97a3"></ellipse>
+
+    <!-- head shell -->
+    <circle cx="10.8" cy="8.8" r="3.2" fill="#9099a6"></circle>
+    <!-- ear plates -->
+    <path d="M8.9 6.8 9.8 5.1 10.6 6.7Z" fill="#8a93a0"></path>
+    <path d="M11.1 6.7 11.9 5.1 12.8 6.9Z" fill="#8a93a0"></path>
+    <!-- face plate split -->
+    <path d="M10.8 6.2v5.2" stroke="#5d6672"></path>
+    <!-- eyes (right = red sensor) -->
+    <g stroke="none">
+      <ellipse cx="10.0" cy="8.8" rx=".45" ry=".55" fill="#e6eef7"></ellipse>
+      <circle cx="11.6" cy="8.9" r=".42" fill="#ff3b30"></circle>
+      <circle cx="11.45" cy="8.75" r=".18" fill="#ff8a80"></circle>
     </g>
+    <!-- muzzle grille -->
+    <rect x="10.1" y="10.0" width="1.4" height=".9" rx=".15" fill="#7b8591" stroke="#66707e"></rect>
+    <path d="M10.2 10.3h1.2m-1.2.3h1.2" stroke="#5c6571" stroke-width=".35"></path>
+    <!-- jaw hinge + whisker ports -->
+    <circle cx="9.4" cy="10.4" r=".1" fill="#43464a" stroke="none"></circle>
+    <circle cx="12.2" cy="10.4" r=".1" fill="#43464a" stroke="none"></circle>
+    <!-- cable whiskers -->
+    <path d="M8.3 10.2h1.1M8.3 10.6h1.0M13.1 10.2h1.1M13.1 10.6h1.0" stroke="#5d6672" stroke-width=".4"></path>
 
-    <!-- Goggles -->
-    <g stroke-linecap="round" stroke-linejoin="round">
-      <!-- strap -->
-      <path d="M13.0 8.6c.7-1.0 4.1-1.0 5.0 0" fill="none" stroke="#5c6670" stroke-width=".8"></path>
-      <!-- frames & lenses -->
-      <g fill="#9ad0ff" stroke="#2c3e50" stroke-width=".55" opacity=".9">
-        <ellipse cx="14.7" cy="9.0" rx=".85" ry=".75"></ellipse>
-        <ellipse cx="16.3" cy="9.0" rx=".85" ry=".75"></ellipse>
-        <rect x="15.05" y="8.75" width=".9" height=".4" rx=".15"></rect>
-      </g>
-      <!-- glare + buckles -->
-      <circle cx="14.5" cy="8.8" r=".12" fill="#fff" opacity=".8"></circle>
-      <circle cx="16.1" cy="8.8" r=".12" fill="#fff" opacity=".8"></circle>
-      <circle cx="13.7" cy="9.0" r=".1" fill="#2c3e50"></circle>
-      <circle cx="17.3" cy="9.0" r=".1" fill="#2c3e50"></circle>
-    </g>
+    <!-- chest core (glow-able) -->
+    <circle cx="10.8" cy="14.0" r=".7" fill="#15e0ff" stroke="#0b3d4b" stroke-width=".5"></circle>
 
-    <!-- Lab coat (smaller, nudged further right) -->
-    <g fill="#ffffff" stroke="#8a8f98" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round" transform="translate(15,14) scale(0.9) translate(-15,-14) translate(1.4,0.4)">
-      <!-- coat body -->
-      <path d="M13.0 12.0c.6-1.0 1.8-1.8 2.6-1.8s2.0.8 2.6 1.8c.3.5.5 1.1.5 1.7 0 2.2-1.2 4.1-2.9 4.8-.6.3-1.8.3-2.4 0-1.7-.7-2.9-2.6-2.9-4.8 0-.6.2-1.2.5-1.7Z"></path>
-      <!-- lapels -->
-      <path d="M14.1 11.6l1.0 1.3 1.0-1.3" fill="none"></path>
-      <!-- center seam -->
-      <path d="M15.1 12.9v4.1" stroke="#a5acb6"></path>
-      <!-- buttons -->
-      <circle cx="15.1" cy="13.8" r=".13" fill="#a5acb6" stroke="none"></circle>
-      <circle cx="15.1" cy="15.0" r=".13" fill="#a5acb6" stroke="none"></circle>
-      <circle cx="15.1" cy="16.2" r=".13" fill="#a5acb6" stroke="none"></circle>
-      <!-- pocket + pen -->
-      <rect x="16.6" y="13.5" width="1.2" height=".9" rx=".15"></rect>
-      <path d="M17.0 13.45v.85" stroke="#2c3e50"></path>
-      <path d="M17.2 13.45v.75" stroke="#3bb273"></path>
+    <!-- shoulder bolts -->
+    <g fill="#2b2f36" stroke="none">
+      <circle cx="9.2" cy="12.1" r=".13"></circle>
+      <circle cx="12.4" cy="12.1" r=".13"></circle>
     </g>
   </g>
 
-  <!-- ========== TESLA TOWER BASE (no top ball) ========== -->
-  <g stroke="#43464a" stroke-linejoin="round" stroke-linecap="round" stroke-width=".6">
-    <!-- emitter torus -->
-    <ellipse cx="21" cy="7.8" rx="2" ry="1.05" fill="#9aa3b1"></ellipse>
-    <!-- mast -->
-    <rect x="19.9" y="8.9" width="2.2" height="9.3" rx=".5" fill="#7b8591"></rect>
-    <!-- copper coil rings -->
+  <!-- ===== TESLA TOWER — BIG & SCARY ===== -->
+  <g id="teslaTower" stroke="#43464a" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- spiked crown above emitter -->
+    <g fill="#7b8591">
+      <path d="M20 4.2l-.6 1.1h1.2Z"></path>
+      <path d="M18.9 4.6l-.6 1.0h1.1Z"></path>
+      <path d="M21.1 4.6l-.5 1.0h1.0Z"></path>
+    </g>
+
+    <!-- bigger emitter torus -->
+    <ellipse cx="20" cy="6.9" rx="2.3" ry="1.2" fill="#9aa3b1"></ellipse>
+    <ellipse cx="20" cy="6.9" rx="2.0" ry=".35" fill="#7b8591" opacity=".55" stroke="none"></ellipse>
+
+    <!-- dual secondary coils on a thick mast -->
+    <rect x="18.6" y="8.1" width="2.8" height="10.4" rx=".6" fill="#6f7a88"></rect>
     <g stroke="#8b4e1f">
-      <path d="M20.2 10.2h1.6"></path>
-      <path d="M20.2 11.2h1.6"></path>
-      <path d="M20.2 12.2h1.6"></path>
-      <path d="M20.2 13.2h1.6"></path>
-      <path d="M20.2 14.2h1.6"></path>
-      <path d="M20.2 15.2h1.6"></path>
-      <path d="M20.2 16.2h1.6"></path>
+      <path d="M19 9.2h2"></path><path d="M19 10.1h2"></path><path d="M19 11.0h2"></path><path d="M19 11.9h2"></path>
+      <path d="M19 12.8h2"></path><path d="M19 13.7h2"></path><path d="M19 14.6h2"></path><path d="M19 15.5h2"></path><path d="M19 16.4h2"></path>
     </g>
-    <!-- base -->
-    <ellipse cx="21" cy="18.5" rx="1.5" ry=".5" fill="#9aa3b1"></ellipse>
-    <rect x="19" y="18.8" width="4" height="1.8" rx=".4" fill="#6f7a88"></rect>
-    <rect x="19.2" y="19.0" width="3.6" height=".7" rx=".2" fill="#444" stroke="#444"></rect>
-    <path d="M19.3 19.1l.5.6m.5-.6l.5.6m.5-.6l.5.6m.5-.6l.5.6" stroke="#f4c542"></path>
+
+    <!-- side braces -->
+    <path d="M18.1 9.4l-1.2 1.2v6.6l1.2.9" fill="#7b8591"></path>
+    <path d="M21.9 9.4l1.2 1.2v6.6l-1.2.9" fill="#7b8591"></path>
+
+    <!-- angry base with hazards -->
+    <ellipse cx="20" cy="19.0" rx="2.0" ry=".7" fill="#9aa3b1"></ellipse>
+    <rect x="17.5" y="19.2" width="5.0" height="2.1" rx=".5" fill="#6f7a88"></rect>
+    <rect x="17.7" y="19.5" width="4.6" height=".9" rx=".2" fill="#444" stroke="#444"></rect>
+    <path d="M17.8 19.6l.6.8m.6-.8l.6.8m.6-.8l.6.8m.6-.8l.6.8" stroke="#f4c542"></path>
+
+    <!-- lightning nubs (arc anchors) -->
+    <circle cx="18.8" cy="5.6" r=".12" fill="#2b2f36" stroke="none"></circle>
+    <circle cx="21.2" cy="5.6" r=".12" fill="#2b2f36" stroke="none"></circle>
+    <circle cx="18.6" cy="7.6" r=".12" fill="#2b2f36" stroke="none"></circle>
+    <circle cx="21.4" cy="7.6" r=".12" fill="#2b2f36" stroke="none"></circle>
   </g>
 
-  <!-- Guides -->
+  <!-- ambient shadow -->
+  <ellipse cx="12" cy="21.0" rx="9.8" ry="1.1" fill="#000" opacity=".06"></ellipse>
+
+  <!-- guides -->
   <g opacity="0">
-    <circle id="emitterCenter" cx="21" cy="7.8" r="0.01"></circle>
+    <circle id="emitterCenter" cx="20" cy="6.9" r="0.01"></circle>
+    <circle id="arcA" cx="18.8" cy="5.6" r="0.01"></circle>
+    <circle id="arcB" cx="21.2" cy="5.6" r="0.01"></circle>
+    <circle id="arcC" cx="18.6" cy="7.6" r="0.01"></circle>
+    <circle id="arcD" cx="21.4" cy="7.6" r="0.01"></circle>
   </g>
 </svg>

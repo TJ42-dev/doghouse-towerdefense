@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-pivot="11.3,11.2" data-muzzle="22.8,11.0" data-handle="15.1,12.7" data-support="17.0,13.7">
+  <title id="title">Arms holding Wunderwaffe-style rifle (handle + mid support)</title>
+
+  <!-- Rotate this WHOLE group around the pivot (11.3,11.2) -->
+  <g id="wunder-arms" transform="rotate(0 11.3 11.2)" stroke-linejoin="round" stroke-linecap="round">
+
+    <!-- ===================== RIFLE ===================== -->
+    <!-- stock (wood) -->
+    <path d="M11.7 11.3c-2.6.5-3.9 1.1-5.1 2.4l.6 1.1c1.8-1 3.1-1.4 4.9-1.8l.9-.2Z" fill="#7b4b2a" stroke="#5a371f" stroke-width=".6"></path>
+
+    <!-- receiver / main block -->
+    <g stroke="#43464a" stroke-width=".6">
+      <rect x="11.7" y="10.4" width="4.9" height="3.3" rx=".4" fill="#6f7a88"></rect>
+      <!-- side vents -->
+      <path d="M12.1 11.0h4M12.1 11.7h4M12.1 12.4h3.4" stroke="#5e6876"></path>
+      <!-- round ports -->
+      <g fill="#959eab" stroke="none">
+        <circle cx="12.3" cy="10.6" r=".22"></circle><circle cx="13.1" cy="10.6" r=".22"></circle>
+        <circle cx="13.9" cy="10.6" r=".22"></circle><circle cx="14.7" cy="10.6" r=".22"></circle>
+      </g>
+    </g>
+
+    <!-- handle / pistol grip (so the trigger hand has something to hold) -->
+    <rect x="14.7" y="11.9" width=".9" height="1.5" rx=".2" fill="#6f7a88" stroke="#43464a" stroke-width=".6"></rect>
+
+    <!-- front capacitor / block -->
+    <rect x="16.2" y="10.8" width="2.2" height="2.5" rx=".3" fill="#7b8591" stroke="#43464a" stroke-width=".6"></rect>
+
+    <!-- blue energy tube -->
+    <rect x="15.0" y="9.6" width="3.0" height=".9" rx=".25" fill="#17d0ff" stroke="#115d70" stroke-width=".5"></rect>
+
+    <!-- mid coil pack (copper windings) -->
+    <g stroke="#8b4e1f" stroke-width=".6">
+      <path d="M15.9 13.9h2.6"></path><path d="M15.9 13.3h2.6"></path>
+      <path d="M15.9 12.7h2.6"></path><path d="M15.9 12.1h2.6"></path>
+    </g>
+
+    <!-- forward coil & barrel with prongs -->
+    <g stroke="#9a7b4f" stroke-width=".6" fill="none">
+      <path d="M18.5 10.7h2.4M18.5 11.2h2.4M18.5 11.7h2.4M18.5 12.2h2.4M18.5 12.7h2.4"></path>
+      <path d="M21.1 10.2c.7.1 1.3.1 1.9-.1m-1.9 3.0c.7-.1 1.3-.1 1.9.1"></path>
+      <path d="M22.2 10.1l.7-1 .7.2M22.2 13.1l.7 1 .7-.2"></path>
+      <path d="M22.8 11.0l1.1-.2M22.8 12.1l1.1.2"></path>
+      <path d="M21.9 11.6l1.5-.7"></path>
+    </g>
+
+    <!-- cable loop -->
+    <path d="M17.6 13.0c.7.25 1.2.55 1.6.95" fill="none" stroke="#6a5640" stroke-width=".6"></path>
+
+    <!-- muzzle origin (anchor) -->
+    <circle cx="22.8" cy="11.0" r=".05" fill="none" stroke="none"></circle>
+
+    <!-- ===================== ARMS ===================== -->
+    <g fill="currentColor" stroke="currentColor" stroke-width=".6">
+      <!-- TRIGGER/HANDLE ARM (grips the handle at 15.1,12.7) -->
+      <path d="M11.3 11.2 L13.2 11.9" stroke-width="1.8"></path>   <!-- upper arm -->
+      <circle cx="13.2" cy="11.9" r=".5"></circle>                  <!-- elbow -->
+      <path d="M13.2 11.9 L14.9 12.5" stroke-width="1.7"></path>   <!-- forearm -->
+      <ellipse cx="15.1" cy="12.7" rx=".98" ry=".78"></ellipse>      <!-- trigger paw -->
+
+      <!-- SUPPORT ARM (under the middle coil pack at 17.0,13.7) -->
+      <path d="M11.0 12.4 L12.8 13.2" stroke-width="1.8"></path>   <!-- upper arm -->
+      <circle cx="12.8" cy="13.2" r=".5"></circle>                  <!-- elbow -->
+      <path d="M12.8 13.2 L16.8 13.6" stroke-width="1.7"></path>   <!-- forearm -->
+      <ellipse cx="17.0" cy="13.7" rx="1.05" ry=".82"></ellipse>     <!-- support paw -->
+    </g>
+  </g>
+
+  <!-- Invisible guides -->
+  <g opacity="0">
+    <circle id="pivot" cx="11.3" cy="11.2" r="0.01"></circle>
+    <circle id="muzzle" cx="22.8" cy="11.0" r="0.01"></circle>
+    <circle id="handleA" cx="15.1" cy="12.7" r="0.01"></circle>
+    <circle id="supportA" cx="17.0" cy="13.7" r="0.01"></circle>
+  </g>
+</svg>
