@@ -92,6 +92,7 @@ let zaps = [];
 let explosions = [];
 let catLives = [];
 let money = 0;
+let sellAnimPhase = 0;
 const BALANCE = {
   wallCost: 10,
   specializationCosts: {
@@ -249,6 +250,25 @@ function removeTowerProjectiles(t) {
   bullets = bullets.filter(b => b.source !== t);
 }
 
+function sellAt(gx, gy){
+  const t = towers.find(t => t.gx === gx && t.gy === gy);
+  if (t){
+    money += Math.floor((t.spent || t.cost || 0) * 0.8);
+    removeOccupancy(gx, gy);
+    removeTowerProjectiles(t);
+    towers = towers.filter(tt => tt !== t);
+    if (selectedTower === t) { selectedTower = null; updateSelectedTowerInfo(); }
+  } else {
+    const i = walls.findIndex(w => w.x === gx && w.y === gy);
+    if (i !== -1){
+      walls.splice(i, 1);
+      removeOccupancy(gx, gy);
+      money += BALANCE.wallCost;
+    }
+  }
+  recalcEnemyPaths();
+}
+
 function canPlace(cell) {
   if (!inBounds(cell)) return false;
   if (occupancy.has(key(cell.x, cell.y))) return false;
@@ -256,9 +276,10 @@ function canPlace(cell) {
   occupancy.add(key(cell.x, cell.y));
   const target = catLives.find(l => l.alive);
   const goal = target ? { x: target.gx, y: target.gy } : currentMap.entries[0];
+  const hasPath = (s, g) => (s.x === g.x && s.y === g.y) || findPath(s, g).length > 0;
   const ok =
-    currentMap.entries.every(e => findPath(e, goal).length > 0) &&
-    enemies.every(en => findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0);
+    currentMap.entries.every(e => hasPath(e, goal)) &&
+    enemies.every(en => hasPath(pxToCell({ x: en.x, y: en.y }), goal));
   occupancy.delete(key(cell.x, cell.y));
   return ok;
 }
@@ -735,25 +756,7 @@ document.addEventListener('click', () => {
 });
 el.contextSell?.addEventListener('click', () => {
   if (!contextTarget) return;
-  const { gx, gy } = contextTarget;
-  const t = towers.find(t => t.gx === gx && t.gy === gy);
-  if (t) {
-    const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
-    money += refund;
-    removeOccupancy(gx, gy);
-    removeTowerProjectiles(t);
-    towers = towers.filter(tt => tt !== t);
-    selectedTower = null;
-    updateSelectedTowerInfo();
-  } else {
-    const idx = walls.findIndex(w => w.x === gx && w.y === gy);
-    if (idx !== -1) {
-      walls.splice(idx, 1);
-      removeOccupancy(gx, gy);
-      money += BALANCE.wallCost;
-    }
-  }
-  recalcEnemyPaths();
+  sellAt(contextTarget.gx, contextTarget.gy);
   el.contextMenu.style.display = 'none';
   contextTarget = null;
   rangePreview = null;
@@ -1026,11 +1029,15 @@ function loadImage(src) {
     // you’ll need CORS headers on the server and this:
     // img.crossOrigin = 'anonymous';
     img.decoding = 'async';
-    img.onload = () => resolve(img);
     img.onerror = () => resolve(null); // treat as missing, don't crash
+    img.onload = async () => {
+      // If the browser supports decode(), use it for reliable readiness.
+      try {
+        if (img.decode) await img.decode();
+      } catch (_) {}
+      resolve(img);
+    };
     img.src = src;
-    // If the browser supports decode(), use it for reliable readiness.
-    if (img.decode) img.decode().then(() => resolve(img)).catch(() => resolve(null));
   });
 }
 
@@ -1402,6 +1409,7 @@ function updateProjectiles(dt) {
 }
 
 function update(dt) {
+  sellAnimPhase += dt * 4;
   if (mouse.active) {
     player.x += (mouse.x - player.x) * Math.min(1, dt*8);
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
@@ -1781,6 +1789,34 @@ function render() {
     ctx.stroke();
   }
 
+  // Highlight cell in sell mode
+  if (selectedBuild === 'sell' && mouse.active) {
+    const cell = pxToCell(mouse);
+    const x = originPx.x + cell.x * CELL_PX + CELL_PX / 2;
+    const y = originPx.y + cell.y * CELL_PX + CELL_PX / 2;
+
+    // check if there's a tower or wall here
+    const hasTower = towers.some(t => t.gx === cell.x && t.gy === cell.y);
+    const hasWall = walls.some(w => w.x === cell.x && w.y === cell.y);
+    const sellable = hasTower || hasWall;
+
+    ctx.save();
+    const scale = 1 + 0.1 * Math.sin(sellAnimPhase); // oscillates between 0.9–1.1
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.font = `${CELL_PX * 0.8}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Green if sellable, red otherwise
+    ctx.fillStyle = sellable ? 'limegreen' : 'red';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.strokeText('$', 0, 0);
+    ctx.fillText('$', 0, 0);
+    ctx.restore();
+  }
+
     // Towers
     for (const t of towers) {
       const art = t.type === 'laser' ? ASSETS.laser :
@@ -1945,11 +1981,17 @@ function unbindInputs() {
   window.visualViewport?.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKey);
 }
+function getMouse(e) {
+  const r = gameCanvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
 function onMouseMove(e) {
-  mouse.x = e.offsetX; mouse.y = e.offsetY; mouse.active = true;
+  const m = getMouse(e);
+  mouse.x = m.x; mouse.y = m.y; mouse.active = true;
 }
 function onCanvasClick(e) {
-  const cell = pxToCell({ x: e.offsetX, y: e.offsetY });
+  const m = getMouse(e);
+  const cell = pxToCell(m);
   const gx = cell.x, gy = cell.y;
   if (!inBounds(cell)) return;
 
@@ -1967,24 +2009,7 @@ function onCanvasClick(e) {
   }
 
   if (selectedBuild === 'sell') {
-    const t = towers.find(t => t.gx === gx && t.gy === gy);
-    if (t) {
-      const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
-      money += refund;
-      removeOccupancy(gx, gy);
-      removeTowerProjectiles(t);
-      towers = towers.filter(tt => tt !== t);
-      selectedTower = null;
-      updateSelectedTowerInfo();
-    } else {
-      const idx = walls.findIndex(w => w.x === gx && w.y === gy);
-      if (idx !== -1) {
-        walls.splice(idx, 1);
-        removeOccupancy(gx, gy);
-        money += BALANCE.wallCost;
-      }
-    }
-    recalcEnemyPaths();
+    sellAt(gx, gy);
     return;
   }
 
@@ -2022,7 +2047,7 @@ function onKey(e) {
   } else if (e.key === '5') {
     if (money >= TESLA_BASE.cost) selectedBuild = 'tesla';
   } else if (e.key.toLowerCase() === 'x') {
-    selectedBuild = 'sell';
+    selectedBuild = (selectedBuild === 'sell') ? null : 'sell';
   }
 }
 
