@@ -1515,7 +1515,6 @@ function update(dt) {
       const angle = t.angle;
       if (t.type === 'laser' || t.type === 'dualLaser') {
         target.health -= t.damage;
-        bark();
         if (t.type === 'dualLaser') {
           const perp = angle + Math.PI / 2;
           const offset = t.alt ? 5 : -5;
@@ -1561,7 +1560,6 @@ function update(dt) {
           const perp = Math.abs(ex * dy - ey * dx);
           if (along > 0 && along <= edgeT && perp <= e.r) {
             e.health -= t.damage;
-            bark();
             if (e.health <= 0) {
                 enemies.splice(enemies.indexOf(e), 1);
                 money += killReward;
