@@ -1,0 +1,8 @@
+{
+  "id": "tesla",
+  "damage": 400,
+  "fireRate": 0.3,
+  "range": 6,
+  "cost": 400,
+  "fireSound": "assets/towers/tower configurations/tesla_hit.wav"
+}

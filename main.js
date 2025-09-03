@@ -120,6 +120,7 @@ let towers = [];
 let bullets = [];
 let smokes = [];
 let beams = [];
+let zaps = [];
 let explosions = [];
 let catLives = [];
 let money = 0;
@@ -252,6 +253,23 @@ function initOccupancy() {
   bumpNav();
 }
 
+function createZap(x1, y1, x2, y2, segments = 5) {
+  const points = [{ x: x1, y: y1 }];
+  const angle = Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2;
+  for (let i = 1; i < segments; i++) {
+    const t = i / segments;
+    const nx = x1 + (x2 - x1) * t;
+    const ny = y1 + (y2 - y1) * t;
+    const offset = (Math.random() - 0.5) * 20;
+    points.push({
+      x: nx + Math.cos(angle) * offset,
+      y: ny + Math.sin(angle) * offset
+    });
+  }
+  points.push({ x: x2, y: y2 });
+  return points;
+}
+
 function removeTowerProjectiles(t) {
   bullets = bullets.filter(b => b.source !== t);
 }
@@ -285,6 +303,7 @@ function recalcEnemyPaths() {
 let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
 let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
 let ROCKET_BASE = { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4.5, cost: 175 };
+let TESLA_BASE = { damage: 400, fireRate: 0.3, range: 6, cost: 400 };
 let TOWER_TYPES = [];
 
 function getBuildItems() {
@@ -292,7 +311,8 @@ function getBuildItems() {
     { id: 'wall', name: 'Wall', cost: BALANCE.wallCost, damage: 0, range: 0, fireRate: 0 },
     { id: 'cannon', name: 'Cannon', ...CANNON_BASE },
     { id: 'laser', name: 'Laser', ...LASER_BASE },
-    { id: 'rocket', name: 'Rocket', ...ROCKET_BASE }
+    { id: 'rocket', name: 'Rocket', ...ROCKET_BASE },
+    { id: 'tesla', name: 'Tesla', ...TESLA_BASE }
   ];
 }
 
@@ -940,6 +960,8 @@ const SNIPER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper_turret.svg';
 const SHOTGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun_turret.svg';
+const TESLA_BASE_SRC = 'assets/towers/bases/tesla_base.svg';
+const TESLA_TURRET_SRC = 'assets/towers/turrets/tesla_turret.svg';
 const WAVE_START_SOUND = 'assets/sounds/wave_start.wav';
 const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
 const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
@@ -954,7 +976,8 @@ const TOWER_CONFIG_IDS = [
   'dualLaser',
   'railgun',
   'nuke',
-  'hellfire'
+  'hellfire',
+  'tesla'
 ];
 
 let DATA_LOADED = false;
@@ -976,6 +999,8 @@ async function loadData() {
       if (laser) LASER_BASE = { ...LASER_BASE, ...laser };
       const rocket = TOWER_TYPES.find(t => t.id === 'rocket');
       if (rocket) ROCKET_BASE = { ...ROCKET_BASE, ...rocket };
+      const tesla = TOWER_TYPES.find(t => t.id === 'tesla');
+      if (tesla) TESLA_BASE = { ...TESLA_BASE, ...tesla };
       renderBuildMenu();
     }
     if (dogJson) {
@@ -1015,7 +1040,8 @@ let ASSETS = {
   dualLaser: { base: null, turret: null },
   railgun: { base: null, turret: null },
   sniper: { base: null, turret: null },
-  shotgun: { base: null, turret: null }
+  shotgun: { base: null, turret: null },
+  tesla: { base: null, turret: null }
 };
 let assetsReady; // Promise
 
@@ -1037,7 +1063,8 @@ async function ensureAssets() {
           dualLaser: { base: await loadImage(DUAL_LASER_BASE_SRC), turret: await loadImage(DUAL_LASER_TURRET_SRC) },
           railgun: { base: await loadImage(RAILGUN_BASE_SRC), turret: await loadImage(RAILGUN_TURRET_SRC) },
           sniper: { base: await loadImage(SNIPER_BASE_SRC), turret: await loadImage(SNIPER_TURRET_SRC) },
-          shotgun: { base: await loadImage(SHOTGUN_BASE_SRC), turret: await loadImage(SHOTGUN_TURRET_SRC) }
+          shotgun: { base: await loadImage(SHOTGUN_BASE_SRC), turret: await loadImage(SHOTGUN_TURRET_SRC) },
+          tesla: { base: await loadImage(TESLA_BASE_SRC), turret: await loadImage(TESLA_TURRET_SRC) }
         };
     })();
   }
@@ -1080,6 +1107,7 @@ function resetGame() {
   towers = [];
   bullets = [];
   smokes = [];
+  zaps = [];
   explosions = [];
   const opts = loadOpts();
   difficulty = opts.difficulty || 'medium';
@@ -1188,6 +1216,7 @@ function queueWave() {
     waveElapsed = 0;
     spawnInterval = BALANCE.wave.spawnInterval;
     beams = [];
+    zaps = [];
     playAudio(isBossWave ? BOSS_WAVE_START_SOUND : WAVE_START_SOUND);
   }
   const total = isBossWave ? 1 : BALANCE.wave.enemiesPerWave;
@@ -1364,6 +1393,11 @@ function updateProjectiles(dt) {
     return e.life > 0;
   });
 
+  zaps = zaps.filter(z => {
+    z.time -= dt;
+    return z.time > 0;
+  });
+
   beams = beams.filter(b => {
     b.time -= dt;
     return b.time > 0;
@@ -1534,6 +1568,19 @@ function update(dt) {
             money += killReward;
             t.kills = (t.kills || 0) + 1;
         }
+      } else if (t.type === 'tesla') {
+        target.health -= t.damage;
+        const x1 = t.x + Math.cos(angle) * (CELL_PX / 2);
+        const y1 = t.y + Math.sin(angle) * (CELL_PX / 2);
+        const points = createZap(x1, y1, target.x, target.y);
+        zaps.push({ points, time: 0.1 });
+        t.cooldown = 1 / t.fireRate;
+        playFireSound(t);
+        if (target.health <= 0) {
+            enemies.splice(enemies.indexOf(target), 1);
+            money += killReward;
+            t.kills = (t.kills || 0) + 1;
+        }
       } else if (t.type === 'railgun') {
         const angle = t.angle;
         const dx = Math.cos(angle);
@@ -1690,6 +1737,7 @@ function render() {
     for (const t of towers) {
       const art = t.type === 'laser' ? ASSETS.laser :
         t.type === 'rocket' ? ASSETS.rocket :
+        t.type === 'tesla' ? ASSETS.tesla :
         t.type === 'nuke' ? ASSETS.nuke :
         t.type === 'hellfire' ? ASSETS.hellfire :
         t.type === 'dualLaser' ? ASSETS.dualLaser :
@@ -1745,6 +1793,22 @@ function render() {
       ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
       ctx.fillStyle = '#fff'; ctx.fill();
     }
+  }
+
+  // Zaps
+  for (const zap of zaps) {
+    const pts = zap.points;
+    const grad = ctx.createLinearGradient(pts[0].x, pts[0].y, pts[pts.length - 1].x, pts[pts.length - 1].y);
+    grad.addColorStop(0, '#ccf');
+    grad.addColorStop(1, '#66f');
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
   }
 
   // Beams
@@ -1938,6 +2002,33 @@ function onCanvasClick(e) {
       firstPlacementDone = true;
       recalcEnemyPaths();
     }
+  } else if (selectedBuild === 'tesla') {
+    if (canPlace(cell) && money >= TESLA_BASE.cost) {
+      money -= TESLA_BASE.cost;
+      addOccupancy(gx, gy);
+      const p = cellToPx(cell);
+      towers.push({
+        gx,
+        gy,
+        x: p.x,
+        y: p.y,
+        type: 'tesla',
+        cooldown: 0,
+        angle: 0,
+        base: { damage: TESLA_BASE.damage, fireRate: TESLA_BASE.fireRate, range: TESLA_BASE.range },
+        damage: TESLA_BASE.damage,
+        fireRate: TESLA_BASE.fireRate,
+        range: TESLA_BASE.range,
+        cost: TESLA_BASE.cost,
+        spent: TESLA_BASE.cost,
+        fireSound: TESLA_BASE.fireSound,
+        upgrades: { damage: 0, fireRate: 0, range: 0 },
+        target: null,
+        kills: 0
+      });
+      firstPlacementDone = true;
+      recalcEnemyPaths();
+    }
   } else if (selectedBuild === 'laser') {
     if (canPlace(cell) && money >= LASER_BASE.cost) {
       money -= LASER_BASE.cost;
@@ -1978,6 +2069,8 @@ function onKey(e) {
     if (money >= LASER_BASE.cost) selectedBuild = 'laser';
   } else if (e.key === '4') {
     if (money >= ROCKET_BASE.cost) selectedBuild = 'rocket';
+  } else if (e.key === '5') {
+    if (money >= TESLA_BASE.cost) selectedBuild = 'tesla';
   } else if (e.key.toLowerCase() === 'x') {
     selectedBuild = 'sell';
   }
