@@ -215,6 +215,7 @@ function igniteRocket(b, target){
   b.target = target;
   b.angle = Math.atan2(target.y - b.y, target.x - b.x);
   b.speed = Math.max(b.speed, b.maxSpeed * 0.25);
+  b.accel = b.maxSpeed * 4;
   b._prevLos = null;
 }
 
@@ -1571,7 +1572,7 @@ function update(dt) {
             target,                 // may be null
             speed: idle ? 0 : maxSpeed * 0.25,  // do NOT move while idle
             maxSpeed,
-            accel: maxSpeed,
+            accel: maxSpeed * 4,
             damage: t.damage,
             source: t,
             type: 'rocket',
@@ -1601,7 +1602,7 @@ function update(dt) {
           target,                 // may be null
           speed: idle ? 0 : maxSpeed * 0.25,  // do NOT move while idle
           maxSpeed,
-          accel: maxSpeed,
+          accel: maxSpeed * 4,
           damage: t.damage,
           source: t,
           type: 'rocket',
