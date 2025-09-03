@@ -68,6 +68,7 @@ const battlefieldBtn = document.getElementById('battlefieldBtn');
 const battlefieldDlg = document.getElementById('battlefieldDialog');
 const saveBattlefieldBtn = document.getElementById('saveBattlefield');
 const MAP_KEY = 'godot_web_battlefield';
+// Default/fallback map definition
 const DEFAULT_MAP = {
   name: 'Backyard',
   img: './assets/maps/backyard/backyard.png',
@@ -79,9 +80,12 @@ const DEFAULT_MAP = {
     { x: 24, y: 13 }, { x: 25, y: 13 }, { x: 26, y: 13 }
   ]
 };
+
 const MAP_CONFIG_FILES = {
   backyard: './assets/maps/backyard/config.json'
 };
+
+// Start with default; loader can replace this after reading config
 let currentMap = DEFAULT_MAP;
 let selectedTower = null;
 let contextTarget = null;
@@ -488,10 +492,10 @@ async function setBattlefield(map) {
     }
   } catch (err) {
     console.warn('Failed to load map config', err);
-    currentMap = DEFAULT_MAP;
-    if (gameCanvas) {
-      gameCanvas.style.background = `url('${DEFAULT_MAP.img}') center/cover no-repeat`;
-    }
+currentMap = DEFAULT_MAP;
+if (gameCanvas) {
+  gameCanvas.style.background = `url('${DEFAULT_MAP.img}') center/cover no-repeat`;
+}
   }
 }
 
