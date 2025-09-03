@@ -1268,66 +1268,59 @@ function queueWave() {
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
     if (b.type === 'rocket') {
-      // Common cleanup bounds (still allow idle to exist indefinitely)
+      // keep bullets if they're near the playfield
       if (
         b.x < originPx.x - 64 || b.x > originPx.x + GRID_COLS * CELL_PX + 64 ||
         b.y < originPx.y - 64 || b.y > originPx.y + GRID_ROWS * CELL_PX + 64
-      ) {
-        return false;
-      }
+      ) return false;
 
-      // ----- IDLE (loiter above the tower) -----
+      // ---------- IDLE ----------
       if (b.state === 'idle') {
-        const src = b.source; // tower that spawned it
-        if (!src) return false; // source removed (safety)
+        const src = b.source;
+        if (!src) return false;
+
+        // hover above tower
         const anchorX = src.x;
         const anchorY = src.y - b.hoverHeight;
-
-        // Loiter around the anchor in a small, constant circle
         b.hoverTheta += b.hoverOmega * dt;
         b.x = anchorX + Math.cos(b.hoverTheta) * b.hoverR;
         b.y = anchorY + Math.sin(b.hoverTheta) * b.hoverR;
-        b.angle = b.hoverTheta + Math.PI / 2; // cosmetic spin
-        b.speed = 0; // stay still in terms of "thrust"
+        b.angle = b.hoverTheta + Math.PI * 0.5;
+        b.speed = 0;
 
-        // Try to acquire a target within range and a reasonable cone
-        const reacquireRange = 800;
-        const halfCone = Math.PI; // 180° — relaxed; tighten if you want
-        let closest = null, best = Infinity;
-        for (const e of enemies) {
-          if (e.health <= 0) continue;
-          const dx = e.x - b.x, dy = e.y - b.y;
-          const d2 = dx * dx + dy * dy;
-          if (d2 > reacquireRange * reacquireRange) continue;
-          // Optional: cone check around current facing
-          const angTo = Math.atan2(dy, dx);
-          if (Math.abs(angleWrap(angTo - b.angle)) > halfCone) continue;
-          if (d2 < best) { best = d2; closest = e; }
-        }
-        if (closest) {
-          // Ignite!
-          igniteRocket(b, closest);
+        // try to acquire ~10x/sec (cheap + deterministic)
+        b.acqCooldown -= dt;
+        if (b.acqCooldown <= 0) {
+          b.acqCooldown = 0.1;
+          const reacquireRange = 1000; // big enough for your whole field
+          let best = Infinity, closest = null;
+          const rx = b.x, ry = b.y;
+          for (const e of enemies) {
+            if (e.health <= 0) continue;
+            const dx = e.x - rx, dy = e.y - ry;
+            const d2 = dx*dx + dy*dy;
+            if (d2 < best && d2 <= reacquireRange * reacquireRange) {
+              best = d2; closest = e;
+            }
+            
+          }
+          if (closest) igniteRocket(b, closest);
         }
 
-        // draw smoke less often while idle (optional)
+        // light smoke while idle
         b.smoke -= dt;
         if (b.smoke <= 0) { b.smoke = 0.25; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
         return true;
       }
 
-      // ----- HOMING (Proportional Navigation for stability) -----
-      // Lose target? fall back to idle loiter near current spot
+      // ---------- HOMING ----------
       if (!b.target || !enemies.includes(b.target) || b.target.health <= 0) {
+        // lost target => back to idle (re-center over the source)
         b.state = 'idle';
-        // keep current hover center where it is to avoid a pop
-        b.hoverR = 22;
-        b.hoverOmega = 1.2;
-        // freeze theta based on current position around an implicit anchor
-        b.hoverTheta = Math.atan2(0, 1); // arbitrary; will resync next frame
+        b.acqCooldown = 0;
         return true;
       }
 
-      // PN Guidance
       const rx = b.x, ry = b.y;
       const tx = b.target.x, ty = b.target.y;
 
@@ -1336,35 +1329,31 @@ function updateProjectiles(dt) {
       const losRate = angleWrap(los - b._prevLos) / dt;
       b._prevLos = los;
 
-      const N = 3.5; // navigation constant (2.5–5.5 feels good)
+      const N = 3.5; // PN constant (2.5–5.5 is typical)
       const cmdTurn = clamp(N * losRate, -b.turnRate, b.turnRate);
 
       const bearingErr = angleWrap(los - b.angle);
       const blend = 0.25;
       const desiredRate = clamp(cmdTurn + blend * (bearingErr / dt), -b.turnRate, b.turnRate);
 
-      // Apply turn + speed (reduce speed slightly on hard turns)
       b.angle = angleWrap(b.angle + desiredRate * dt);
-      const turnMag = Math.abs(desiredRate) / b.turnRate; // 0..1
+
+      const turnMag = Math.abs(desiredRate) / b.turnRate;
       const turnDrag = 1 - 0.25 * turnMag;
       b.speed = Math.min(b.maxSpeed, (b.speed + b.accel * dt) * turnDrag);
 
-      // Advance
       b.x += Math.cos(b.angle) * b.speed * dt;
       b.y += Math.sin(b.angle) * b.speed * dt;
 
-      // Smoke trail
       b.smoke -= dt;
       if (b.smoke <= 0) { b.smoke = 0.05; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
 
-      // Proximity fuse (prevents tunneling at high speed)
+      // proximity fuse
       const fuseR = 10 + (b.target.r || 6);
       const dist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
       if (dist <= fuseR) {
         b.target.health -= b.damage;
-        if (b.variant === 'rocket' || b.variant === 'hellfire') {
-          playAudio(ROCKET_HIT_SOUND);
-        }
+        if (b.variant === 'rocket' || b.variant === 'hellfire') playAudio(ROCKET_HIT_SOUND);
         if (b.variant === 'nuke') {
           playAudio(NUKE_HIT_SOUND);
           const tx2 = b.target.x, ty2 = b.target.y;
@@ -1372,26 +1361,17 @@ function updateProjectiles(dt) {
             const e = enemies[i];
             if (e !== b.target && Math.hypot(e.x - tx2, e.y - ty2) <= NUKE_SPLASH_RADIUS) {
               e.health -= b.damage * 0.8;
-              if (e.health <= 0) {
-                enemies.splice(i, 1);
-                money += killReward;
-                if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-              }
+              if (e.health <= 0) { enemies.splice(i, 1); money += killReward; if (b.source) b.source.kills = (b.source.kills || 0) + 1; }
             }
           }
           explosions.push({ x: tx2, y: ty2, life: 0.3, max: 0.3 });
         }
         if (b.target.health <= 0) {
           const idx = enemies.indexOf(b.target);
-          if (idx !== -1) {
-            enemies.splice(idx, 1);
-            money += killReward;
-            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-          }
+          if (idx !== -1) { enemies.splice(idx, 1); money += killReward; if (b.source) b.source.kills = (b.source.kills || 0) + 1; }
         }
         return false;
       }
-
       return true;
     }
     if (b.straight) {
