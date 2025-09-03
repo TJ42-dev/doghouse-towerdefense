@@ -48,3 +48,12 @@ Run `node tests/railgun.test.js` after adding assets or modifying code.
 4. **Store everything as shown above and keep placeholder assets text-only.**
 5. **Testing**
    - Run `node tests/railgun.test.js`.
+
+## Adjusting an existing map
+1. **Config updates** (`assets/maps/<map_id>/config.json`)
+   - Use `extraRows` to extend the grid height and `gridOffset` to shift the grid on the canvas.
+   - Modify `catLives` coordinates to reposition life markers.
+2. **UI**
+   - If the grid dimensions change, update the map label in `index.html`.
+3. **Testing**
+   - Run `node tests/railgun.test.js`.
