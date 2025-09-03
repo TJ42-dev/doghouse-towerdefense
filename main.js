@@ -92,7 +92,6 @@ let zaps = [];
 let explosions = [];
 let catLives = [];
 let money = 0;
-let sellAnimPhase = 0;
 const BALANCE = {
   wallCost: 10,
   specializationCosts: {
@@ -210,6 +209,14 @@ function inBounds(cell) {
 
 function isWallAt(gx, gy) {
   return occupancy.has(key(gx, gy));
+}
+
+// --- sell mode cursor ---
+const SELL_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' ry='6' fill='black' fill-opacity='.15'/><text x='16' y='21' text-anchor='middle' font-family='system-ui,Segoe UI,Roboto' font-size='20' fill='#00e676'>$</text></svg>") 16 16, auto`;
+
+function setSellCursor(on) {
+  if (!gameCanvas) return;
+  gameCanvas.style.cursor = on ? SELL_CURSOR : '';
 }
 
 function addOccupancy(x, y) {
@@ -1409,7 +1416,6 @@ function updateProjectiles(dt) {
 }
 
 function update(dt) {
-  sellAnimPhase += dt * 4;
   if (mouse.active) {
     player.x += (mouse.x - player.x) * Math.min(1, dt*8);
     player.y += (mouse.y - player.y) * Math.min(1, dt*8);
@@ -1789,34 +1795,6 @@ function render() {
     ctx.stroke();
   }
 
-  // Highlight cell in sell mode
-  if (selectedBuild === 'sell' && mouse.active) {
-    const cell = pxToCell(mouse);
-    const x = originPx.x + cell.x * CELL_PX + CELL_PX / 2;
-    const y = originPx.y + cell.y * CELL_PX + CELL_PX / 2;
-
-    // check if there's a tower or wall here
-    const hasTower = towers.some(t => t.gx === cell.x && t.gy === cell.y);
-    const hasWall = walls.some(w => w.x === cell.x && w.y === cell.y);
-    const sellable = hasTower || hasWall;
-
-    ctx.save();
-    const scale = 1 + 0.1 * Math.sin(sellAnimPhase); // oscillates between 0.9–1.1
-    ctx.translate(x, y);
-    ctx.scale(scale, scale);
-    ctx.font = `${CELL_PX * 0.8}px system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    // Green if sellable, red otherwise
-    ctx.fillStyle = sellable ? 'limegreen' : 'red';
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 2;
-    ctx.strokeText('$', 0, 0);
-    ctx.fillText('$', 0, 0);
-    ctx.restore();
-  }
-
     // Towers
     for (const t of towers) {
       const art = t.type === 'laser' ? ASSETS.laser :
@@ -2037,17 +2015,34 @@ function onKey(e) {
   if (e.key === 'Escape') {
     endGame();
   } else if (e.key === '1') {
-    if (money >= BALANCE.wallCost) selectedBuild = 'wall';
+    if (money >= BALANCE.wallCost) {
+      selectedBuild = 'wall';
+      setSellCursor(false);
+    }
   } else if (e.key === '2') {
-    if (money >= CANNON_BASE.cost) selectedBuild = 'cannon';
+    if (money >= CANNON_BASE.cost) {
+      selectedBuild = 'cannon';
+      setSellCursor(false);
+    }
   } else if (e.key === '3') {
-    if (money >= LASER_BASE.cost) selectedBuild = 'laser';
+    if (money >= LASER_BASE.cost) {
+      selectedBuild = 'laser';
+      setSellCursor(false);
+    }
   } else if (e.key === '4') {
-    if (money >= ROCKET_BASE.cost) selectedBuild = 'rocket';
+    if (money >= ROCKET_BASE.cost) {
+      selectedBuild = 'rocket';
+      setSellCursor(false);
+    }
   } else if (e.key === '5') {
-    if (money >= TESLA_BASE.cost) selectedBuild = 'tesla';
+    if (money >= TESLA_BASE.cost) {
+      selectedBuild = 'tesla';
+      setSellCursor(false);
+    }
   } else if (e.key.toLowerCase() === 'x') {
-    selectedBuild = (selectedBuild === 'sell') ? null : 'sell';
+    const goSell = selectedBuild !== 'sell';
+    selectedBuild = goSell ? 'sell' : null;
+    setSellCursor(goSell);
   }
 }
 
@@ -2109,6 +2104,7 @@ function endGame() {
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
+  setSellCursor(false);
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.hoverMenu && (el.hoverMenu.style.display = 'none');
   overlayHeader && (overlayHeader.style.display = 'none');
@@ -2142,6 +2138,7 @@ function returnToMenu() {
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
+  setSellCursor(false);
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
 }
