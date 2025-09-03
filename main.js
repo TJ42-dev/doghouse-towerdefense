@@ -1320,7 +1320,7 @@ function updateProjectiles(dt) {
       }
 
       // ---------- HOMING ----------
-      if (!b.target || !enemies.includes(b.target) || b.target.health <= 0) {
+      if (!b.target) {
         // lost target => back to idle (re-center over the source)
         b.state = 'idle';
         b.acqCooldown = 0;
@@ -1355,7 +1355,7 @@ function updateProjectiles(dt) {
       if (b.smoke <= 0) { b.smoke = 0.05; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
 
       // proximity fuse
-      const fuseR = 14 + (b.target.r || 6); // try 14–22 if misses are common
+      const fuseR = 20 + (b.target.r || 6); // widened so rockets detonate even if target dies early
       const dist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
       if (dist <= fuseR) {
         if (b.variant === 'rocket' || b.variant === 'hellfire') {
