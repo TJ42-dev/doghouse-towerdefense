@@ -1271,6 +1271,37 @@ function queueWave() {
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
     if (b.type === 'rocket') {
+      if (b.state === 'idle') {
+        // stay in place until a target is found
+        const reacquireRange = 800;
+        const halfCone = Math.PI / 2.5; // ~72°
+        let closest = null, closestDist = Infinity;
+        for (const e of enemies) {
+          if (e.health <= 0) continue;
+          const dx = e.x - b.x, dy = e.y - b.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > reacquireRange * reacquireRange) continue;
+          if (!withinCone(b.x, b.y, b.angle, e.x, e.y, halfCone)) continue;
+          if (d2 < closestDist) { closestDist = d2; closest = e; }
+        }
+        if (closest) {
+          b.target = closest;
+          b.state = 'homing';
+          b.speed = b.maxSpeed * 0.25;
+          b.angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
+          b._prevLos = null;
+        } else {
+          const ax = b.source.x;
+          const ay = b.source.y - b.hoverHeight;
+          b.hoverTheta += b.hoverOmega * dt;
+          b.x = ax + Math.cos(b.hoverTheta) * b.hoverR;
+          b.y = ay + Math.sin(b.hoverTheta) * b.hoverR;
+          b.life = (b.life ?? 0) + dt;
+          if (b.life > 15) return false;
+          return true;
+        }
+      }
+
       const needsNewTarget =
         !b.target ||
         !enemies.includes(b.target) ||
@@ -1584,22 +1615,33 @@ function update(dt) {
       const baseAngle = t.type === 'nuke' ? -Math.PI / 2 : (t.angle || 0);
       const sx = t.x + Math.cos(baseAngle) * (CELL_PX / 2);
       const sy = t.y + Math.sin(baseAngle) * (CELL_PX / 2);
+      const slot = existing; // 0..cap-1, use to offset the hover positions
+      const idle = !target;  // no target in range? spawn as idle
       if (cap > 0) {
         if (existing < cap && t.cooldown <= 0) {
           bullets.push({
             x: sx,
             y: sy,
-            target,
-            speed: maxSpeed * 0.2,
+            target,                 // may be null
+            speed: idle ? 0 : maxSpeed * 0.25,  // do NOT move while idle
             maxSpeed,
             accel: maxSpeed,
             damage: t.damage,
             source: t,
             type: 'rocket',
             angle: baseAngle,
-            turnRate: Math.PI,
+            turnRate: Math.PI,      // rad/s cap
             smoke: 0,
-            variant: t.type
+            variant: t.type,
+
+            // NEW: passive loiter behavior
+            state: idle ? 'idle' : 'homing',
+            hoverR: 22,                          // orbit radius around anchor
+            hoverOmega: 1.2 + slot * 0.05,       // rad/s (small variety)
+            hoverTheta: slot * (2 * Math.PI / Math.max(3, cap || 3)),
+            hoverHeight: CELL_PX * 1.25,         // “in the sky” above the tower
+            // Nav memory
+            _prevLos: null,
           });
           t.cooldown = 1 / t.fireRate;
           t.anim = 0.1;
@@ -1609,17 +1651,26 @@ function update(dt) {
         bullets.push({
           x: sx,
           y: sy,
-          target,
-          speed: maxSpeed * 0.2,
+          target,                 // may be null
+          speed: idle ? 0 : maxSpeed * 0.25,  // do NOT move while idle
           maxSpeed,
           accel: maxSpeed,
           damage: t.damage,
           source: t,
           type: 'rocket',
           angle: baseAngle,
-          turnRate: Math.PI,
+          turnRate: Math.PI,      // rad/s cap
           smoke: 0,
-          variant: t.type
+          variant: t.type,
+
+          // NEW: passive loiter behavior
+          state: idle ? 'idle' : 'homing',
+          hoverR: 22,                          // orbit radius around anchor
+          hoverOmega: 1.2 + slot * 0.05,       // rad/s (small variety)
+          hoverTheta: slot * (2 * Math.PI / Math.max(3, cap || 3)),
+          hoverHeight: CELL_PX * 1.25,         // “in the sky” above the tower
+          // Nav memory
+          _prevLos: null,
         });
         t.cooldown = 1 / t.fireRate;
         t.anim = 0.1;
