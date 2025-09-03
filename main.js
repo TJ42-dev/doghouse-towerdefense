@@ -82,7 +82,8 @@ const DEFAULT_MAP = {
 };
 
 const MAP_CONFIG_FILES = {
-  backyard: './assets/maps/backyard/config.json'
+  backyard: './assets/maps/backyard/config.json',
+  ally_cats: './assets/maps/ally_cats/config.json'
 };
 
 // Start with default; loader can replace this after reading config
