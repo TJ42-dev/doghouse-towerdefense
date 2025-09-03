@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-emitter-center="21,7.8" data-emitter-rx="2" data-emitter-ry="1.05">
+  <title id="title">Lab-kitten next to Tesla tower base (coat aligned further right)</title>
+
+  <!-- ========== KITTEN (shifted left ~1.2px away from tower) ========== -->
+  <g id="kitten" transform="translate(-1.2,0)">
+    <!-- Body/Head/Tail -->
+    <g fill="currentColor" stroke="currentColor" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round">
+      <!-- tail -->
+      <path d="M13.1 17.9c-1.2.1-2 .9-2 1.8 0 .8.6 1.5 1.3 1.5.3 0 .6-.1.6-.4 0-.2-.1-.3-.3-.4-.6-.2-.6-1.1.4-1.5"></path>
+      <!-- body -->
+      <ellipse cx="15.6" cy="15.2" rx="3.6" ry="4.4"></ellipse>
+      <!-- feet -->
+      <ellipse cx="14.0" cy="19.0" rx=".8" ry=".5"></ellipse>
+      <ellipse cx="17.2" cy="19.0" rx=".8" ry=".5"></ellipse>
+      <!-- head -->
+      <circle cx="15.4" cy="9.2" r="3.2"></circle>
+      <!-- ears -->
+      <path d="M13.7 7.1 14.6 5.4 15.3 7.0Z"></path>
+      <path d="M16.0 7.0 16.8 5.4 17.6 7.2Z"></path>
+      <!-- eyes -->
+      <g stroke="none">
+        <ellipse cx="14.7" cy="9.0" rx=".45" ry=".55" fill="#fff"></ellipse>
+        <ellipse cx="16.3" cy="9.0" rx=".45" ry=".55" fill="#fff"></ellipse>
+        <circle cx="14.8" cy="9.1" r=".2" fill="currentColor"></circle>
+        <circle cx="16.4" cy="9.1" r=".2" fill="currentColor"></circle>
+      </g>
+      <!-- muzzle + nose -->
+      <ellipse cx="15.5" cy="10.2" rx="1.2" ry=".9" fill="#fff" stroke="none" opacity=".9"></ellipse>
+      <path d="M15.2 9.9h.5l-.25.28Z" fill="currentColor" stroke="none"></path>
+      <!-- whiskers -->
+      <path d="M13.7 10.3h1.2M16.1 10.3h1.2M13.8 10.6h1.1M16.2 10.6h1.1" stroke-width=".35" fill="none"></path>
+    </g>
+
+    <!-- Goggles -->
+    <g stroke-linecap="round" stroke-linejoin="round">
+      <!-- strap -->
+      <path d="M13.0 8.6c.7-1.0 4.1-1.0 5.0 0" fill="none" stroke="#5c6670" stroke-width=".8"></path>
+      <!-- frames & lenses -->
+      <g fill="#9ad0ff" stroke="#2c3e50" stroke-width=".55" opacity=".9">
+        <ellipse cx="14.7" cy="9.0" rx=".85" ry=".75"></ellipse>
+        <ellipse cx="16.3" cy="9.0" rx=".85" ry=".75"></ellipse>
+        <rect x="15.05" y="8.75" width=".9" height=".4" rx=".15"></rect>
+      </g>
+      <!-- glare + buckles -->
+      <circle cx="14.5" cy="8.8" r=".12" fill="#fff" opacity=".8"></circle>
+      <circle cx="16.1" cy="8.8" r=".12" fill="#fff" opacity=".8"></circle>
+      <circle cx="13.7" cy="9.0" r=".1" fill="#2c3e50"></circle>
+      <circle cx="17.3" cy="9.0" r=".1" fill="#2c3e50"></circle>
+    </g>
+
+    <!-- Lab coat (smaller, nudged further right) -->
+    <g fill="#ffffff" stroke="#8a8f98" stroke-width=".6" stroke-linejoin="round" stroke-linecap="round" transform="translate(15,14) scale(0.9) translate(-15,-14) translate(1.4,0.4)">
+      <!-- coat body -->
+      <path d="M13.0 12.0c.6-1.0 1.8-1.8 2.6-1.8s2.0.8 2.6 1.8c.3.5.5 1.1.5 1.7 0 2.2-1.2 4.1-2.9 4.8-.6.3-1.8.3-2.4 0-1.7-.7-2.9-2.6-2.9-4.8 0-.6.2-1.2.5-1.7Z"></path>
+      <!-- lapels -->
+      <path d="M14.1 11.6l1.0 1.3 1.0-1.3" fill="none"></path>
+      <!-- center seam -->
+      <path d="M15.1 12.9v4.1" stroke="#a5acb6"></path>
+      <!-- buttons -->
+      <circle cx="15.1" cy="13.8" r=".13" fill="#a5acb6" stroke="none"></circle>
+      <circle cx="15.1" cy="15.0" r=".13" fill="#a5acb6" stroke="none"></circle>
+      <circle cx="15.1" cy="16.2" r=".13" fill="#a5acb6" stroke="none"></circle>
+      <!-- pocket + pen -->
+      <rect x="16.6" y="13.5" width="1.2" height=".9" rx=".15"></rect>
+      <path d="M17.0 13.45v.85" stroke="#2c3e50"></path>
+      <path d="M17.2 13.45v.75" stroke="#3bb273"></path>
+    </g>
+  </g>
+
+  <!-- ========== TESLA TOWER BASE (no top ball) ========== -->
+  <g stroke="#43464a" stroke-linejoin="round" stroke-linecap="round" stroke-width=".6">
+    <!-- emitter torus -->
+    <ellipse cx="21" cy="7.8" rx="2" ry="1.05" fill="#9aa3b1"></ellipse>
+    <!-- mast -->
+    <rect x="19.9" y="8.9" width="2.2" height="9.3" rx=".5" fill="#7b8591"></rect>
+    <!-- copper coil rings -->
+    <g stroke="#8b4e1f">
+      <path d="M20.2 10.2h1.6"></path>
+      <path d="M20.2 11.2h1.6"></path>
+      <path d="M20.2 12.2h1.6"></path>
+      <path d="M20.2 13.2h1.6"></path>
+      <path d="M20.2 14.2h1.6"></path>
+      <path d="M20.2 15.2h1.6"></path>
+      <path d="M20.2 16.2h1.6"></path>
+    </g>
+    <!-- base -->
+    <ellipse cx="21" cy="18.5" rx="1.5" ry=".5" fill="#9aa3b1"></ellipse>
+    <rect x="19" y="18.8" width="4" height="1.8" rx=".4" fill="#6f7a88"></rect>
+    <rect x="19.2" y="19.0" width="3.6" height=".7" rx=".2" fill="#444" stroke="#444"></rect>
+    <path d="M19.3 19.1l.5.6m.5-.6l.5.6m.5-.6l.5.6m.5-.6l.5.6" stroke="#f4c542"></path>
+  </g>
+
+  <!-- Guides -->
+  <g opacity="0">
+    <circle id="emitterCenter" cx="21" cy="7.8" r="0.01"></circle>
+  </g>
+</svg>
