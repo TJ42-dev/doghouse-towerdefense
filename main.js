@@ -480,16 +480,14 @@ function victory() {
 }
 
 const audioCache = new Map();
-function playAudio(url, fallback) {
+function playAudio(url) {
   let a = audioCache.get(url);
   if (!a) {
     a = new Audio(url);
     audioCache.set(url, a);
   }
   a.currentTime = 0;
-  a.play().catch(() => {
-    if (typeof fallback === 'function') fallback();
-  });
+  a.play().catch(() => {});
 }
 
 function playFireSound(t) {
@@ -1357,10 +1355,10 @@ function updateProjectiles(dt) {
       if (dist <= fuseR) {
         b.target.health -= b.damage;
         if (b.variant === 'rocket' || b.variant === 'hellfire') {
-          playAudio(ROCKET_HIT_SOUND, () => sfx(250, 0.2, 0.2, 'square'));
+          playAudio(ROCKET_HIT_SOUND);
         }
         if (b.variant === 'nuke') {
-          playAudio(NUKE_HIT_SOUND, () => sfx(120, 0.3, 0.3, 'sawtooth'));
+          playAudio(NUKE_HIT_SOUND);
           const tx2 = b.target.x, ty2 = b.target.y;
           for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
