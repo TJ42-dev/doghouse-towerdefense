@@ -1745,6 +1745,7 @@ function update(dt) {
   }
 
   updateProjectiles(dt);
+  if (catLives.every(l => !l.alive)) { endGame(); return; }
   if (!waveActive) {
     if (!firstPlacementDone) return;
     preWaveTimer -= dt;
@@ -1769,8 +1770,6 @@ function update(dt) {
       }
     }
   }
-
-  if (catLives.every(l => !l.alive)) { endGame(); return; }
 
   if (waveElapsed >= BALANCE.wave.time) {
     queueWave();
