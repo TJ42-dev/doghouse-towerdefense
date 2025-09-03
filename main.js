@@ -70,8 +70,8 @@ const saveBattlefieldBtn = document.getElementById('saveBattlefield');
 const MAP_KEY = 'godot_web_battlefield';
 // Default/fallback map definition
 const DEFAULT_MAP = {
-  name: 'Backyard',
-  img: './assets/maps/backyard/backyard.png',
+  name: 'Ally Cats',
+  img: './assets/maps/ally_cats.png',
   grid: 'medium',
   entries: [{ x: 0, y: 0 }],
   catLives: [
@@ -82,7 +82,7 @@ const DEFAULT_MAP = {
 };
 
 const MAP_CONFIG_FILES = {
-  backyard: './assets/maps/backyard/config.json'
+  ally_cats: './assets/maps/config.json'
 };
 
 // Start with default; loader can replace this after reading config
@@ -476,14 +476,14 @@ function syncBestWave() {
 
 function loadBattlefield() {
   try {
-    return localStorage.getItem(MAP_KEY) || 'backyard';
+    return localStorage.getItem(MAP_KEY) || 'ally_cats';
   } catch {
-    return 'backyard';
+    return 'ally_cats';
   }
 }
 function saveBattlefield(v) { localStorage.setItem(MAP_KEY, v); }
 async function setBattlefield(map) {
-  const path = MAP_CONFIG_FILES[map] || MAP_CONFIG_FILES.backyard;
+  const path = MAP_CONFIG_FILES[map] || MAP_CONFIG_FILES.ally_cats;
   try {
     const m = await fetch(path).then(r => r.json());
     currentMap = m;
@@ -2177,7 +2177,7 @@ battlefieldBtn?.addEventListener('click', () => {
   }
 });
 saveBattlefieldBtn?.addEventListener('click', async () => {
-  const selected = battlefieldDlg?.querySelector('input[name="battlefield"]:checked')?.value || 'backyard';
+  const selected = battlefieldDlg?.querySelector('input[name="battlefield"]:checked')?.value || 'ally_cats';
   saveBattlefield(selected);
   await setBattlefield(selected);
   const opts = loadOpts();

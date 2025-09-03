@@ -1,6 +1,6 @@
 {
-  "name": "Backyard",
-  "img": "./assets/maps/backyard/backyard.png",
+  "name": "Ally Cats",
+  "img": "./assets/maps/ally_cats.png",
   "grid": "medium",
   "entries": [{ "x": 0, "y": 0 }],
   "catLives": [
