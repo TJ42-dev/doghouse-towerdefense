@@ -129,6 +129,8 @@ const SPECIALIZE_BY_BASE = {
   rocket: ['nuke', 'hellfire'],
   tesla: ['terminator', 'wunderwaffe']
 };
+const SPECIAL_TYPES = new Set(Object.values(SPECIALIZE_BY_BASE).flat());
+const BASE_TYPES = new Set(Object.keys(SPECIALIZE_BY_BASE));
 const SPECIAL_COST_SPANS = {
   sniper: el.sniperCost, shotgun: el.shotgunCost, dualLaser: el.dualLaserCost, railgun: el.railgunCost,
   nuke: el.nukeCost, hellfire: el.hellfireCost, terminator: el.terminatorCost, wunderwaffe: el.wunderwaffeCost
@@ -229,6 +231,13 @@ function setSellPointer(on) {
   }
 }
 
+function setBuildMode(id) {
+  selectedBuild = id || null;
+  setSellPointer(selectedBuild === 'sell');
+}
+
+function clearBuildMode() { setBuildMode(null); }
+
 function addOccupancy(x, y) {
   occupancy.add(key(x, y));
   bumpNav();
@@ -283,6 +292,8 @@ function sellAt(gx, gy){
       money += BALANCE.wallCost;
     }
   }
+  sfx(900, 0.05, 0.05, 'sine');
+  setTimeout(() => sfx(1200, 0.07, 0.04, 'sine'), 50);
   recalcEnemyPaths();
 }
 
@@ -292,7 +303,8 @@ function canPlace(cell) {
   // Temporarily occupy to test pathing without bumping nav version
   occupancy.add(key(cell.x, cell.y));
   const target = catLives.find(l => l.alive);
-  const goal = target ? { x: target.gx, y: target.gy } : currentMap.entries[0];
+  if (!target) { occupancy.delete(key(cell.x, cell.y)); return true; }
+  const goal = { x: target.gx, y: target.gy };
   const hasPath = (s, g) => (s.x === g.x && s.y === g.y) || findPath(s, g).length > 0;
   const ok =
     currentMap.entries.every(e => hasPath(e, goal)) &&
@@ -374,8 +386,7 @@ function renderBuildMenu() {
       `<div class="stats">DMG ${b.damage} • RNG ${b.range} • SPD ${b.fireRate}</div>`;
     btn.addEventListener('click', () => {
       if (money >= b.cost) {
-        selectedBuild = b.id;
-        setSellPointer(false);
+        setBuildMode(b.id);
       }
     });
     el.buildList.appendChild(btn);
@@ -649,8 +660,8 @@ function updateSelectedTowerInfo() {
   if (!el.selectedTowerName) return;
   if (selectedTower) {
     el.selectedTowerName.classList.remove('no-selection');
-    const isSpecial = ['sniper','shotgun','dualLaser','railgun','nuke','hellfire','terminator','wunderwaffe'].includes(selectedTower.type);
-    const isBaseTower = ['cannon','laser','rocket','tesla'].includes(selectedTower.type);
+    const isSpecial = SPECIAL_TYPES.has(selectedTower.type);
+    const isBaseTower = BASE_TYPES.has(selectedTower.type);
     const fullyUpgraded = isBaseTower && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
     if (fullyUpgraded) {
@@ -739,8 +750,8 @@ function updateSelectedTowerInfo() {
 gameCanvas?.addEventListener('contextmenu', (e) => {
   e.preventDefault();
   if (!el.contextMenu || !el.contextSell || !el.contextStats) return;
-  const r = gameCanvas.getBoundingClientRect();
-  const cell = pxToCell({ x: e.clientX - r.left, y: e.clientY - r.top });
+  const m = getMouse(e);
+  const cell = pxToCell(m);
   const t = towers.find(tt => tt.gx === cell.x && tt.gy === cell.y);
   const w = walls.find(ww => ww.x === cell.x && ww.y === cell.y);
   if (!t && !w) {
@@ -748,8 +759,7 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
     contextTarget = null;
     rangePreview = null;
     if (selectedBuild) {
-      selectedBuild = null;
-      setSellPointer(false);
+      clearBuildMode();
     }
     return;
   }
@@ -1126,8 +1136,7 @@ let healthBuffMultiplier = 1;
 
 function resetGame() {
   enemies = [];
-  selectedBuild = null;
-  setSellPointer(false);
+  clearBuildMode();
   towers = [];
   bullets = [];
   smokes = [];
@@ -1768,17 +1777,24 @@ function drawBG() {
     }
   }
 }
+
+function canSellAt(gx, gy) {
+  return towers.some(t => t.gx === gx && t.gy === gy) ||
+         walls.some(w => w.x === gx && w.y === gy);
+}
 function drawSellGhost() {
   const t = performance.now() / 1000;
   const bob = Math.sin(t * 6) * 3; // 6Hz small oscillation
+  const cell = pxToCell(mouse);
+  const ok = canSellAt(cell.x, cell.y);
 
   ctx.save();
   ctx.translate(mouse.x, mouse.y + bob);
   ctx.globalAlpha = 0.95;
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.font = '24px system-ui, Segoe UI, Roboto, sans-serif';
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.fillText('$', 1.5, 1.5);
-  ctx.fillStyle = '#ffd54f';
+  ctx.fillStyle = ok ? '#69f0ae' : '#ffd54f'; // green if sellable
   ctx.fillText('$', 0, 0);
   ctx.restore();
 }
@@ -2052,33 +2068,26 @@ function onKey(e) {
     endGame();
   } else if (e.key === '1') {
     if (money >= BALANCE.wallCost) {
-      selectedBuild = 'wall';
-      setSellPointer(false);
+      setBuildMode('wall');
     }
   } else if (e.key === '2') {
     if (money >= CANNON_BASE.cost) {
-      selectedBuild = 'cannon';
-      setSellPointer(false);
+      setBuildMode('cannon');
     }
   } else if (e.key === '3') {
     if (money >= LASER_BASE.cost) {
-      selectedBuild = 'laser';
-      setSellPointer(false);
+      setBuildMode('laser');
     }
   } else if (e.key === '4') {
     if (money >= ROCKET_BASE.cost) {
-      selectedBuild = 'rocket';
-      setSellPointer(false);
+      setBuildMode('rocket');
     }
   } else if (e.key === '5') {
     if (money >= TESLA_BASE.cost) {
-      selectedBuild = 'tesla';
-      setSellPointer(false);
+      setBuildMode('tesla');
     }
   } else if (e.key.toLowerCase() === 'x') {
-    const goSell = selectedBuild !== 'sell';
-    selectedBuild = goSell ? 'sell' : null;
-    setSellPointer(goSell);
+    setBuildMode(selectedBuild === 'sell' ? null : 'sell');
   }
 }
 
@@ -2139,8 +2148,7 @@ function endGame() {
   unbindInputs();
   selectedTower = null;
   updateSelectedTowerInfo();
-  selectedBuild = null;
-  setSellPointer(false);
+  clearBuildMode();
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.hoverMenu && (el.hoverMenu.style.display = 'none');
   overlayHeader && (overlayHeader.style.display = 'none');
@@ -2152,11 +2160,12 @@ function endGame() {
   el.gameOverPanel && (el.gameOverPanel.style.display = 'block');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
 
-  const waveNum = waveIndex; // waves completed
-  recordBestWave(waveNum);
+  const wavesCompleted = waveIndex;
+  recordBestWave(wavesCompleted);
   syncBestWave();
   if (el.gameOverText) {
-    el.gameOverText.textContent = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
+    const waveNum = wavesCompleted + 1;
+    el.gameOverText.textContent = `Reached wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
   }
 }
 
@@ -2173,8 +2182,7 @@ function returnToMenu() {
   menu && (menu.style.display = '');
   selectedTower = null;
   updateSelectedTowerInfo();
-  selectedBuild = null;
-  setSellPointer(false);
+  clearBuildMode();
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
 }
