@@ -1271,145 +1271,113 @@ function queueWave() {
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
     if (b.type === 'rocket') {
-      if (b.state === 'idle') {
-        // stay in place until a target is found
-        const reacquireRange = 800;
-        const halfCone = Math.PI / 2.5; // ~72°
-        let closest = null, closestDist = Infinity;
-        for (const e of enemies) {
-          if (e.health <= 0) continue;
-          const dx = e.x - b.x, dy = e.y - b.y;
-          const d2 = dx * dx + dy * dy;
-          if (d2 > reacquireRange * reacquireRange) continue;
-          if (!withinCone(b.x, b.y, b.angle, e.x, e.y, halfCone)) continue;
-          if (d2 < closestDist) { closestDist = d2; closest = e; }
-        }
-        if (closest) {
-          b.target = closest;
-          b.state = 'homing';
-          b.speed = b.maxSpeed * 0.25;
-          b.angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
-          b._prevLos = null;
-        } else {
-          const ax = b.source.x;
-          const ay = b.source.y - b.hoverHeight;
-          b.hoverTheta += b.hoverOmega * dt;
-          b.x = ax + Math.cos(b.hoverTheta) * b.hoverR;
-          b.y = ay + Math.sin(b.hoverTheta) * b.hoverR;
-          b.life = (b.life ?? 0) + dt;
-          if (b.life > 15) return false;
-          return true;
-        }
-      }
-
-      const needsNewTarget =
-        !b.target ||
-        !enemies.includes(b.target) ||
-        b.target.health <= 0;
-
-      if (needsNewTarget) {
-        b.target = null;
-        // Only reacquire if within cone & range
-        const reacquireRange = 800;
-        const halfCone = Math.PI / 2.5; // ~72°
-        let closest = null, closestDist = Infinity;
-        for (const e of enemies) {
-          if (e.health <= 0) continue;
-          const dx = e.x - b.x, dy = e.y - b.y;
-          const d2 = dx * dx + dy * dy;
-          if (d2 > reacquireRange * reacquireRange) continue;
-          if (!withinCone(b.x, b.y, b.angle, e.x, e.y, halfCone)) continue;
-          if (d2 < closestDist) { closestDist = d2; closest = e; }
-        }
-        b.target = closest;
-        if (!b.target) {
-          // Fail: start a short search spiral with timeout
-          b._searchTime = (b._searchTime ?? 0) + dt;
-          const spiralRate = 0.8; // rad/s
-          b.angle += spiralRate * dt;
-          b.speed = Math.min(b.maxSpeed * 0.75, b.speed + b.accel * 0.5 * dt);
-          b.x += Math.cos(b.angle) * b.speed * dt;
-          b.y += Math.sin(b.angle) * b.speed * dt;
-          b.smoke -= dt;
-          if (b.smoke <= 0) {
-            smokes.push({ x: b.x, y: b.y, life: 0.5 });
-            b.smoke = 0.05;
-          }
-          if (b._searchTime > 1.5) return false; // despawn
-          return true;
-        } else {
-          b._searchTime = 0;
-        }
-      }
-
-      // --- Proportional Navigation (PN) guidance ---
-      const rx = b.x, ry = b.y;
-      const tx = b.target.x, ty = b.target.y;
-
-      // Current LOS angle
-      const los = Math.atan2(ty - ry, tx - rx);
-
-      // Estimate LOS rate d(los)/dt via finite difference
-      b._prevLos = b._prevLos ?? los;
-      const losRate = angleWrap(los - b._prevLos) / dt;
-      b._prevLos = los;
-
-      // Closing velocity (positive if closing)
-      const relVx = (b.target.velX || 0) - Math.cos(b.angle) * b.speed;
-      const relVy = (b.target.velY || 0) - Math.sin(b.angle) * b.speed;
-      const closingVel = -(relVx * Math.cos(los) + relVy * Math.sin(los));
-
-      // Navigation constant (tune 2.5–5.5)
-      const N = b.navConst || 3.5;
-
-      // PN commanded turn rate
-      const cmdTurn = clamp(N * losRate, -b.turnRate, b.turnRate);
-
-      // Blend PN with small bearing error term to help initial capture
-      const bearingErr = angleWrap(los - b.angle);
-      const blend = 0.25; // 0..1 (more = snappier)
-      const desiredRate = clamp(cmdTurn + blend * bearingErr / dt, -b.turnRate, b.turnRate);
-
-      // Apply turn (frame-rate independent)
-      b.angle = angleWrap(b.angle + desiredRate * dt);
-
-      // Speed control: accelerate, but penalize sharp turns to reduce corkscrew
-      const turnMag = Math.abs(desiredRate) / b.turnRate; // 0..1
-      const turnDrag = 1 - 0.25 * turnMag;                // keep ≥ 75% speed when turning hard
-      b.speed = Math.min(b.maxSpeed, (b.speed + b.accel * dt) * turnDrag);
-
-      // Advance
-      b.x += Math.cos(b.angle) * b.speed * dt;
-      b.y += Math.sin(b.angle) * b.speed * dt;
-
-      b.smoke -= dt;
-      if (b.smoke <= 0) {
-        smokes.push({ x: b.x, y: b.y, life: 0.5 });
-        b.smoke = 0.05;
-      }
-
-      // Lifetime + offscreen cleanup
-      b.life = (b.life ?? 0) + dt;
+      // Common cleanup bounds (still allow idle to exist indefinitely)
       if (
-        b.life > 15 || // seconds
         b.x < originPx.x - 64 || b.x > originPx.x + GRID_COLS * CELL_PX + 64 ||
         b.y < originPx.y - 64 || b.y > originPx.y + GRID_ROWS * CELL_PX + 64
       ) {
         return false;
       }
 
-      // Proximity fuse (helps with tunneling at high speed)
-      const fuseR = (b.fuseRadius ?? 10) + (b.target.r || 6);
-      const distToTarget = Math.hypot(b.target.x - b.x, b.target.y - b.y);
-      if (distToTarget <= fuseR) {
-        const targetX = b.target.x;
-        const targetY = b.target.y;
+      // ----- IDLE (loiter above the tower) -----
+      if (b.state === 'idle') {
+        const src = b.source; // tower that spawned it
+        if (!src) return false; // source removed (safety)
+        const anchorX = src.x;
+        const anchorY = src.y - b.hoverHeight;
+
+        // Loiter around the anchor in a small, constant circle
+        b.hoverTheta += b.hoverOmega * dt;
+        b.x = anchorX + Math.cos(b.hoverTheta) * b.hoverR;
+        b.y = anchorY + Math.sin(b.hoverTheta) * b.hoverR;
+        b.angle = b.hoverTheta + Math.PI / 2; // cosmetic spin
+        b.speed = 0; // stay still in terms of "thrust"
+
+        // Try to acquire a target within range and a reasonable cone
+        const reacquireRange = 800;
+        const halfCone = Math.PI; // 180° — relaxed; tighten if you want
+        let closest = null, best = Infinity;
+        for (const e of enemies) {
+          if (e.health <= 0) continue;
+          const dx = e.x - b.x, dy = e.y - b.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > reacquireRange * reacquireRange) continue;
+          // Optional: cone check around current facing
+          const angTo = Math.atan2(dy, dx);
+          if (Math.abs(angleWrap(angTo - b.angle)) > halfCone) continue;
+          if (d2 < best) { best = d2; closest = e; }
+        }
+        if (closest) {
+          // Ignite!
+          b.state = 'homing';
+          b.target = closest;
+          b.angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
+          b.speed = b.maxSpeed * 0.25; // gentle start, will ramp
+          b._prevLos = null;           // reset PN memory
+        }
+
+        // draw smoke less often while idle (optional)
+        b.smoke -= dt;
+        if (b.smoke <= 0) { b.smoke = 0.25; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
+        return true;
+      }
+
+      // ----- HOMING (Proportional Navigation for stability) -----
+      // Lose target? fall back to idle loiter near current spot
+      if (!b.target || !enemies.includes(b.target) || b.target.health <= 0) {
+        b.state = 'idle';
+        // keep current hover center where it is to avoid a pop
+        b.hoverR = 22;
+        b.hoverOmega = 1.2;
+        // freeze theta based on current position around an implicit anchor
+        b.hoverTheta = Math.atan2(0, 1); // arbitrary; will resync next frame
+        return true;
+      }
+
+      // PN Guidance
+      const rx = b.x, ry = b.y;
+      const tx = b.target.x, ty = b.target.y;
+
+      const los = Math.atan2(ty - ry, tx - rx);
+      if (b._prevLos == null) b._prevLos = los;
+      const losRate = angleWrap(los - b._prevLos) / dt;
+      b._prevLos = los;
+
+      const N = 3.5; // navigation constant (2.5–5.5 feels good)
+      const cmdTurn = clamp(N * losRate, -b.turnRate, b.turnRate);
+
+      const bearingErr = angleWrap(los - b.angle);
+      const blend = 0.25;
+      const desiredRate = clamp(cmdTurn + blend * (bearingErr / dt), -b.turnRate, b.turnRate);
+
+      // Apply turn + speed (reduce speed slightly on hard turns)
+      b.angle = angleWrap(b.angle + desiredRate * dt);
+      const turnMag = Math.abs(desiredRate) / b.turnRate; // 0..1
+      const turnDrag = 1 - 0.25 * turnMag;
+      b.speed = Math.min(b.maxSpeed, (b.speed + b.accel * dt) * turnDrag);
+
+      // Advance
+      b.x += Math.cos(b.angle) * b.speed * dt;
+      b.y += Math.sin(b.angle) * b.speed * dt;
+
+      // Smoke trail
+      b.smoke -= dt;
+      if (b.smoke <= 0) { b.smoke = 0.05; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
+
+      // Proximity fuse (prevents tunneling at high speed)
+      const fuseR = 10 + (b.target.r || 6);
+      const dist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
+      if (dist <= fuseR) {
         b.target.health -= b.damage;
+        if (b.variant === 'rocket' || b.variant === 'hellfire') {
+          playAudio(ROCKET_HIT_SOUND);
+        }
         if (b.variant === 'nuke') {
           playAudio(NUKE_HIT_SOUND);
+          const tx2 = b.target.x, ty2 = b.target.y;
           for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
-            if (e !== b.target && Math.hypot(e.x - targetX, e.y - targetY) <= NUKE_SPLASH_RADIUS) {
+            if (e !== b.target && Math.hypot(e.x - tx2, e.y - ty2) <= NUKE_SPLASH_RADIUS) {
               e.health -= b.damage * 0.8;
               if (e.health <= 0) {
                 enemies.splice(i, 1);
@@ -1418,20 +1386,19 @@ function updateProjectiles(dt) {
               }
             }
           }
-          explosions.push({ x: targetX, y: targetY, life: 0.3, max: 0.3 });
-        } else {
-          playAudio(ROCKET_HIT_SOUND);
+          explosions.push({ x: tx2, y: ty2, life: 0.3, max: 0.3 });
         }
         if (b.target.health <= 0) {
-          const targetIndex = enemies.indexOf(b.target);
-          if (targetIndex !== -1) {
-            enemies.splice(targetIndex, 1);
+          const idx = enemies.indexOf(b.target);
+          if (idx !== -1) {
+            enemies.splice(idx, 1);
             money += killReward;
             if (b.source) b.source.kills = (b.source.kills || 0) + 1;
           }
         }
         return false;
       }
+
       return true;
     }
     if (b.straight) {
