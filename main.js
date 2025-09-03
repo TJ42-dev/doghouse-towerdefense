@@ -1350,15 +1350,19 @@ function updateProjectiles(dt) {
       if (b.smoke <= 0) { b.smoke = 0.05; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
 
       // proximity fuse
-      const fuseR = 10 + (b.target.r || 6);
+      const fuseR = 14 + (b.target.r || 6); // try 14–22 if misses are common
       const dist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
       if (dist <= fuseR) {
-        b.target.health -= b.damage;
         if (b.variant === 'rocket' || b.variant === 'hellfire') {
           playAudio(ROCKET_HIT_SOUND);
         }
         if (b.variant === 'nuke') {
           playAudio(NUKE_HIT_SOUND);
+        }
+
+        b.target.health -= b.damage;
+
+        if (b.variant === 'nuke') {
           const tx2 = b.target.x, ty2 = b.target.y;
           for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
@@ -1581,7 +1585,7 @@ function update(dt) {
             angle: baseAngle,
             turnRate: Math.PI,      // rad/s cap
             smoke: 0,
-            variant: t.type,
+            variant: t.type,              // 'rocket' | 'hellfire' | 'nuke'
 
             // NEW: passive loiter behavior
             state: idle ? 'idle' : 'homing',
@@ -1611,7 +1615,7 @@ function update(dt) {
           angle: baseAngle,
           turnRate: Math.PI,      // rad/s cap
           smoke: 0,
-          variant: t.type,
+          variant: t.type,              // 'rocket' | 'hellfire' | 'nuke'
 
           // NEW: passive loiter behavior
           state: idle ? 'idle' : 'homing',
