@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title" data-target-ball-center="21,6.1" data-target-ball-radius="0.95">
+  <title id="title">Tower top targeting ball (overlay)</title>
+
+  <!-- Rotate this group toward targets -->
+  <g id="targetBall" transform="rotate(0 21 6.1)">
+    <!-- ball shell -->
+    <circle cx="21" cy="6.1" r="0.95" fill="#9aa3b1" stroke="#43464a" stroke-width=".6"></circle>
+    <!-- rim band (equator) -->
+    <ellipse cx="21" cy="6.1" rx="0.9" ry="0.28" fill="#7b8591" opacity=".55" stroke="none"></ellipse>
+    <!-- directional slit (shows facing when rotated) -->
+    <path d="M21.25 6.1h.55" stroke="#2b2f36" stroke-width=".35" stroke-linecap="round"></path>
+    <!-- accent chevron -->
+    <path d="M20.9 5.7l.6.4-.6.4" fill="none" stroke="#6c7682" stroke-width=".35" stroke-linecap="round" stroke-linejoin="round" opacity=".9"></path>
+    <!-- LED -->
+    <circle cx="20.55" cy="5.85" r="0.1" fill="#00e676"></circle>
+    <!-- highlight & shadow -->
+    <circle cx="20.7" cy="5.85" r="0.28" fill="#ffffff" opacity=".5" stroke="none"></circle>
+    <path d="M21.9 6.1a.9.9 0 0 1-1.5.7" fill="#6f7a88" opacity=".35" stroke="none"></path>
+  </g>
+
+  <!-- Optional tiny mounting post (enable if you want a visible stem) -->
+  <g id="mountPost" fill="#7b8591" stroke="#43464a" stroke-width=".5" style="display:none">
+    <rect x="20.78" y="7.1" width=".44" height=".7" rx=".2"></rect>
+  </g>
+
+  <!-- Guide for tooling -->
+  <g opacity="0">
+    <circle id="pivot" cx="21" cy="6.1" r="0.01"></circle>
+  </g>
+</svg>

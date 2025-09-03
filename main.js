@@ -52,12 +52,16 @@ const upgradeDualLaserBtn = document.getElementById('upgradeDualLaser');
 const upgradeRailgunBtn = document.getElementById('upgradeRailgun');
 const upgradeNukeBtn = document.getElementById('upgradeNuke');
 const upgradeHellfireBtn = document.getElementById('upgradeHellfire');
+const upgradeTerminatorBtn = document.getElementById('upgradeTerminator');
+const upgradeWunderwaffeBtn = document.getElementById('upgradeWunderwaffe');
 const sniperCostSpan = document.getElementById('sniperCost');
 const shotgunCostSpan = document.getElementById('shotgunCost');
 const dualLaserCostSpan = document.getElementById('dualLaserCost');
 const railgunCostSpan = document.getElementById('railgunCost');
 const nukeCostSpan = document.getElementById('nukeCost');
 const hellfireCostSpan = document.getElementById('hellfireCost');
+const terminatorCostSpan = document.getElementById('terminatorCost');
+const wunderwaffeCostSpan = document.getElementById('wunderwaffeCost');
 const quitInMenuBtn = document.getElementById('quitInMenuBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const contextMenu = document.getElementById('contextMenu');
@@ -130,7 +134,9 @@ const BALANCE = {
     dualLaser: 1500,
     railgun: 2500,
     nuke: 3000,
-    hellfire: 2000
+    hellfire: 2000,
+    terminator: 2200,
+    wunderwaffe: 2600
   },
   difficulties: {
     easy: { startingCash: 500, killReward: 15, waveReward: 75, healthMultiplier: 0.8 },
@@ -157,6 +163,8 @@ dualLaserCostSpan && (dualLaserCostSpan.textContent = `$${BALANCE.specialization
 railgunCostSpan && (railgunCostSpan.textContent = `$${BALANCE.specializationCosts.railgun}`);
 nukeCostSpan && (nukeCostSpan.textContent = `$${BALANCE.specializationCosts.nuke}`);
 hellfireCostSpan && (hellfireCostSpan.textContent = `$${BALANCE.specializationCosts.hellfire}`);
+terminatorCostSpan && (terminatorCostSpan.textContent = `$${BALANCE.specializationCosts.terminator}`);
+wunderwaffeCostSpan && (wunderwaffeCostSpan.textContent = `$${BALANCE.specializationCosts.wunderwaffe}`);
 
 const GRID_SIZES = {
   large: { cols: 36, rows: 24 },
@@ -600,6 +608,12 @@ upgradeNukeBtn?.addEventListener('click', () => {
 upgradeHellfireBtn?.addEventListener('click', () => {
   if (selectedTower) { specializeTower(selectedTower, 'hellfire'); updateSelectedTowerInfo(); }
 });
+upgradeTerminatorBtn?.addEventListener('click', () => {
+  if (selectedTower) { specializeTower(selectedTower, 'terminator'); updateSelectedTowerInfo(); }
+});
+upgradeWunderwaffeBtn?.addEventListener('click', () => {
+  if (selectedTower) { specializeTower(selectedTower, 'wunderwaffe'); updateSelectedTowerInfo(); }
+});
 quitInMenuBtn?.addEventListener('click', () => returnToMenu());
 
 pauseBtn?.addEventListener('click', () => {
@@ -620,8 +634,8 @@ function updateSelectedTowerInfo() {
   if (!selectedTowerName) return;
   if (selectedTower) {
     selectedTowerName.classList.remove('no-selection');
-    const isSpecial = ['sniper','shotgun','dualLaser','railgun','nuke','hellfire'].includes(selectedTower.type);
-    const fullyUpgraded = ['cannon','laser','rocket'].includes(selectedTower.type) && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
+    const isSpecial = ['sniper','shotgun','dualLaser','railgun','nuke','hellfire','terminator','wunderwaffe'].includes(selectedTower.type);
+    const fullyUpgraded = ['cannon','laser','rocket','tesla'].includes(selectedTower.type) && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
     if (fullyUpgraded) {
       selectedTowerName.textContent = 'Choose specialization';
@@ -631,6 +645,7 @@ function updateSelectedTowerInfo() {
         const isCannon = selectedTower.type === 'cannon';
         const isLaser = selectedTower.type === 'laser';
         const isRocket = selectedTower.type === 'rocket';
+        const isTesla = selectedTower.type === 'tesla';
         if (upgradeSniperBtn) {
           upgradeSniperBtn.parentElement && (upgradeSniperBtn.parentElement.style.display = isCannon ? '' : 'none');
           upgradeSniperBtn.disabled = money < BALANCE.specializationCosts.sniper;
@@ -655,11 +670,19 @@ function updateSelectedTowerInfo() {
           upgradeHellfireBtn.parentElement && (upgradeHellfireBtn.parentElement.style.display = isRocket ? '' : 'none');
           upgradeHellfireBtn.disabled = money < BALANCE.specializationCosts.hellfire;
         }
+        if (upgradeTerminatorBtn) {
+          upgradeTerminatorBtn.parentElement && (upgradeTerminatorBtn.parentElement.style.display = isTesla ? '' : 'none');
+          upgradeTerminatorBtn.disabled = money < BALANCE.specializationCosts.terminator;
+        }
+        if (upgradeWunderwaffeBtn) {
+          upgradeWunderwaffeBtn.parentElement && (upgradeWunderwaffeBtn.parentElement.style.display = isTesla ? '' : 'none');
+          upgradeWunderwaffeBtn.disabled = money < BALANCE.specializationCosts.wunderwaffe;
+        }
       }
     } else {
       if (basicUpgrades) basicUpgrades.style.display = '';
       if (specialUpgrades) specialUpgrades.style.display = 'none';
-      const friendlyNames = { sniper: 'Sniper', shotgun: 'Shotgun', dualLaser: 'Dual Laser', railgun: 'Railgun', nuke: 'Nuke', hellfire: 'Hellfire' };
+      const friendlyNames = { sniper: 'Sniper', shotgun: 'Shotgun', dualLaser: 'Dual Laser', railgun: 'Railgun', nuke: 'Nuke', hellfire: 'Hellfire', terminator: 'Terminator', wunderwaffe: 'Wunderwaffe' };
       const typeName = friendlyNames[selectedTower.type] || selectedTower.type.charAt(0).toUpperCase() + selectedTower.type.slice(1);
       selectedTowerName.textContent = isSpecial ? `${typeName} (Maxed)` : `Selected: ${selectedTower.type}`;
       const stats = {
@@ -872,6 +895,20 @@ function specializeTower(t, kind) {
     } else {
       return;
     }
+  } else if (t.type === 'tesla') {
+    if (kind === 'terminator') {
+      t.type = 'terminator';
+      t.damage = Math.round(t.damage * 1.2);
+      t.fireRate = t.fireRate * 1.2;
+      // range unchanged
+    } else if (kind === 'wunderwaffe') {
+      t.type = 'wunderwaffe';
+      t.damage = Math.round(t.damage * 1.5);
+      t.fireRate = t.fireRate * 0.75;
+      // range unchanged
+    } else {
+      return;
+    }
   } else {
     return;
   }
@@ -962,6 +999,10 @@ const SHOTGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
 const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun_turret.svg';
 const TESLA_BASE_SRC = 'assets/towers/bases/tesla_base.svg';
 const TESLA_TURRET_SRC = 'assets/towers/turrets/tesla_turret.svg';
+const TERMINATOR_BASE_SRC = 'assets/towers/bases/terminator_base.svg';
+const TERMINATOR_TURRET_SRC = 'assets/towers/turrets/terminator_turret.svg';
+const WUNDERWAFFE_BASE_SRC = 'assets/towers/bases/D2_base.svg';
+const WUNDERWAFFE_TURRET_SRC = 'assets/towers/turrets/D2_turret.svg';
 const WAVE_START_SOUND = 'assets/sounds/wave_start.wav';
 const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
 const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
@@ -977,7 +1018,9 @@ const TOWER_CONFIG_IDS = [
   'railgun',
   'nuke',
   'hellfire',
-  'tesla'
+  'tesla',
+  'terminator',
+  'wunderwaffe'
 ];
 
 let DATA_LOADED = false;
@@ -1041,7 +1084,9 @@ let ASSETS = {
   railgun: { base: null, turret: null },
   sniper: { base: null, turret: null },
   shotgun: { base: null, turret: null },
-  tesla: { base: null, turret: null }
+  tesla: { base: null, turret: null },
+  terminator: { base: null, turret: null },
+  wunderwaffe: { base: null, turret: null }
 };
 let assetsReady; // Promise
 
@@ -1064,7 +1109,9 @@ async function ensureAssets() {
           railgun: { base: await loadImage(RAILGUN_BASE_SRC), turret: await loadImage(RAILGUN_TURRET_SRC) },
           sniper: { base: await loadImage(SNIPER_BASE_SRC), turret: await loadImage(SNIPER_TURRET_SRC) },
           shotgun: { base: await loadImage(SHOTGUN_BASE_SRC), turret: await loadImage(SHOTGUN_TURRET_SRC) },
-          tesla: { base: await loadImage(TESLA_BASE_SRC), turret: await loadImage(TESLA_TURRET_SRC) }
+          tesla: { base: await loadImage(TESLA_BASE_SRC), turret: await loadImage(TESLA_TURRET_SRC) },
+          terminator: { base: await loadImage(TERMINATOR_BASE_SRC), turret: await loadImage(TERMINATOR_TURRET_SRC) },
+          wunderwaffe: { base: await loadImage(WUNDERWAFFE_BASE_SRC), turret: await loadImage(WUNDERWAFFE_TURRET_SRC) }
         };
     })();
   }
@@ -1394,6 +1441,10 @@ function updateProjectiles(dt) {
   });
 
   zaps = zaps.filter(z => {
+    if (z.delay) {
+      z.delay -= dt;
+      if (z.delay > 0) return true;
+    }
     z.time -= dt;
     return z.time > 0;
   });
@@ -1486,9 +1537,19 @@ function update(dt) {
     const rangePx = t.range * CELL_PX;
     let target = null;
     let closest = rangePx;
+    let possible = [];
     for (const e of enemies) {
       const d = Math.hypot(e.x - t.x, e.y - t.y);
-      if (d <= closest) { target = e; closest = d; }
+      if (d <= rangePx) {
+        if (d <= closest) { target = e; closest = d; }
+        if (t.type === 'terminator') possible.push({ e, d });
+      }
+    }
+    if (t.type === 'terminator') {
+      possible.sort((a, b) => a.d - b.d);
+      t.targets = possible.slice(0, 5).map(p => p.e);
+    } else {
+      t.targets = null;
     }
     t.target = target;
     if (target) {
@@ -1581,6 +1642,46 @@ function update(dt) {
             money += killReward;
             t.kills = (t.kills || 0) + 1;
         }
+      } else if (t.type === 'terminator') {
+        const targets = t.targets || [];
+        if (targets.length) {
+          for (const e of targets) {
+            const ang = Math.atan2(e.y - t.y, e.x - t.x);
+            const x1 = t.x + Math.cos(ang) * (CELL_PX / 2);
+            const y1 = t.y + Math.sin(ang) * (CELL_PX / 2);
+            const points = createZap(x1, y1, e.x, e.y);
+            zaps.push({ points, time: 0.1, colors: ['#f88','#f00'] });
+            e.health -= t.damage;
+            if (e.health <= 0) {
+              enemies.splice(enemies.indexOf(e), 1);
+              money += killReward;
+              t.kills = (t.kills || 0) + 1;
+            }
+          }
+          t.cooldown = 1 / t.fireRate;
+          playFireSound(t);
+        }
+      } else if (t.type === 'wunderwaffe') {
+        const angle = t.angle;
+        let x1 = t.x + Math.cos(angle) * (CELL_PX / 2);
+        let y1 = t.y + Math.sin(angle) * (CELL_PX / 2);
+        let delay = 0;
+        const chain = enemies.slice();
+        const idx = chain.indexOf(target);
+        if (idx > -1) { chain.splice(idx,1); chain.unshift(target); }
+        for (const e of chain) {
+          const points = createZap(x1, y1, e.x, e.y);
+          zaps.push({ points, time: 0.1, delay });
+          e.health -= t.damage;
+          if (e.health <= 0) {
+            enemies.splice(enemies.indexOf(e), 1);
+            money += killReward;
+            t.kills = (t.kills || 0) + 1;
+          }
+          x1 = e.x; y1 = e.y; delay += 0.05;
+        }
+        t.cooldown = 1 / t.fireRate;
+        playFireSound(t);
       } else if (t.type === 'railgun') {
         const angle = t.angle;
         const dx = Math.cos(angle);
@@ -1738,6 +1839,8 @@ function render() {
       const art = t.type === 'laser' ? ASSETS.laser :
         t.type === 'rocket' ? ASSETS.rocket :
         t.type === 'tesla' ? ASSETS.tesla :
+        t.type === 'terminator' ? ASSETS.terminator :
+        t.type === 'wunderwaffe' ? ASSETS.wunderwaffe :
         t.type === 'nuke' ? ASSETS.nuke :
         t.type === 'hellfire' ? ASSETS.hellfire :
         t.type === 'dualLaser' ? ASSETS.dualLaser :
@@ -1797,10 +1900,11 @@ function render() {
 
   // Zaps
   for (const zap of zaps) {
+    if (zap.delay && zap.delay > 0) continue;
     const pts = zap.points;
+    const cols = zap.colors || ['#ccf', '#66f'];
     const grad = ctx.createLinearGradient(pts[0].x, pts[0].y, pts[pts.length - 1].x, pts[pts.length - 1].y);
-    grad.addColorStop(0, '#ccf');
-    grad.addColorStop(1, '#66f');
+    cols.forEach((c, i) => grad.addColorStop(cols.length === 1 ? 0 : i / (cols.length - 1), c));
     ctx.strokeStyle = grad;
     ctx.lineWidth = 2;
     ctx.beginPath();
