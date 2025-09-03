@@ -211,6 +211,24 @@ function isWallAt(gx, gy) {
   return occupancy.has(key(gx, gy));
 }
 
+// --- sell mode cursor/ghost ---
+const SELL_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' ry='6' fill='black' fill-opacity='.15'/><text x='16' y='21' text-anchor='middle' font-family='system-ui,Segoe UI,Roboto' font-size='20' fill='#00e676'>$</text></svg>") 16 16, auto`;
+const SELL_POINTER_MODE = 'ghost'; // 'ghost' or 'cursor'
+
+function setSellCursor(on) {
+  if (!gameCanvas) return;
+  gameCanvas.style.cursor = on ? SELL_CURSOR : '';
+}
+
+function setSellPointer(on) {
+  if (!gameCanvas) return;
+  if (SELL_POINTER_MODE === 'ghost') {
+    gameCanvas.style.cursor = on ? 'none' : '';
+  } else {
+    setSellCursor(on);
+  }
+}
+
 function addOccupancy(x, y) {
   occupancy.add(key(x, y));
   bumpNav();
@@ -249,6 +267,25 @@ function removeTowerProjectiles(t) {
   bullets = bullets.filter(b => b.source !== t);
 }
 
+function sellAt(gx, gy){
+  const t = towers.find(t => t.gx === gx && t.gy === gy);
+  if (t){
+    money += Math.floor((t.spent || t.cost || 0) * 0.8);
+    removeOccupancy(gx, gy);
+    removeTowerProjectiles(t);
+    towers = towers.filter(tt => tt !== t);
+    if (selectedTower === t) { selectedTower = null; updateSelectedTowerInfo(); }
+  } else {
+    const i = walls.findIndex(w => w.x === gx && w.y === gy);
+    if (i !== -1){
+      walls.splice(i, 1);
+      removeOccupancy(gx, gy);
+      money += BALANCE.wallCost;
+    }
+  }
+  recalcEnemyPaths();
+}
+
 function canPlace(cell) {
   if (!inBounds(cell)) return false;
   if (occupancy.has(key(cell.x, cell.y))) return false;
@@ -256,9 +293,10 @@ function canPlace(cell) {
   occupancy.add(key(cell.x, cell.y));
   const target = catLives.find(l => l.alive);
   const goal = target ? { x: target.gx, y: target.gy } : currentMap.entries[0];
+  const hasPath = (s, g) => (s.x === g.x && s.y === g.y) || findPath(s, g).length > 0;
   const ok =
-    currentMap.entries.every(e => findPath(e, goal).length > 0) &&
-    enemies.every(en => findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0);
+    currentMap.entries.every(e => hasPath(e, goal)) &&
+    enemies.every(en => hasPath(pxToCell({ x: en.x, y: en.y }), goal));
   occupancy.delete(key(cell.x, cell.y));
   return ok;
 }
@@ -335,7 +373,10 @@ function renderBuildMenu() {
     btn.innerHTML = `<div class="title">${b.name} $${b.cost}</div>` +
       `<div class="stats">DMG ${b.damage} • RNG ${b.range} • SPD ${b.fireRate}</div>`;
     btn.addEventListener('click', () => {
-      if (money >= b.cost) selectedBuild = b.id;
+      if (money >= b.cost) {
+        selectedBuild = b.id;
+        setSellPointer(false);
+      }
     });
     el.buildList.appendChild(btn);
   });
@@ -706,7 +747,10 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
     el.contextMenu.style.display = 'none';
     contextTarget = null;
     rangePreview = null;
-    if (selectedBuild) selectedBuild = null;
+    if (selectedBuild) {
+      selectedBuild = null;
+      setSellPointer(false);
+    }
     return;
   }
   contextTarget = { gx: cell.x, gy: cell.y };
@@ -735,25 +779,7 @@ document.addEventListener('click', () => {
 });
 el.contextSell?.addEventListener('click', () => {
   if (!contextTarget) return;
-  const { gx, gy } = contextTarget;
-  const t = towers.find(t => t.gx === gx && t.gy === gy);
-  if (t) {
-    const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
-    money += refund;
-    removeOccupancy(gx, gy);
-    removeTowerProjectiles(t);
-    towers = towers.filter(tt => tt !== t);
-    selectedTower = null;
-    updateSelectedTowerInfo();
-  } else {
-    const idx = walls.findIndex(w => w.x === gx && w.y === gy);
-    if (idx !== -1) {
-      walls.splice(idx, 1);
-      removeOccupancy(gx, gy);
-      money += BALANCE.wallCost;
-    }
-  }
-  recalcEnemyPaths();
+  sellAt(contextTarget.gx, contextTarget.gy);
   el.contextMenu.style.display = 'none';
   contextTarget = null;
   rangePreview = null;
@@ -1026,11 +1052,15 @@ function loadImage(src) {
     // you’ll need CORS headers on the server and this:
     // img.crossOrigin = 'anonymous';
     img.decoding = 'async';
-    img.onload = () => resolve(img);
     img.onerror = () => resolve(null); // treat as missing, don't crash
+    img.onload = async () => {
+      // If the browser supports decode(), use it for reliable readiness.
+      try {
+        if (img.decode) await img.decode();
+      } catch (_) {}
+      resolve(img);
+    };
     img.src = src;
-    // If the browser supports decode(), use it for reliable readiness.
-    if (img.decode) img.decode().then(() => resolve(img)).catch(() => resolve(null));
   });
 }
 
@@ -1097,6 +1127,7 @@ let healthBuffMultiplier = 1;
 function resetGame() {
   enemies = [];
   selectedBuild = null;
+  setSellPointer(false);
   towers = [];
   bullets = [];
   smokes = [];
@@ -1737,6 +1768,21 @@ function drawBG() {
     }
   }
 }
+function drawSellGhost() {
+  const t = performance.now() / 1000;
+  const bob = Math.sin(t * 6) * 3; // 6Hz small oscillation
+
+  ctx.save();
+  ctx.translate(mouse.x, mouse.y + bob);
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.font = '24px system-ui, Segoe UI, Roboto, sans-serif';
+  ctx.fillText('$', 1.5, 1.5);
+  ctx.fillStyle = '#ffd54f';
+  ctx.fillText('$', 0, 0);
+  ctx.restore();
+}
+
 function drawHUD() {
   const statsEl = $id('gameStats');
   const overlayEl = el.overlayStats;
@@ -1917,8 +1963,12 @@ function render() {
     }
   }
 
-    drawHUD();
+  if (selectedBuild === 'sell' && mouse.active && SELL_POINTER_MODE === 'ghost') {
+    drawSellGhost();
   }
+
+  drawHUD();
+}
 
 function loop(ts) {
   if (!running) return;
@@ -1945,11 +1995,17 @@ function unbindInputs() {
   window.visualViewport?.removeEventListener('resize', resizeCanvas);
   window.removeEventListener('keydown', onKey);
 }
+function getMouse(e) {
+  const r = gameCanvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
 function onMouseMove(e) {
-  mouse.x = e.offsetX; mouse.y = e.offsetY; mouse.active = true;
+  const m = getMouse(e);
+  mouse.x = m.x; mouse.y = m.y; mouse.active = true;
 }
 function onCanvasClick(e) {
-  const cell = pxToCell({ x: e.offsetX, y: e.offsetY });
+  const m = getMouse(e);
+  const cell = pxToCell(m);
   const gx = cell.x, gy = cell.y;
   if (!inBounds(cell)) return;
 
@@ -1967,24 +2023,7 @@ function onCanvasClick(e) {
   }
 
   if (selectedBuild === 'sell') {
-    const t = towers.find(t => t.gx === gx && t.gy === gy);
-    if (t) {
-      const refund = Math.floor((t.spent || t.cost || 0) * 0.8);
-      money += refund;
-      removeOccupancy(gx, gy);
-      removeTowerProjectiles(t);
-      towers = towers.filter(tt => tt !== t);
-      selectedTower = null;
-      updateSelectedTowerInfo();
-    } else {
-      const idx = walls.findIndex(w => w.x === gx && w.y === gy);
-      if (idx !== -1) {
-        walls.splice(idx, 1);
-        removeOccupancy(gx, gy);
-        money += BALANCE.wallCost;
-      }
-    }
-    recalcEnemyPaths();
+    sellAt(gx, gy);
     return;
   }
 
@@ -2012,17 +2051,34 @@ function onKey(e) {
   if (e.key === 'Escape') {
     endGame();
   } else if (e.key === '1') {
-    if (money >= BALANCE.wallCost) selectedBuild = 'wall';
+    if (money >= BALANCE.wallCost) {
+      selectedBuild = 'wall';
+      setSellPointer(false);
+    }
   } else if (e.key === '2') {
-    if (money >= CANNON_BASE.cost) selectedBuild = 'cannon';
+    if (money >= CANNON_BASE.cost) {
+      selectedBuild = 'cannon';
+      setSellPointer(false);
+    }
   } else if (e.key === '3') {
-    if (money >= LASER_BASE.cost) selectedBuild = 'laser';
+    if (money >= LASER_BASE.cost) {
+      selectedBuild = 'laser';
+      setSellPointer(false);
+    }
   } else if (e.key === '4') {
-    if (money >= ROCKET_BASE.cost) selectedBuild = 'rocket';
+    if (money >= ROCKET_BASE.cost) {
+      selectedBuild = 'rocket';
+      setSellPointer(false);
+    }
   } else if (e.key === '5') {
-    if (money >= TESLA_BASE.cost) selectedBuild = 'tesla';
+    if (money >= TESLA_BASE.cost) {
+      selectedBuild = 'tesla';
+      setSellPointer(false);
+    }
   } else if (e.key.toLowerCase() === 'x') {
-    selectedBuild = 'sell';
+    const goSell = selectedBuild !== 'sell';
+    selectedBuild = goSell ? 'sell' : null;
+    setSellPointer(goSell);
   }
 }
 
@@ -2084,6 +2140,7 @@ function endGame() {
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
+  setSellPointer(false);
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.hoverMenu && (el.hoverMenu.style.display = 'none');
   overlayHeader && (overlayHeader.style.display = 'none');
@@ -2117,6 +2174,7 @@ function returnToMenu() {
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
+  setSellPointer(false);
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
 }
