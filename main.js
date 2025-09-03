@@ -1572,7 +1572,6 @@ function update(dt) {
       const baseAngle = t.type === 'nuke' ? -Math.PI / 2 : (t.angle || 0);
       const sx = t.x + Math.cos(baseAngle) * (CELL_PX / 2);
       const sy = t.y + Math.sin(baseAngle) * (CELL_PX / 2);
-      const slot = existing; // 0..cap-1, use to offset the hover positions
       const idle = !target;  // no target in range? spawn as idle
       if (cap > 0) {
         if (existing < cap && t.cooldown <= 0) {
@@ -1593,10 +1592,11 @@ function update(dt) {
 
             // NEW: passive loiter behavior
             state: idle ? 'idle' : 'homing',
-            hoverR: 22,                          // orbit radius around anchor
-            hoverOmega: 1.2 + slot * 0.05,       // rad/s (small variety)
-            hoverTheta: slot * (2 * Math.PI / Math.max(3, cap || 3)),
-            hoverHeight: CELL_PX * 1.25,         // “in the sky” above the tower
+            acqCooldown: 0,               // check for targets every 0.1s
+            hoverR: 22,
+            hoverOmega: 1.2,
+            hoverTheta: 0,
+            hoverHeight: CELL_PX * 1.25,
             // Nav memory
             _prevLos: null,
           });
@@ -1622,10 +1622,11 @@ function update(dt) {
 
           // NEW: passive loiter behavior
           state: idle ? 'idle' : 'homing',
-          hoverR: 22,                          // orbit radius around anchor
-          hoverOmega: 1.2 + slot * 0.05,       // rad/s (small variety)
-          hoverTheta: slot * (2 * Math.PI / Math.max(3, cap || 3)),
-          hoverHeight: CELL_PX * 1.25,         // “in the sky” above the tower
+          acqCooldown: 0,               // check for targets every 0.1s
+          hoverR: 22,
+          hoverOmega: 1.2,
+          hoverTheta: 0,
+          hoverHeight: CELL_PX * 1.25,
           // Nav memory
           _prevLos: null,
         });
