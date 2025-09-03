@@ -168,6 +168,8 @@ function applyGridSize(size) {
   const g = GRID_SIZES[size] || GRID_SIZES.medium;
   GRID_COLS = g.cols;
   GRID_ROWS = g.rows;
+  if (currentMap?.extraCols) GRID_COLS += currentMap.extraCols;
+  if (currentMap?.extraRows) GRID_ROWS += currentMap.extraRows;
   initOccupancy();
   resizeCanvas();
 }
@@ -913,9 +915,10 @@ function resizeCanvas() {
   ctx.textBaseline = 'top';
   const playW = CELL_PX * GRID_COLS;
   const playH = CELL_PX * GRID_ROWS;
+  const offset = currentMap?.gridOffset || { x: 0, y: 0 };
   originPx = {
-    x: Math.floor((w - playW) / 2),
-    y: Math.floor((h - playH) / 2 + h * 0.15)
+    x: Math.floor((w - playW) / 2 + offset.x * CELL_PX),
+    y: Math.floor((h - playH) / 2 + h * 0.15 + offset.y * CELL_PX)
   };
   towers.forEach(t => {
     const p = cellToPx({ x: t.gx, y: t.gy });

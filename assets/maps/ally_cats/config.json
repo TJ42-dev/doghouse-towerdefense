@@ -2,6 +2,8 @@
   "name": "Ally Cats",
   "img": "./assets/maps/ally_cats/ally_cats.png",
   "grid": "medium",
+  "extraRows": 5,
+  "gridOffset": { "x": 0, "y": -4 },
   "entries": [{ "x": 0, "y": 0 }],
   "catLives": [
     { "x": 24, "y": 11 }, { "x": 25, "y": 11 }, { "x": 26, "y": 11 },
