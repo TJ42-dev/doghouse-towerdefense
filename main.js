@@ -210,6 +210,13 @@ function inBounds(cell) {
 }
 function angleWrap(a){ return ((a + Math.PI) % (Math.PI * 2)) - Math.PI; }
 function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+function igniteRocket(b, target){
+  b.state = 'homing';
+  b.target = target;
+  b.angle = Math.atan2(target.y - b.y, target.x - b.x);
+  b.speed = Math.max(b.speed, b.maxSpeed * 0.25);
+  b._prevLos = null;
+}
 
 function isWallAt(gx, gy) {
   return occupancy.has(key(gx, gy));
@@ -1299,11 +1306,7 @@ function updateProjectiles(dt) {
         }
         if (closest) {
           // Ignite!
-          b.state = 'homing';
-          b.target = closest;
-          b.angle = Math.atan2(b.target.y - b.y, b.target.x - b.x);
-          b.speed = b.maxSpeed * 0.25; // gentle start, will ramp
-          b._prevLos = null;           // reset PN memory
+          igniteRocket(b, closest);
         }
 
         // draw smoke less often while idle (optional)
@@ -1559,6 +1562,13 @@ function update(dt) {
       t.targets = null;
     }
     t.target = target;
+    if ((t.type === 'rocket' || t.type === 'hellfire' || t.type === 'nuke') && t.target) {
+      for (const b of bullets) {
+        if (b.type === 'rocket' && b.source === t && b.state === 'idle') {
+          igniteRocket(b, t.target);
+        }
+      }
+    }
     if (target) {
       t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     }
