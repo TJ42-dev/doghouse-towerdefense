@@ -1360,7 +1360,7 @@ function updateProjectiles(dt) {
       // Lifetime + offscreen cleanup
       b.life = (b.life ?? 0) + dt;
       if (
-        b.life > 6 || // seconds
+        b.life > 15 || // seconds
         b.x < originPx.x - 64 || b.x > originPx.x + GRID_COLS * CELL_PX + 64 ||
         b.y < originPx.y - 64 || b.y > originPx.y + GRID_ROWS * CELL_PX + 64
       ) {
@@ -1371,14 +1371,11 @@ function updateProjectiles(dt) {
       const fuseR = (b.fuseRadius ?? 10) + (b.target.r || 6);
       const distToTarget = Math.hypot(b.target.x - b.x, b.target.y - b.y);
       if (distToTarget <= fuseR) {
+        const targetX = b.target.x;
+        const targetY = b.target.y;
         b.target.health -= b.damage;
-        if (b.variant === 'rocket' || b.variant === 'hellfire') {
-          playAudio(ROCKET_HIT_SOUND);
-        }
         if (b.variant === 'nuke') {
           playAudio(NUKE_HIT_SOUND);
-          const targetX = b.target.x;
-          const targetY = b.target.y;
           for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
             if (e !== b.target && Math.hypot(e.x - targetX, e.y - targetY) <= NUKE_SPLASH_RADIUS) {
@@ -1391,6 +1388,8 @@ function updateProjectiles(dt) {
             }
           }
           explosions.push({ x: targetX, y: targetY, life: 0.3, max: 0.3 });
+        } else {
+          playAudio(ROCKET_HIT_SOUND);
         }
         if (b.target.health <= 0) {
           const targetIndex = enemies.indexOf(b.target);
