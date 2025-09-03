@@ -74,7 +74,6 @@ let CELL_PX = 26; // fixed pixel size for each grid cell
 const TOWER_SCALE = 1.75; // render tower sprites 25% larger
 const TOWER_PX = CELL_PX * TOWER_SCALE;
 const NUKE_SPLASH_RADIUS = CELL_PX * 2;
-const STRAY_ROCKET_RADIUS = CELL_PX;
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
 let gridCache = null, gridCtx = null, gridCacheW = 0, gridCacheH = 0;
 
@@ -211,6 +210,19 @@ function inBounds(cell) {
 
 function isWallAt(gx, gy) {
   return occupancy.has(key(gx, gy));
+}
+
+function angleWrap(a) {
+  return ((a + Math.PI) % (Math.PI * 2)) - Math.PI;
+}
+
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function withinCone(srcX, srcY, dirAngle, tgtX, tgtY, halfAngleRad) {
+  const ang = Math.atan2(tgtY - srcY, tgtX - srcX);
+  return Math.abs(angleWrap(ang - dirAngle)) <= halfAngleRad;
 }
 
 // --- sell mode cursor/ghost ---
@@ -1259,9 +1271,6 @@ function queueWave() {
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
     if (b.type === 'rocket') {
-      b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
-      const move = b.speed * dt;
-
       const needsNewTarget =
         !b.target ||
         !enemies.includes(b.target) ||
@@ -1269,66 +1278,78 @@ function updateProjectiles(dt) {
 
       if (needsNewTarget) {
         b.target = null;
-        let closest = null;
-        let closestDist = Infinity;
-        const maxSearchDist = 800;
+        // Only reacquire if within cone & range
+        const reacquireRange = 800;
+        const halfCone = Math.PI / 2.5; // ~72°
+        let closest = null, closestDist = Infinity;
         for (const e of enemies) {
           if (e.health <= 0) continue;
-          const dx = e.x - b.x;
-          const dy = e.y - b.y;
-          const distSq = dx * dx + dy * dy;
-          if (distSq > maxSearchDist * maxSearchDist) continue;
-          if (distSq < closestDist) {
-            closestDist = distSq;
-            closest = e;
-          }
+          const dx = e.x - b.x, dy = e.y - b.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > reacquireRange * reacquireRange) continue;
+          if (!withinCone(b.x, b.y, b.angle, e.x, e.y, halfCone)) continue;
+          if (d2 < closestDist) { closestDist = d2; closest = e; }
         }
         b.target = closest;
-        if (b.target) {
-          b.orbitCenter = null;
-        } else {
-          if (!b.orbitCenter) {
-            b.orbitCenter = { x: b.x, y: b.y };
-            b.orbitAng = b.angle || 0;
-          }
-          b.orbitAng += (b.speed / STRAY_ROCKET_RADIUS) * dt;
-          b.x = b.orbitCenter.x + Math.cos(b.orbitAng) * STRAY_ROCKET_RADIUS;
-          b.y = b.orbitCenter.y + Math.sin(b.orbitAng) * STRAY_ROCKET_RADIUS;
-          b.angle = b.orbitAng + Math.PI / 2;
+        if (!b.target) {
+          // Fail: start a short search spiral with timeout
+          b._searchTime = (b._searchTime ?? 0) + dt;
+          const spiralRate = 0.8; // rad/s
+          b.angle += spiralRate * dt;
+          b.speed = Math.min(b.maxSpeed * 0.75, b.speed + b.accel * 0.5 * dt);
+          b.x += Math.cos(b.angle) * b.speed * dt;
+          b.y += Math.sin(b.angle) * b.speed * dt;
           b.smoke -= dt;
           if (b.smoke <= 0) {
             smokes.push({ x: b.x, y: b.y, life: 0.5 });
             b.smoke = 0.05;
           }
-          if (
-            b.x < originPx.x ||
-            b.x > originPx.x + GRID_COLS * CELL_PX ||
-            b.y < originPx.y ||
-            b.y > originPx.y + GRID_ROWS * CELL_PX
-          ) {
-            return false;
-          }
+          if (b._searchTime > 1.5) return false; // despawn
           return true;
+        } else {
+          b._searchTime = 0;
         }
       }
 
-      const targetVelX = b.target.velX || 0;
-      const targetVelY = b.target.velY || 0;
-      const distToTarget = Math.hypot(b.target.x - b.x, b.target.y - b.y);
-      const leadTime = distToTarget / b.speed;
-      const predictedX = b.target.x + targetVelX * leadTime * 0.5;
-      const predictedY = b.target.y + targetVelY * leadTime * 0.5;
+      // --- Proportional Navigation (PN) guidance ---
+      const rx = b.x, ry = b.y;
+      const tx = b.target.x, ty = b.target.y;
 
-      const desired = Math.atan2(predictedY - b.y, predictedX - b.x);
-      let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
-      const turnRateMultiplier = Math.min(2.0, Math.max(0.5, 200 / distToTarget));
-      const maxTurn = b.turnRate * turnRateMultiplier * dt;
-      if (diff > maxTurn) diff = maxTurn;
-      if (diff < -maxTurn) diff = -maxTurn;
-      b.angle += diff;
+      // Current LOS angle
+      const los = Math.atan2(ty - ry, tx - rx);
 
-      b.x += Math.cos(b.angle) * move;
-      b.y += Math.sin(b.angle) * move;
+      // Estimate LOS rate d(los)/dt via finite difference
+      b._prevLos = b._prevLos ?? los;
+      const losRate = angleWrap(los - b._prevLos) / dt;
+      b._prevLos = los;
+
+      // Closing velocity (positive if closing)
+      const relVx = (b.target.velX || 0) - Math.cos(b.angle) * b.speed;
+      const relVy = (b.target.velY || 0) - Math.sin(b.angle) * b.speed;
+      const closingVel = -(relVx * Math.cos(los) + relVy * Math.sin(los));
+
+      // Navigation constant (tune 2.5–5.5)
+      const N = b.navConst || 3.5;
+
+      // PN commanded turn rate
+      const cmdTurn = clamp(N * losRate, -b.turnRate, b.turnRate);
+
+      // Blend PN with small bearing error term to help initial capture
+      const bearingErr = angleWrap(los - b.angle);
+      const blend = 0.25; // 0..1 (more = snappier)
+      const desiredRate = clamp(cmdTurn + blend * bearingErr / dt, -b.turnRate, b.turnRate);
+
+      // Apply turn (frame-rate independent)
+      b.angle = angleWrap(b.angle + desiredRate * dt);
+
+      // Speed control: accelerate, but penalize sharp turns to reduce corkscrew
+      const turnMag = Math.abs(desiredRate) / b.turnRate; // 0..1
+      const turnDrag = 1 - 0.25 * turnMag;                // keep ≥ 75% speed when turning hard
+      b.speed = Math.min(b.maxSpeed, (b.speed + b.accel * dt) * turnDrag);
+
+      // Advance
+      b.x += Math.cos(b.angle) * b.speed * dt;
+      b.y += Math.sin(b.angle) * b.speed * dt;
 
       b.smoke -= dt;
       if (b.smoke <= 0) {
@@ -1336,9 +1357,20 @@ function updateProjectiles(dt) {
         b.smoke = 0.05;
       }
 
-      const newDist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
-      const hitRadius = b.target.r + 2;
-      if (newDist <= hitRadius) {
+      // Lifetime + offscreen cleanup
+      b.life = (b.life ?? 0) + dt;
+      if (
+        b.life > 6 || // seconds
+        b.x < originPx.x - 64 || b.x > originPx.x + GRID_COLS * CELL_PX + 64 ||
+        b.y < originPx.y - 64 || b.y > originPx.y + GRID_ROWS * CELL_PX + 64
+      ) {
+        return false;
+      }
+
+      // Proximity fuse (helps with tunneling at high speed)
+      const fuseR = (b.fuseRadius ?? 10) + (b.target.r || 6);
+      const distToTarget = Math.hypot(b.target.x - b.x, b.target.y - b.y);
+      if (distToTarget <= fuseR) {
         b.target.health -= b.damage;
         if (b.variant === 'rocket' || b.variant === 'hellfire') {
           playAudio(ROCKET_HIT_SOUND);
@@ -1350,12 +1382,12 @@ function updateProjectiles(dt) {
           for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
             if (e !== b.target && Math.hypot(e.x - targetX, e.y - targetY) <= NUKE_SPLASH_RADIUS) {
-                e.health -= b.damage * 0.8;
-                if (e.health <= 0) {
-                  enemies.splice(i, 1);
-                  money += killReward;
-                  if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-                }
+              e.health -= b.damage * 0.8;
+              if (e.health <= 0) {
+                enemies.splice(i, 1);
+                money += killReward;
+                if (b.source) b.source.kills = (b.source.kills || 0) + 1;
+              }
             }
           }
           explosions.push({ x: targetX, y: targetY, life: 0.3, max: 0.3 });
