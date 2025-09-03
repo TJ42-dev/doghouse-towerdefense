@@ -1,76 +1,45 @@
 // -------------------- Options & DOM --------------------
 const LS_KEY = 'godot_web_options';
 const BEST_WAVE_KEY = 'godot_web_best_wave';
-const startBtn = document.getElementById('startBtn');
-const optionsBtn = document.getElementById('optionsBtn');
-const quitBtn = document.getElementById('quitBtn');         // main page "Quit"
-const quitGameBtn = document.getElementById('quitGameBtn'); // in-game "Quit"
-const nextWaveBtn = document.getElementById('nextWaveBtn'); // force next wave
-const statsOverlay = document.getElementById('statsOverlay');
-const overlayStats = document.getElementById('overlayStats');
-const overlayHeader = document.querySelector('#statsOverlay .overlay-header');
-const upNextBanner = document.getElementById('upNextBanner');
-const gameOverPanel = document.getElementById('gameOverPanel');
-const gameOverText = document.getElementById('gameOverText');
-const retryBtn = document.getElementById('retryBtn');
-const gameOverQuitBtn = document.getElementById('gameOverQuitBtn');
-const dlg = document.getElementById('optionsDialog');
-const optMute = document.getElementById('optMute');
-const optFullscreen = document.getElementById('optFullscreen');
-const optGridSize = document.getElementById('optGridSize');
-const optGridOverride = document.getElementById('optGridOverride');
-const optDifficulty = document.getElementById('optDifficulty');
-const saveBtn = document.getElementById('saveOptions');
-const menu = document.querySelector('.menu');
-const container = document.querySelector('.container');
-const hoverMenu = document.getElementById('hoverMenu');
-const hoverMenuHeader = document.getElementById('hoverMenuHeader');
-const tabButtons = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-const buildList = document.getElementById('buildList');
-const upgradeDamageBtn = document.getElementById('upgradeDamage');
-const upgradeFireRateBtn = document.getElementById('upgradeFireRate');
-const upgradeRangeBtn = document.getElementById('upgradeRange');
-const maxDamageBtn = document.getElementById('maxDamage');
-const maxFireRateBtn = document.getElementById('maxFireRate');
-const maxRangeBtn = document.getElementById('maxRange');
-const selectedTowerName = document.getElementById('selectedTowerName');
-const damageValue = document.getElementById('damageValue');
-const damageNext = document.getElementById('damageNext');
-const damageCost = document.getElementById('damageCost');
-const fireRateValue = document.getElementById('fireRateValue');
-const fireRateNext = document.getElementById('fireRateNext');
-const fireRateCost = document.getElementById('fireRateCost');
-const rangeValue = document.getElementById('rangeValue');
-const rangeNext = document.getElementById('rangeNext');
-const rangeCost = document.getElementById('rangeCost');
-const basicUpgrades = document.getElementById('basicUpgrades');
-const specialUpgrades = document.getElementById('specialUpgrades');
-const upgradeSniperBtn = document.getElementById('upgradeSniper');
-const upgradeShotgunBtn = document.getElementById('upgradeShotgun');
-const upgradeDualLaserBtn = document.getElementById('upgradeDualLaser');
-const upgradeRailgunBtn = document.getElementById('upgradeRailgun');
-const upgradeNukeBtn = document.getElementById('upgradeNuke');
-const upgradeHellfireBtn = document.getElementById('upgradeHellfire');
-const upgradeTerminatorBtn = document.getElementById('upgradeTerminator');
-const upgradeWunderwaffeBtn = document.getElementById('upgradeWunderwaffe');
-const sniperCostSpan = document.getElementById('sniperCost');
-const shotgunCostSpan = document.getElementById('shotgunCost');
-const dualLaserCostSpan = document.getElementById('dualLaserCost');
-const railgunCostSpan = document.getElementById('railgunCost');
-const nukeCostSpan = document.getElementById('nukeCost');
-const hellfireCostSpan = document.getElementById('hellfireCost');
-const terminatorCostSpan = document.getElementById('terminatorCost');
-const wunderwaffeCostSpan = document.getElementById('wunderwaffeCost');
-const quitInMenuBtn = document.getElementById('quitInMenuBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const contextMenu = document.getElementById('contextMenu');
-const contextSellBtn = document.getElementById('contextSell');
-const contextStats = document.getElementById('contextStats');
-const bestWaveSpan = document.getElementById('bestWave');
-const battlefieldBtn = document.getElementById('battlefieldBtn');
-const battlefieldDlg = document.getElementById('battlefieldDialog');
-const saveBattlefieldBtn = document.getElementById('saveBattlefield');
+// DOM helpers
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const $id = (id) => document.getElementById(id);
+
+// Map of all IDs you reference (add more as needed)
+const ids = [
+  'startBtn','optionsBtn','quitBtn','quitGameBtn','nextWaveBtn',
+  'statsOverlay','overlayStats','upNextBanner','gameOverPanel','gameOverText',
+  'retryBtn','gameOverQuitBtn','optionsDialog','optMute','optFullscreen',
+  'optGridSize','optGridOverride','optDifficulty','saveOptions',
+  'hoverMenu','hoverMenuHeader','buildList','bestWave','pauseBtn',
+  'contextMenu','contextSell','contextStats','battlefieldBtn','battlefieldDialog',
+  'saveBattlefield','selectedTowerName','damageValue','damageNext','damageCost',
+  'fireRateValue','fireRateNext','fireRateCost','rangeValue','rangeNext','rangeCost',
+  'upgradeDamage','upgradeFireRate','upgradeRange','maxDamage','maxFireRate','maxRange',
+  'basicUpgrades','specialUpgrades','upgradeSniper','upgradeShotgun','upgradeDualLaser',
+  'upgradeRailgun','upgradeNuke','upgradeHellfire','upgradeTerminator','upgradeWunderwaffe',
+  'sniperCost','shotgunCost','dualLaserCost','railgunCost','nukeCost','hellfireCost',
+  'terminatorCost','wunderwaffeCost','quitInMenuBtn','gameCanvas'
+];
+const el = Object.fromEntries(ids.map(k => [k, $id(k)]));
+
+// Non-ID selectors
+const overlayHeader = $('#statsOverlay .overlay-header');
+const menu = $('.menu');
+const container = $('.container');
+const tabButtons = $$('.tab-btn');
+const tabContents = $$('.tab-content');
+
+const friendlyNames = {
+  sniper: 'Sniper', shotgun: 'Shotgun', dualLaser: 'Dual Laser', railgun: 'Railgun',
+  nuke: 'Nuke', hellfire: 'Hellfire', terminator: 'Terminator', wunderwaffe: 'Wunderwaffe'
+};
+function caps(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// Track canvas separately since it may be replaced later
+let gameCanvas = el.gameCanvas; // can be null initially
+let ctx = null;
 const MAP_KEY = 'godot_web_battlefield';
 // Default/fallback map definition
 const DEFAULT_MAP = {
@@ -96,9 +65,6 @@ let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
 
-let gameCanvas = document.getElementById('gameCanvas'); // can be null initially
-let ctx = null;
-
 // -------------------- Grid & Build --------------------
 // Fixed logical grid
 let GRID_COLS = 36;
@@ -110,7 +76,7 @@ const TOWER_PX = CELL_PX * TOWER_SCALE;
 const NUKE_SPLASH_RADIUS = CELL_PX * 2;
 const STRAY_ROCKET_RADIUS = CELL_PX;
 let originPx = { x: 0, y: 0 }; // top-left of playfield in pixels
-let gridCache = null, gridCtx = null;
+let gridCache = null, gridCtx = null, gridCacheW = 0, gridCacheH = 0;
 
 // Occupancy map mirrors walls & towers
 let occupancy = new Set();
@@ -157,14 +123,23 @@ const BALANCE = {
 let difficulty = 'medium';
 let difficultySettings = { ...BALANCE.difficulties[difficulty] };
 
-sniperCostSpan && (sniperCostSpan.textContent = `$${BALANCE.specializationCosts.sniper}`);
-shotgunCostSpan && (shotgunCostSpan.textContent = `$${BALANCE.specializationCosts.shotgun}`);
-dualLaserCostSpan && (dualLaserCostSpan.textContent = `$${BALANCE.specializationCosts.dualLaser}`);
-railgunCostSpan && (railgunCostSpan.textContent = `$${BALANCE.specializationCosts.railgun}`);
-nukeCostSpan && (nukeCostSpan.textContent = `$${BALANCE.specializationCosts.nuke}`);
-hellfireCostSpan && (hellfireCostSpan.textContent = `$${BALANCE.specializationCosts.hellfire}`);
-terminatorCostSpan && (terminatorCostSpan.textContent = `$${BALANCE.specializationCosts.terminator}`);
-wunderwaffeCostSpan && (wunderwaffeCostSpan.textContent = `$${BALANCE.specializationCosts.wunderwaffe}`);
+const SPECIALIZE_BY_BASE = {
+  cannon: ['sniper', 'shotgun'],
+  laser: ['dualLaser', 'railgun'],
+  rocket: ['nuke', 'hellfire'],
+  tesla: ['terminator', 'wunderwaffe']
+};
+const SPECIAL_COST_SPANS = {
+  sniper: el.sniperCost, shotgun: el.shotgunCost, dualLaser: el.dualLaserCost, railgun: el.railgunCost,
+  nuke: el.nukeCost, hellfire: el.hellfireCost, terminator: el.terminatorCost, wunderwaffe: el.wunderwaffeCost
+};
+const SPECIAL_BUTTONS = {
+  sniper: el.upgradeSniper, shotgun: el.upgradeShotgun, dualLaser: el.upgradeDualLaser, railgun: el.upgradeRailgun,
+  nuke: el.upgradeNuke, hellfire: el.upgradeHellfire, terminator: el.upgradeTerminator, wunderwaffe: el.upgradeWunderwaffe
+};
+for (const [k, span] of Object.entries(SPECIAL_COST_SPANS)) {
+  if (span) span.textContent = `$${BALANCE.specializationCosts[k]}`;
+}
 
 const GRID_SIZES = {
   large: { cols: 36, rows: 24 },
@@ -184,9 +159,14 @@ function applyGridSize(size) {
 
 function rebuildGridCache() {
   const w = GRID_COLS * CELL_PX, h = GRID_ROWS * CELL_PX;
-  gridCache = document.createElement('canvas');
-  gridCache.width = w; gridCache.height = h;
-  gridCtx = gridCache.getContext('2d');
+  if (!gridCache || w !== gridCacheW || h !== gridCacheH) {
+    gridCache = document.createElement('canvas');
+    gridCache.width = w; gridCache.height = h;
+    gridCtx = gridCache.getContext('2d');
+    gridCacheW = w; gridCacheH = h;
+  } else {
+    gridCtx.clearRect(0, 0, w, h);
+  }
   gridCtx.strokeStyle = 'rgba(255,255,255,0.1)';
   gridCtx.lineWidth = 1;
   for (let i = 0; i <= GRID_COLS; i++) {
@@ -295,34 +275,59 @@ function recalcEnemyPaths() {
 }
 
 // Tower and enemy stats are loaded from external JSON for easier tuning
-let CANNON_BASE = { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 };
-let LASER_BASE = { damage: 120, fireRate: 0.4, range: 4, cost: 100 };
-let ROCKET_BASE = { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4.5, cost: 175 };
-let TESLA_BASE = { damage: 400, fireRate: 0.3, range: 6, cost: 400 };
+const TOWER_BASES = {
+  cannon: { damage: 80, fireRate: 0.5, range: 4, bulletSpeed: 5, cost: 50 },
+  laser:  { damage: 120, fireRate: 0.4, range: 4,           cost: 100 },
+  rocket: { damage: 200, fireRate: 0.4, range: 5.5, bulletSpeed: 4.5, cost: 175 },
+  tesla:  { damage: 400, fireRate: 0.3, range: 6,           cost: 400 }
+};
+// Compatibility variables for existing references
+let CANNON_BASE = TOWER_BASES.cannon;
+let LASER_BASE  = TOWER_BASES.laser;
+let ROCKET_BASE = TOWER_BASES.rocket;
+let TESLA_BASE  = TOWER_BASES.tesla;
 let TOWER_TYPES = [];
+
+function makeTower(type, gx, gy) {
+  const base = TOWER_BASES[type];
+  const p = cellToPx({ x: gx, y: gy });
+  return {
+    gx, gy, x: p.x, y: p.y,
+    type, cooldown: 0, angle: 0, anim: 0,
+    base: { damage: base.damage, fireRate: base.fireRate, range: base.range },
+    damage: base.damage, fireRate: base.fireRate, range: base.range,
+    cost: base.cost, spent: base.cost, fireSound: base.fireSound,
+    upgrades: { damage: 0, fireRate: 0, range: 0 },
+    target: null, kills: 0
+  };
+}
 
 function getBuildItems() {
   return [
     { id: 'wall', name: 'Wall', cost: BALANCE.wallCost, damage: 0, range: 0, fireRate: 0 },
-    { id: 'cannon', name: 'Cannon', ...CANNON_BASE },
-    { id: 'laser', name: 'Laser', ...LASER_BASE },
-    { id: 'rocket', name: 'Rocket', ...ROCKET_BASE },
-    { id: 'tesla', name: 'Tesla', ...TESLA_BASE }
+    ...Object.entries(TOWER_BASES).map(([id, b]) => ({
+      id,
+      name: friendlyNames[id] || caps(id),
+      cost: b.cost,
+      damage: b.damage,
+      range: b.range,
+      fireRate: b.fireRate
+    }))
   ];
 }
 
 function updateBuildMenuAvailability() {
-  if (!buildList) return;
+  if (!el.buildList) return;
   const builds = getBuildItems();
-  buildList.querySelectorAll('.build-item').forEach(btn => {
+  el.buildList.querySelectorAll('.build-item').forEach(btn => {
     const b = builds.find(x => x.id === btn.dataset.build);
     if (b) btn.disabled = money < b.cost;
   });
 }
 
 function renderBuildMenu() {
-  if (!buildList) return;
-  buildList.innerHTML = '';
+  if (!el.buildList) return;
+  el.buildList.innerHTML = '';
   getBuildItems().forEach(b => {
     const btn = document.createElement('button');
     btn.className = 'build-item';
@@ -332,7 +337,7 @@ function renderBuildMenu() {
     btn.addEventListener('click', () => {
       if (money >= b.cost) selectedBuild = b.id;
     });
-    buildList.appendChild(btn);
+    el.buildList.appendChild(btn);
   });
   updateBuildMenuAvailability();
 }
@@ -375,7 +380,11 @@ function findPath(start, goal) {
 
 // -------------------- Small SFX (respects "Mute") --------------------
 let audioCtx = null;
+let lastSfx = 0;
 function sfx(freq = 440, dur = 0.07, vol = 0.03, type = 'square') {
+  const now = performance.now();
+  if (now - lastSfx < 30) return;
+  lastSfx = now;
   const opts = loadOpts();
   if (opts.mute) return;
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -437,26 +446,26 @@ function loadOpts() {
 function saveOpts(o) { localStorage.setItem(LS_KEY, JSON.stringify(o)); }
 function syncUI() {
   const o = loadOpts();
-  if (optMute) optMute.checked = !!o.mute;
-  if (optFullscreen) optFullscreen.checked = !!o.fullscreen;
-  if (optGridOverride) optGridOverride.checked = !!o.gridOverride;
-  if (optGridSize) {
-    optGridSize.value = o.gridSize || 'medium';
-    optGridSize.disabled = !o.gridOverride;
+  if (el.optMute) el.optMute.checked = !!o.mute;
+  if (el.optFullscreen) el.optFullscreen.checked = !!o.fullscreen;
+  if (el.optGridOverride) el.optGridOverride.checked = !!o.gridOverride;
+  if (el.optGridSize) {
+    el.optGridSize.value = o.gridSize || 'medium';
+    el.optGridSize.disabled = !o.gridOverride;
   }
-  if (optDifficulty) optDifficulty.value = o.difficulty || 'medium';
+  if (el.optDifficulty) el.optDifficulty.value = o.difficulty || 'medium';
 }
-optionsBtn?.addEventListener('click', () => { syncUI(); dlg?.showModal?.(); });
-optGridOverride?.addEventListener('change', () => {
-  if (optGridSize) optGridSize.disabled = !optGridOverride.checked;
+el.optionsBtn?.addEventListener('click', () => { syncUI(); el.optionsDialog?.showModal?.(); });
+el.optGridOverride?.addEventListener('change', () => {
+  if (el.optGridSize) el.optGridSize.disabled = !el.optGridOverride.checked;
 });
-saveBtn?.addEventListener('click', () => {
-  const override = optGridOverride?.checked;
-  const grid = override ? optGridSize?.value : (currentMap?.grid || 'medium');
-  const difficulty = optDifficulty?.value || 'medium';
+el.saveOptions?.addEventListener('click', () => {
+  const override = el.optGridOverride?.checked;
+  const grid = override ? el.optGridSize?.value : (currentMap?.grid || 'medium');
+  const difficulty = el.optDifficulty?.value || 'medium';
   const opts = {
-    mute: optMute?.checked,
-    fullscreen: optFullscreen?.checked,
+    mute: el.optMute?.checked,
+    fullscreen: el.optFullscreen?.checked,
     gridSize: grid,
     gridOverride: override,
     difficulty,
@@ -482,7 +491,7 @@ function recordBestWave(wave) {
 }
 
 function syncBestWave() {
-  if (bestWaveSpan) bestWaveSpan.textContent = loadBestWave();
+  if (el.bestWave) el.bestWave.textContent = loadBestWave();
 }
 
 function loadBattlefield() {
@@ -535,15 +544,15 @@ function activateTab(name) {
 tabButtons.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
 
 let drag = null;
-hoverMenuHeader?.addEventListener('mousedown', (e) => {
+el.hoverMenuHeader?.addEventListener('mousedown', (e) => {
   drag = { x: e.offsetX, y: e.offsetY };
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', stopDrag);
 });
 function onDrag(e) {
   if (!drag) return;
-  hoverMenu.style.left = (e.pageX - drag.x) + 'px';
-  hoverMenu.style.top = (e.pageY - drag.y) + 'px';
+  el.hoverMenu.style.left = (e.pageX - drag.x) + 'px';
+  el.hoverMenu.style.top = (e.pageY - drag.y) + 'px';
 }
 function stopDrag() {
   drag = null;
@@ -551,144 +560,78 @@ function stopDrag() {
   document.removeEventListener('mouseup', stopDrag);
 }
 
-upgradeDamageBtn?.addEventListener('click', () => {
-  if (selectedTower && upgradeTower(selectedTower, 'damage')) { rankUp(); updateSelectedTowerInfo(); }
-});
-upgradeFireRateBtn?.addEventListener('click', () => {
-  if (selectedTower && upgradeTower(selectedTower, 'fireRate')) { rankUp(); updateSelectedTowerInfo(); }
-});
-upgradeRangeBtn?.addEventListener('click', () => {
-  if (selectedTower && upgradeTower(selectedTower, 'range')) { rankUp(); updateSelectedTowerInfo(); }
-});
-maxDamageBtn?.addEventListener('click', () => {
+function tryUpgrade(stat, max = false) {
   if (!selectedTower) return;
   let upgraded = false;
-  while (selectedTower.upgrades?.damage < 10 && money >= getUpgradeCost(selectedTower, 'damage')) {
-    if (!upgradeTower(selectedTower, 'damage')) break;
-    upgraded = true;
-    rankUp();
+  const limit = () => (selectedTower.upgrades?.[stat] ?? 0) < 10;
+  if (max) {
+    while (limit() && money >= getUpgradeCost(selectedTower, stat)) {
+      if (!upgradeTower(selectedTower, stat)) break;
+      upgraded = true;
+    }
+  } else if (limit() && money >= getUpgradeCost(selectedTower, stat)) {
+    upgraded = upgradeTower(selectedTower, stat);
   }
-  if (upgraded) updateSelectedTowerInfo();
-});
-maxFireRateBtn?.addEventListener('click', () => {
-  if (!selectedTower) return;
-  let upgraded = false;
-  while (selectedTower.upgrades?.fireRate < 10 && money >= getUpgradeCost(selectedTower, 'fireRate')) {
-    if (!upgradeTower(selectedTower, 'fireRate')) break;
-    upgraded = true;
-    rankUp();
-  }
-  if (upgraded) updateSelectedTowerInfo();
-});
-maxRangeBtn?.addEventListener('click', () => {
-  if (!selectedTower) return;
-  let upgraded = false;
-  while (selectedTower.upgrades?.range < 10 && money >= getUpgradeCost(selectedTower, 'range')) {
-    if (!upgradeTower(selectedTower, 'range')) break;
-    upgraded = true;
-    rankUp();
-  }
-  if (upgraded) updateSelectedTowerInfo();
-});
-upgradeSniperBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'sniper'); updateSelectedTowerInfo(); }
-});
-upgradeShotgunBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'shotgun'); updateSelectedTowerInfo(); }
-});
-upgradeDualLaserBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'dualLaser'); updateSelectedTowerInfo(); }
-});
-upgradeRailgunBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'railgun'); updateSelectedTowerInfo(); }
-});
-upgradeNukeBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'nuke'); updateSelectedTowerInfo(); }
-});
-upgradeHellfireBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'hellfire'); updateSelectedTowerInfo(); }
-});
-upgradeTerminatorBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'terminator'); updateSelectedTowerInfo(); }
-});
-upgradeWunderwaffeBtn?.addEventListener('click', () => {
-  if (selectedTower) { specializeTower(selectedTower, 'wunderwaffe'); updateSelectedTowerInfo(); }
-});
-quitInMenuBtn?.addEventListener('click', () => returnToMenu());
+  if (upgraded) { rankUp(); updateSelectedTowerInfo(); }
+}
 
-pauseBtn?.addEventListener('click', () => {
+el.upgradeDamage?.addEventListener('click', () => tryUpgrade('damage'));
+el.upgradeFireRate?.addEventListener('click', () => tryUpgrade('fireRate'));
+el.upgradeRange?.addEventListener('click', () => tryUpgrade('range'));
+el.maxDamage?.addEventListener('click', () => tryUpgrade('damage', true));
+el.maxFireRate?.addEventListener('click', () => tryUpgrade('fireRate', true));
+el.maxRange?.addEventListener('click', () => tryUpgrade('range', true));
+for (const [kind, btn] of Object.entries(SPECIAL_BUTTONS)) {
+  btn?.addEventListener('click', () => {
+    if (!selectedTower) return;
+    specializeTower(selectedTower, kind);
+    updateSelectedTowerInfo();
+  });
+}
+el.quitInMenuBtn?.addEventListener('click', () => returnToMenu());
+
+el.pauseBtn?.addEventListener('click', () => {
   if (running) {
     running = false;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
-    pauseBtn.textContent = 'Resume';
+    el.pauseBtn.textContent = 'Resume';
   } else {
     running = true;
     lastT = 0;
     rafId = requestAnimationFrame(loop);
-    pauseBtn.textContent = 'Pause';
+    el.pauseBtn.textContent = 'Pause';
   }
 });
 
 function updateSelectedTowerInfo() {
-  if (!selectedTowerName) return;
+  if (!el.selectedTowerName) return;
   if (selectedTower) {
-    selectedTowerName.classList.remove('no-selection');
+    el.selectedTowerName.classList.remove('no-selection');
     const isSpecial = ['sniper','shotgun','dualLaser','railgun','nuke','hellfire','terminator','wunderwaffe'].includes(selectedTower.type);
-    const fullyUpgraded = ['cannon','laser','rocket','tesla'].includes(selectedTower.type) && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
+    const isBaseTower = ['cannon','laser','rocket','tesla'].includes(selectedTower.type);
+    const fullyUpgraded = isBaseTower && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
     if (fullyUpgraded) {
-      selectedTowerName.textContent = 'Choose specialization';
-      if (basicUpgrades) basicUpgrades.style.display = 'none';
-      if (specialUpgrades) {
-        specialUpgrades.style.display = '';
-        const isCannon = selectedTower.type === 'cannon';
-        const isLaser = selectedTower.type === 'laser';
-        const isRocket = selectedTower.type === 'rocket';
-        const isTesla = selectedTower.type === 'tesla';
-        if (upgradeSniperBtn) {
-          upgradeSniperBtn.parentElement && (upgradeSniperBtn.parentElement.style.display = isCannon ? '' : 'none');
-          upgradeSniperBtn.disabled = money < BALANCE.specializationCosts.sniper;
-        }
-        if (upgradeShotgunBtn) {
-          upgradeShotgunBtn.parentElement && (upgradeShotgunBtn.parentElement.style.display = isCannon ? '' : 'none');
-          upgradeShotgunBtn.disabled = money < BALANCE.specializationCosts.shotgun;
-        }
-        if (upgradeDualLaserBtn) {
-          upgradeDualLaserBtn.parentElement && (upgradeDualLaserBtn.parentElement.style.display = isLaser ? '' : 'none');
-          upgradeDualLaserBtn.disabled = money < BALANCE.specializationCosts.dualLaser;
-        }
-        if (upgradeRailgunBtn) {
-          upgradeRailgunBtn.parentElement && (upgradeRailgunBtn.parentElement.style.display = isLaser ? '' : 'none');
-          upgradeRailgunBtn.disabled = money < BALANCE.specializationCosts.railgun;
-        }
-        if (upgradeNukeBtn) {
-          upgradeNukeBtn.parentElement && (upgradeNukeBtn.parentElement.style.display = isRocket ? '' : 'none');
-          upgradeNukeBtn.disabled = money < BALANCE.specializationCosts.nuke;
-        }
-        if (upgradeHellfireBtn) {
-          upgradeHellfireBtn.parentElement && (upgradeHellfireBtn.parentElement.style.display = isRocket ? '' : 'none');
-          upgradeHellfireBtn.disabled = money < BALANCE.specializationCosts.hellfire;
-        }
-        if (upgradeTerminatorBtn) {
-          upgradeTerminatorBtn.parentElement && (upgradeTerminatorBtn.parentElement.style.display = isTesla ? '' : 'none');
-          upgradeTerminatorBtn.disabled = money < BALANCE.specializationCosts.terminator;
-        }
-        if (upgradeWunderwaffeBtn) {
-          upgradeWunderwaffeBtn.parentElement && (upgradeWunderwaffeBtn.parentElement.style.display = isTesla ? '' : 'none');
-          upgradeWunderwaffeBtn.disabled = money < BALANCE.specializationCosts.wunderwaffe;
-        }
+      el.selectedTowerName.textContent = 'Choose specialization';
+      el.basicUpgrades && (el.basicUpgrades.style.display = 'none');
+      el.specialUpgrades && (el.specialUpgrades.style.display = '');
+      const allowed = SPECIALIZE_BY_BASE[selectedTower.type] || [];
+      for (const [kind, btn] of Object.entries(SPECIAL_BUTTONS)) {
+        if (!btn) continue;
+        const show = allowed.includes(kind);
+        btn.parentElement && (btn.parentElement.style.display = show ? '' : 'none');
+        btn.disabled = money < BALANCE.specializationCosts[kind];
       }
     } else {
-      if (basicUpgrades) basicUpgrades.style.display = '';
-      if (specialUpgrades) specialUpgrades.style.display = 'none';
-      const friendlyNames = { sniper: 'Sniper', shotgun: 'Shotgun', dualLaser: 'Dual Laser', railgun: 'Railgun', nuke: 'Nuke', hellfire: 'Hellfire', terminator: 'Terminator', wunderwaffe: 'Wunderwaffe' };
-      const typeName = friendlyNames[selectedTower.type] || selectedTower.type.charAt(0).toUpperCase() + selectedTower.type.slice(1);
-      selectedTowerName.textContent = isSpecial ? `${typeName} (Maxed)` : `Selected: ${selectedTower.type}`;
+      el.basicUpgrades && (el.basicUpgrades.style.display = '');
+      el.specialUpgrades && (el.specialUpgrades.style.display = 'none');
+      const typeName = friendlyNames[selectedTower.type] || caps(selectedTower.type);
+      el.selectedTowerName.textContent = isSpecial ? `${typeName} (Maxed)` : `Selected: ${typeName}`;
       const stats = {
-        damage: { value: damageValue, next: damageNext, cost: damageCost, btn: upgradeDamageBtn, maxBtn: maxDamageBtn },
-        fireRate: { value: fireRateValue, next: fireRateNext, cost: fireRateCost, btn: upgradeFireRateBtn, maxBtn: maxFireRateBtn },
-        range: { value: rangeValue, next: rangeNext, cost: rangeCost, btn: upgradeRangeBtn, maxBtn: maxRangeBtn }
+        damage: { value: el.damageValue, next: el.damageNext, cost: el.damageCost, btn: el.upgradeDamage, maxBtn: el.maxDamage },
+        fireRate: { value: el.fireRateValue, next: el.fireRateNext, cost: el.fireRateCost, btn: el.upgradeFireRate, maxBtn: el.maxFireRate },
+        range: { value: el.rangeValue, next: el.rangeNext, cost: el.rangeCost, btn: el.upgradeRange, maxBtn: el.maxRange }
       };
       for (const [stat, els] of Object.entries(stats)) {
         const lvl = selectedTower.upgrades?.[stat] || 0;
@@ -740,27 +683,27 @@ function updateSelectedTowerInfo() {
       }
     }
   } else {
-    selectedTowerName.textContent = 'No tower selected';
-    selectedTowerName.classList.add('no-selection');
+    el.selectedTowerName.textContent = 'No tower selected';
+    el.selectedTowerName.classList.add('no-selection');
     rangePreview = null;
-    [damageValue, damageNext, damageCost, fireRateValue, fireRateNext, fireRateCost, rangeValue, rangeNext, rangeCost].forEach(el => {
+    [el.damageValue, el.damageNext, el.damageCost, el.fireRateValue, el.fireRateNext, el.fireRateCost, el.rangeValue, el.rangeNext, el.rangeCost].forEach(el => {
       if (el) el.textContent = '-';
     });
-    [upgradeDamageBtn, upgradeFireRateBtn, upgradeRangeBtn, maxDamageBtn, maxFireRateBtn, maxRangeBtn].forEach(btn => { if (btn) { btn.disabled = true; btn.style.display = ''; } });
-    if (basicUpgrades) basicUpgrades.style.display = '';
-    if (specialUpgrades) specialUpgrades.style.display = 'none';
+    [el.upgradeDamage, el.upgradeFireRate, el.upgradeRange, el.maxDamage, el.maxFireRate, el.maxRange].forEach(btn => { if (btn) { btn.disabled = true; btn.style.display = ''; } });
+    if (el.basicUpgrades) el.basicUpgrades.style.display = '';
+    if (el.specialUpgrades) el.specialUpgrades.style.display = 'none';
   }
 }
 
 gameCanvas?.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  if (!contextMenu || !contextSellBtn || !contextStats) return;
+  if (!el.contextMenu || !el.contextSell || !el.contextStats) return;
   const r = gameCanvas.getBoundingClientRect();
   const cell = pxToCell({ x: e.clientX - r.left, y: e.clientY - r.top });
   const t = towers.find(tt => tt.gx === cell.x && tt.gy === cell.y);
   const w = walls.find(ww => ww.x === cell.x && ww.y === cell.y);
   if (!t && !w) {
-    contextMenu.style.display = 'none';
+    el.contextMenu.style.display = 'none';
     contextTarget = null;
     rangePreview = null;
     if (selectedBuild) selectedBuild = null;
@@ -769,20 +712,20 @@ gameCanvas?.addEventListener('contextmenu', (e) => {
   contextTarget = { gx: cell.x, gy: cell.y };
   if (t) {
     const sellVal = Math.floor((t.spent || t.cost || 0) * 0.8);
-    contextStats.innerHTML = `Damage: ${Math.round(t.damage)}<br>Kills: ${t.kills || 0}<br>Sell: $${sellVal}`;
-    contextSellBtn.textContent = '$';
+    el.contextStats.innerHTML = `Damage: ${Math.round(t.damage)}<br>Kills: ${t.kills || 0}<br>Sell: $${sellVal}`;
+    el.contextSell.textContent = '$';
     rangePreview = { x: t.x, y: t.y, r: t.range * CELL_PX };
   } else {
-    contextStats.innerHTML = `Sell: $${BALANCE.wallCost}`;
-    contextSellBtn.textContent = '$';
+    el.contextStats.innerHTML = `Sell: $${BALANCE.wallCost}`;
+    el.contextSell.textContent = '$';
     rangePreview = null;
   }
-  contextMenu.style.left = e.clientX + 'px';
-  contextMenu.style.top = e.clientY + 'px';
-  contextMenu.style.display = 'block';
+  el.contextMenu.style.left = e.clientX + 'px';
+  el.contextMenu.style.top = e.clientY + 'px';
+  el.contextMenu.style.display = 'block';
 });
 document.addEventListener('click', () => {
-  if (contextMenu) contextMenu.style.display = 'none';
+  if (el.contextMenu) el.contextMenu.style.display = 'none';
   contextTarget = null;
   if (selectedTower) {
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
@@ -790,7 +733,7 @@ document.addEventListener('click', () => {
     rangePreview = null;
   }
 });
-contextSellBtn?.addEventListener('click', () => {
+el.contextSell?.addEventListener('click', () => {
   if (!contextTarget) return;
   const { gx, gy } = contextTarget;
   const t = towers.find(t => t.gx === gx && t.gy === gy);
@@ -811,7 +754,7 @@ contextSellBtn?.addEventListener('click', () => {
     }
   }
   recalcEnemyPaths();
-  contextMenu.style.display = 'none';
+  el.contextMenu.style.display = 'none';
   contextTarget = null;
   rangePreview = null;
 });
@@ -1011,6 +954,22 @@ const NUKE_HIT_SOUND = 'assets/sounds/nuke_hit.wav';
 const GAME_START_SOUND = 'assets/sounds/game_start.wav';
 const GAME_OVER_SOUND = 'assets/sounds/game_over.wav';
 const CAT_DEATH_SOUND = 'assets/sounds/cat_death.wav';
+
+const ART_SPECS = {
+  wall: { base: WALL_SRC },
+  cannon: { base: CANNON_BASE_SRC, turret: CANNON_TURRET_SRC },
+  laser: { base: LASER_BASE_SRC, turret: LASER_TURRET_SRC },
+  rocket: { base: ROCKET_BASE_SRC, turret: ROCKET_TURRET_SRC },
+  nuke: { base: NUKE_BASE_SRC, turret: NUKE_TURRET_SRC },
+  hellfire: { base: HELLFIRE_BASE_SRC, turret: HELLFIRE_TURRET_SRC },
+  dualLaser: { base: DUAL_LASER_BASE_SRC, turret: DUAL_LASER_TURRET_SRC },
+  railgun: { base: RAILGUN_BASE_SRC, turret: RAILGUN_TURRET_SRC },
+  sniper: { base: SNIPER_BASE_SRC, turret: SNIPER_TURRET_SRC },
+  shotgun: { base: SHOTGUN_BASE_SRC, turret: SHOTGUN_TURRET_SRC },
+  tesla: { base: TESLA_BASE_SRC, turret: TESLA_TURRET_SRC },
+  terminator: { base: TERMINATOR_BASE_SRC, turret: TERMINATOR_TURRET_SRC },
+  wunderwaffe: { base: WUNDERWAFFE_BASE_SRC, turret: WUNDERWAFFE_TURRET_SRC }
+};
 const TOWER_CONFIG_IDS = [
   'cannon',
   'laser',
@@ -1039,14 +998,15 @@ async function loadData() {
     ]);
     if (Array.isArray(towerJson)) {
       TOWER_TYPES = towerJson;
-      const cannon = TOWER_TYPES.find(t => t.id === 'cannon');
-      if (cannon) CANNON_BASE = { ...CANNON_BASE, ...cannon };
-      const laser = TOWER_TYPES.find(t => t.id === 'laser');
-      if (laser) LASER_BASE = { ...LASER_BASE, ...laser };
-      const rocket = TOWER_TYPES.find(t => t.id === 'rocket');
-      if (rocket) ROCKET_BASE = { ...ROCKET_BASE, ...rocket };
-      const tesla = TOWER_TYPES.find(t => t.id === 'tesla');
-      if (tesla) TESLA_BASE = { ...TESLA_BASE, ...tesla };
+      for (const t of TOWER_TYPES) {
+        if (TOWER_BASES[t.id]) {
+          TOWER_BASES[t.id] = { ...TOWER_BASES[t.id], ...t };
+        }
+      }
+      CANNON_BASE = TOWER_BASES.cannon;
+      LASER_BASE  = TOWER_BASES.laser;
+      ROCKET_BASE = TOWER_BASES.rocket;
+      TESLA_BASE  = TOWER_BASES.tesla;
       renderBuildMenu();
     }
     if (dogJson) {
@@ -1074,48 +1034,31 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = {
-  dogs: [],
-  cat: null,
-  wall: null,
-  cannon: { base: null, turret: null },
-  laser: { base: null, turret: null },
-  rocket: { base: null, turret: null },
-  nuke: { base: null, turret: null },
-  hellfire: { base: null, turret: null },
-  dualLaser: { base: null, turret: null },
-  railgun: { base: null, turret: null },
-  sniper: { base: null, turret: null },
-  shotgun: { base: null, turret: null },
-  tesla: { base: null, turret: null },
-  terminator: { base: null, turret: null },
-  wunderwaffe: { base: null, turret: null }
-};
+let ASSETS = { dogs: [] };
 let assetsReady; // Promise
 
 async function ensureAssets() {
   await loadData();
   if (!assetsReady) {
     assetsReady = (async () => {
-        const dogImgs = await Promise.all(DOG_TYPES.map(t => loadImage(t.src)));
-        dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
-        ASSETS = {
-          dogs: DOG_TYPES,
-          cat: await loadImage(CAT_SRC),
-          wall: await loadImage(WALL_SRC),
-          cannon: { base: await loadImage(CANNON_BASE_SRC), turret: await loadImage(CANNON_TURRET_SRC) },
-          laser: { base: await loadImage(LASER_BASE_SRC), turret: await loadImage(LASER_TURRET_SRC) },
-          rocket: { base: await loadImage(ROCKET_BASE_SRC), turret: await loadImage(ROCKET_TURRET_SRC) },
-          nuke: { base: await loadImage(NUKE_BASE_SRC), turret: await loadImage(NUKE_TURRET_SRC) },
-          hellfire: { base: await loadImage(HELLFIRE_BASE_SRC), turret: await loadImage(HELLFIRE_TURRET_SRC) },
-          dualLaser: { base: await loadImage(DUAL_LASER_BASE_SRC), turret: await loadImage(DUAL_LASER_TURRET_SRC) },
-          railgun: { base: await loadImage(RAILGUN_BASE_SRC), turret: await loadImage(RAILGUN_TURRET_SRC) },
-          sniper: { base: await loadImage(SNIPER_BASE_SRC), turret: await loadImage(SNIPER_TURRET_SRC) },
-          shotgun: { base: await loadImage(SHOTGUN_BASE_SRC), turret: await loadImage(SHOTGUN_TURRET_SRC) },
-          tesla: { base: await loadImage(TESLA_BASE_SRC), turret: await loadImage(TESLA_TURRET_SRC) },
-          terminator: { base: await loadImage(TERMINATOR_BASE_SRC), turret: await loadImage(TERMINATOR_TURRET_SRC) },
-          wunderwaffe: { base: await loadImage(WUNDERWAFFE_BASE_SRC), turret: await loadImage(WUNDERWAFFE_TURRET_SRC) }
+      const dogImgs = await Promise.all(DOG_TYPES.map(t => loadImage(t.src)));
+      dogImgs.forEach((img, i) => { DOG_TYPES[i].img = img; });
+      const art = {};
+      for (const [k, spec] of Object.entries(ART_SPECS)) {
+        art[k] = {
+          base: spec.base ? await loadImage(spec.base) : null,
+          turret: spec.turret ? await loadImage(spec.turret) : null
         };
+      }
+      ASSETS = {
+        dogs: DOG_TYPES,
+        cat: await loadImage(CAT_SRC),
+        wall: art.wall.base,
+        cannon: art.cannon, laser: art.laser, rocket: art.rocket, nuke: art.nuke,
+        hellfire: art.hellfire, dualLaser: art.dualLaser, railgun: art.railgun,
+        sniper: art.sniper, shotgun: art.shotgun, tesla: art.tesla,
+        terminator: art.terminator, wunderwaffe: art.wunderwaffe
+      };
     })();
   }
   return assetsReady;
@@ -1216,7 +1159,7 @@ function spawnEnemy(waveNum) {
   const goalCell = target ? { x: target.gx, y: target.gy } : entry;
   const path = findPath(entry, goalCell);
 
-  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum, navVersion: NAV_VERSION });
+  enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum, navVersion: NAV_VERSION, lastCell: entry });
 }
 
 function getNextWaveEnemyName() {
@@ -1483,11 +1426,13 @@ function update(dt) {
 
     const goalCell = { x: target.gx, y: target.gy };
     const curCell = pxToCell({ x: e.x, y: e.y });
+    const crossed = !e.lastCell || e.lastCell.x !== curCell.x || e.lastCell.y !== curCell.y;
+    e.lastCell = curCell;
 
     if (
       !e.path || !e.path.length ||
       !e.goalCell || e.goalCell.x !== goalCell.x || e.goalCell.y !== goalCell.y ||
-      e.navVersion !== NAV_VERSION
+      (e.navVersion !== NAV_VERSION && crossed)
     ) {
       e.path = findPath(curCell, goalCell);
       e.goalCell = goalCell;
@@ -1793,9 +1738,9 @@ function drawBG() {
   }
 }
 function drawHUD() {
-  const statsEl = document.getElementById('gameStats');
-  const overlayEl = overlayStats;
-  if (!statsEl && !overlayEl && !upNextBanner) return;
+  const statsEl = $id('gameStats');
+  const overlayEl = el.overlayStats;
+  if (!statsEl && !overlayEl && !el.upNextBanner) return;
   let html = '';
   html += `Wave: ${waveIndex + 1}<br>`;
   html += `Enemies: ${enemies.length}<br>`;
@@ -1808,9 +1753,9 @@ function drawHUD() {
   }
   html += `Lives: ${catLives.filter(l => l.alive).length}<br>`;
   html += `Money: $${money}`;
-  if (upNextBanner) {
+  if (el.upNextBanner) {
     const nextName = getNextWaveEnemyName();
-    upNextBanner.textContent = nextName ? `Up Next: ${nextName}` : '';
+    el.upNextBanner.textContent = nextName ? `Up Next: ${nextName}` : '';
   }
   updateBuildMenuAvailability();
   if (statsEl) statsEl.innerHTML = html;
@@ -1978,7 +1923,7 @@ function render() {
 function loop(ts) {
   if (!running) return;
   if (!lastT) lastT = ts;
-  const dt = Math.min(0.033, (ts - lastT) / 1000); // clamp for tab-jumps
+  const dt = Math.min(0.025, (ts - lastT) / 1000); // clamp for tab-jumps
   lastT = ts;
   update(dt);
   render();
@@ -2001,12 +1946,10 @@ function unbindInputs() {
   window.removeEventListener('keydown', onKey);
 }
 function onMouseMove(e) {
-  const r = gameCanvas.getBoundingClientRect();
-  mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.active = true;
+  mouse.x = e.offsetX; mouse.y = e.offsetY; mouse.active = true;
 }
 function onCanvasClick(e) {
-  const r = gameCanvas.getBoundingClientRect();
-  const cell = pxToCell({ x: e.clientX - r.left, y: e.clientY - r.top });
+  const cell = pxToCell({ x: e.offsetX, y: e.offsetY });
   const gx = cell.x, gy = cell.y;
   if (!inBounds(cell)) return;
 
@@ -2053,112 +1996,13 @@ function onCanvasClick(e) {
       firstPlacementDone = true;
       recalcEnemyPaths();
     }
-  } else if (selectedBuild === 'cannon') {
-    if (canPlace(cell) && money >= CANNON_BASE.cost) {
-      money -= CANNON_BASE.cost;
+  } else {
+    // Any tower type in TOWER_BASES
+    const base = TOWER_BASES[selectedBuild];
+    if (base && canPlace(cell) && money >= base.cost) {
+      money -= base.cost;
       addOccupancy(gx, gy);
-      const p = cellToPx(cell);
-      towers.push({
-        gx,
-        gy,
-        x: p.x,
-        y: p.y,
-        type: 'cannon',
-        cooldown: 0,
-        angle: 0,
-        base: { damage: CANNON_BASE.damage, fireRate: CANNON_BASE.fireRate, range: CANNON_BASE.range },
-        damage: CANNON_BASE.damage,
-        fireRate: CANNON_BASE.fireRate,
-        range: CANNON_BASE.range,
-        cost: CANNON_BASE.cost,
-        spent: CANNON_BASE.cost,
-        fireSound: CANNON_BASE.fireSound,
-        upgrades: { damage: 0, fireRate: 0, range: 0 },
-        target: null,
-        kills: 0
-      });
-      firstPlacementDone = true;
-      recalcEnemyPaths();
-    }
-  } else if (selectedBuild === 'rocket') {
-    if (canPlace(cell) && money >= ROCKET_BASE.cost) {
-      money -= ROCKET_BASE.cost;
-      addOccupancy(gx, gy);
-      const p = cellToPx(cell);
-      towers.push({
-        gx,
-        gy,
-        x: p.x,
-        y: p.y,
-        type: 'rocket',
-        cooldown: 0,
-        angle: 0,
-        base: { damage: ROCKET_BASE.damage, fireRate: ROCKET_BASE.fireRate, range: ROCKET_BASE.range },
-        damage: ROCKET_BASE.damage,
-        fireRate: ROCKET_BASE.fireRate,
-        range: ROCKET_BASE.range,
-        cost: ROCKET_BASE.cost,
-        spent: ROCKET_BASE.cost,
-        fireSound: ROCKET_BASE.fireSound,
-        upgrades: { damage: 0, fireRate: 0, range: 0 },
-        target: null,
-        kills: 0,
-        anim: 0
-      });
-      firstPlacementDone = true;
-      recalcEnemyPaths();
-    }
-  } else if (selectedBuild === 'tesla') {
-    if (canPlace(cell) && money >= TESLA_BASE.cost) {
-      money -= TESLA_BASE.cost;
-      addOccupancy(gx, gy);
-      const p = cellToPx(cell);
-      towers.push({
-        gx,
-        gy,
-        x: p.x,
-        y: p.y,
-        type: 'tesla',
-        cooldown: 0,
-        angle: 0,
-        base: { damage: TESLA_BASE.damage, fireRate: TESLA_BASE.fireRate, range: TESLA_BASE.range },
-        damage: TESLA_BASE.damage,
-        fireRate: TESLA_BASE.fireRate,
-        range: TESLA_BASE.range,
-        cost: TESLA_BASE.cost,
-        spent: TESLA_BASE.cost,
-        fireSound: TESLA_BASE.fireSound,
-        upgrades: { damage: 0, fireRate: 0, range: 0 },
-        target: null,
-        kills: 0
-      });
-      firstPlacementDone = true;
-      recalcEnemyPaths();
-    }
-  } else if (selectedBuild === 'laser') {
-    if (canPlace(cell) && money >= LASER_BASE.cost) {
-      money -= LASER_BASE.cost;
-      addOccupancy(gx, gy);
-      const p = cellToPx(cell);
-      towers.push({
-        gx,
-        gy,
-        x: p.x,
-        y: p.y,
-        type: 'laser',
-        cooldown: 0,
-        angle: 0,
-        base: { damage: LASER_BASE.damage, fireRate: LASER_BASE.fireRate, range: LASER_BASE.range },
-        damage: LASER_BASE.damage,
-        fireRate: LASER_BASE.fireRate,
-        range: LASER_BASE.range,
-        cost: LASER_BASE.cost,
-        spent: LASER_BASE.cost,
-        fireSound: LASER_BASE.fireSound,
-        upgrades: { damage: 0, fireRate: 0, range: 0 },
-        target: null,
-        kills: 0
-      });
+      towers.push(makeTower(selectedBuild, gx, gy));
       firstPlacementDone = true;
       recalcEnemyPaths();
     }
@@ -2186,14 +2030,14 @@ async function startGame() {
   // UI
   container && (container.style.display = 'none');
   menu && (menu.style.display = 'none');
-  quitGameBtn && (quitGameBtn.style.display = 'inline-block');
-  nextWaveBtn && (nextWaveBtn.style.display = 'inline-block');
-  statsOverlay && (statsOverlay.style.display = 'block');
-  hoverMenu && (hoverMenu.style.display = 'flex');
+  el.quitGameBtn && (el.quitGameBtn.style.display = 'inline-block');
+  el.nextWaveBtn && (el.nextWaveBtn.style.display = 'inline-block');
+  el.statsOverlay && (el.statsOverlay.style.display = 'block');
+  el.hoverMenu && (el.hoverMenu.style.display = 'flex');
   overlayHeader && (overlayHeader.style.display = 'flex');
-  overlayStats && (overlayStats.style.display = 'block');
-  upNextBanner && (upNextBanner.style.display = 'block');
-  gameOverPanel && (gameOverPanel.style.display = 'none');
+  el.overlayStats && (el.overlayStats.style.display = 'block');
+  el.upNextBanner && (el.upNextBanner.style.display = 'block');
+  el.gameOverPanel && (el.gameOverPanel.style.display = 'none');
 
   // Canvas
   ensureCanvas();
@@ -2240,22 +2084,22 @@ function endGame() {
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
-  contextMenu && (contextMenu.style.display = 'none');
-  hoverMenu && (hoverMenu.style.display = 'none');
+  el.contextMenu && (el.contextMenu.style.display = 'none');
+  el.hoverMenu && (el.hoverMenu.style.display = 'none');
   overlayHeader && (overlayHeader.style.display = 'none');
-  overlayStats && (overlayStats.style.display = 'none');
-  upNextBanner && (upNextBanner.style.display = 'none');
-  nextWaveBtn && (nextWaveBtn.style.display = 'none');
-  quitGameBtn && (quitGameBtn.style.display = 'none');
-  statsOverlay && (statsOverlay.style.display = 'block');
-  gameOverPanel && (gameOverPanel.style.display = 'block');
-  pauseBtn && (pauseBtn.textContent = 'Pause');
+  el.overlayStats && (el.overlayStats.style.display = 'none');
+  el.upNextBanner && (el.upNextBanner.style.display = 'none');
+  el.nextWaveBtn && (el.nextWaveBtn.style.display = 'none');
+  el.quitGameBtn && (el.quitGameBtn.style.display = 'none');
+  el.statsOverlay && (el.statsOverlay.style.display = 'block');
+  el.gameOverPanel && (el.gameOverPanel.style.display = 'block');
+  el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
 
   const waveNum = waveIndex; // waves completed
   recordBestWave(waveNum);
   syncBestWave();
-  if (gameOverText) {
-    gameOverText.textContent = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
+  if (el.gameOverText) {
+    el.gameOverText.textContent = `Game Over at wave ${waveNum} after ${waveElapsed.toFixed(1)}s.`;
   }
 }
 
@@ -2265,30 +2109,30 @@ function returnToMenu() {
   rafId = null;
   unbindInputs();
   gameCanvas && (gameCanvas.style.display = 'none');
-  hoverMenu && (hoverMenu.style.display = 'none');
-  statsOverlay && (statsOverlay.style.display = 'none');
-  gameOverPanel && (gameOverPanel.style.display = 'none');
+  el.hoverMenu && (el.hoverMenu.style.display = 'none');
+  el.statsOverlay && (el.statsOverlay.style.display = 'none');
+  el.gameOverPanel && (el.gameOverPanel.style.display = 'none');
   container && (container.style.display = 'block');
   menu && (menu.style.display = '');
   selectedTower = null;
   updateSelectedTowerInfo();
   selectedBuild = null;
-  contextMenu && (contextMenu.style.display = 'none');
-  pauseBtn && (pauseBtn.textContent = 'Pause');
+  el.contextMenu && (el.contextMenu.style.display = 'none');
+  el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
 }
 
 // -------------------- Hooks --------------------
 
-battlefieldBtn?.addEventListener('click', () => {
+el.battlefieldBtn?.addEventListener('click', () => {
   const current = loadBattlefield();
-  if (battlefieldDlg) {
-    const radios = battlefieldDlg.querySelectorAll('input[name="battlefield"]');
+  if (el.battlefieldDialog) {
+    const radios = el.battlefieldDialog.querySelectorAll('input[name="battlefield"]');
     radios.forEach(r => { r.checked = (r.value === current); });
-    battlefieldDlg.showModal();
+    el.battlefieldDialog.showModal();
   }
 });
-saveBattlefieldBtn?.addEventListener('click', async () => {
-  const selected = battlefieldDlg?.querySelector('input[name="battlefield"]:checked')?.value || 'backyard';
+el.saveBattlefield?.addEventListener('click', async () => {
+  const selected = el.battlefieldDialog?.querySelector('input[name="battlefield"]:checked')?.value || 'backyard';
   saveBattlefield(selected);
   await setBattlefield(selected);
   const opts = loadOpts();
@@ -2299,14 +2143,14 @@ saveBattlefieldBtn?.addEventListener('click', async () => {
   }
 });
 
-startBtn?.addEventListener('click', () => {
+el.startBtn?.addEventListener('click', () => {
   startGame();
 });
-quitGameBtn?.addEventListener('click', () => endGame());
-quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));
-nextWaveBtn?.addEventListener('click', () => {
+el.quitGameBtn?.addEventListener('click', () => endGame());
+el.quitBtn?.addEventListener('click', () => alert('Thanks for stopping by! You can close this tab any time.'));
+el.nextWaveBtn?.addEventListener('click', () => {
   if (!running) return;
   queueWave();
 });
-retryBtn?.addEventListener('click', () => startGame());
-gameOverQuitBtn?.addEventListener('click', () => returnToMenu());
+el.retryBtn?.addEventListener('click', () => startGame());
+el.gameOverQuitBtn?.addEventListener('click', () => returnToMenu());
