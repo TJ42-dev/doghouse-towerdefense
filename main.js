@@ -208,6 +208,16 @@ function inBounds(cell) {
     cell.y < GRID_ROWS
   );
 }
+function angleWrap(a){ return ((a + Math.PI) % (Math.PI * 2)) - Math.PI; }
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+function igniteRocket(b, target){
+  b.state = 'homing';
+  b.target = target;
+  b.angle = Math.atan2(target.y - b.y, target.x - b.x);
+  b.speed = Math.max(b.speed, b.maxSpeed * 0.25);
+  b.accel = b.maxSpeed * 4;
+  b._prevLos = null;
+}
 
 function isWallAt(gx, gy) {
   return occupancy.has(key(gx, gy));
@@ -1259,114 +1269,107 @@ function queueWave() {
 function updateProjectiles(dt) {
   bullets = bullets.filter(b => {
     if (b.type === 'rocket') {
-      b.speed = Math.min(b.maxSpeed, b.speed + b.accel * dt);
-      const move = b.speed * dt;
+      // keep bullets if they're near the playfield
+      if (
+        b.x < originPx.x - 64 || b.x > originPx.x + GRID_COLS * CELL_PX + 64 ||
+        b.y < originPx.y - 64 || b.y > originPx.y + GRID_ROWS * CELL_PX + 64
+      ) return false;
 
-      const needsNewTarget =
-        !b.target ||
-        !enemies.includes(b.target) ||
-        b.target.health <= 0;
+      // ---------- IDLE ----------
+      if (b.state === 'idle') {
+        const src = b.source;
+        if (!src) return false;
 
-      if (needsNewTarget) {
-        b.target = null;
-        let closest = null;
-        let closestDist = Infinity;
-        const maxSearchDist = 800;
-        for (const e of enemies) {
-          if (e.health <= 0) continue;
-          const dx = e.x - b.x;
-          const dy = e.y - b.y;
-          const distSq = dx * dx + dy * dy;
-          if (distSq > maxSearchDist * maxSearchDist) continue;
-          if (distSq < closestDist) {
-            closestDist = distSq;
-            closest = e;
+        // hover above tower
+        const anchorX = src.x;
+        const anchorY = src.y - b.hoverHeight;
+        b.hoverTheta += b.hoverOmega * dt;
+        b.x = anchorX + Math.cos(b.hoverTheta) * b.hoverR;
+        b.y = anchorY + Math.sin(b.hoverTheta) * b.hoverR;
+        b.angle = b.hoverTheta + Math.PI * 0.5;
+        b.speed = 0;
+
+        // try to acquire ~10x/sec (cheap + deterministic)
+        b.acqCooldown -= dt;
+        if (b.acqCooldown <= 0) {
+          b.acqCooldown = 0.1;
+          const reacquireRange = 1000; // big enough for your whole field
+          let best = Infinity, closest = null;
+          const rx = b.x, ry = b.y;
+          for (const e of enemies) {
+            if (e.health <= 0) continue;
+            const dx = e.x - rx, dy = e.y - ry;
+            const d2 = dx*dx + dy*dy;
+            if (d2 < best && d2 <= reacquireRange * reacquireRange) {
+              best = d2; closest = e;
+            }
+            
           }
+          if (closest) igniteRocket(b, closest);
         }
-        b.target = closest;
-        if (b.target) {
-          b.orbitCenter = null;
-        } else {
-          if (!b.orbitCenter) {
-            b.orbitCenter = { x: b.x, y: b.y };
-            b.orbitAng = b.angle || 0;
-          }
-          b.orbitAng += (b.speed / STRAY_ROCKET_RADIUS) * dt;
-          b.x = b.orbitCenter.x + Math.cos(b.orbitAng) * STRAY_ROCKET_RADIUS;
-          b.y = b.orbitCenter.y + Math.sin(b.orbitAng) * STRAY_ROCKET_RADIUS;
-          b.angle = b.orbitAng + Math.PI / 2;
-          b.smoke -= dt;
-          if (b.smoke <= 0) {
-            smokes.push({ x: b.x, y: b.y, life: 0.5 });
-            b.smoke = 0.05;
-          }
-          if (
-            b.x < originPx.x ||
-            b.x > originPx.x + GRID_COLS * CELL_PX ||
-            b.y < originPx.y ||
-            b.y > originPx.y + GRID_ROWS * CELL_PX
-          ) {
-            return false;
-          }
-          return true;
-        }
+
+        // light smoke while idle
+        b.smoke -= dt;
+        if (b.smoke <= 0) { b.smoke = 0.25; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
+        return true;
       }
 
-      const targetVelX = b.target.velX || 0;
-      const targetVelY = b.target.velY || 0;
-      const distToTarget = Math.hypot(b.target.x - b.x, b.target.y - b.y);
-      const leadTime = distToTarget / b.speed;
-      const predictedX = b.target.x + targetVelX * leadTime * 0.5;
-      const predictedY = b.target.y + targetVelY * leadTime * 0.5;
+      // ---------- HOMING ----------
+      if (!b.target || !enemies.includes(b.target) || b.target.health <= 0) {
+        // lost target => back to idle (re-center over the source)
+        b.state = 'idle';
+        b.acqCooldown = 0;
+        return true;
+      }
 
-      const desired = Math.atan2(predictedY - b.y, predictedX - b.x);
-      let diff = ((desired - b.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
-      const turnRateMultiplier = Math.min(2.0, Math.max(0.5, 200 / distToTarget));
-      const maxTurn = b.turnRate * turnRateMultiplier * dt;
-      if (diff > maxTurn) diff = maxTurn;
-      if (diff < -maxTurn) diff = -maxTurn;
-      b.angle += diff;
+      const rx = b.x, ry = b.y;
+      const tx = b.target.x, ty = b.target.y;
 
-      b.x += Math.cos(b.angle) * move;
-      b.y += Math.sin(b.angle) * move;
+      const los = Math.atan2(ty - ry, tx - rx);
+      if (b._prevLos == null) b._prevLos = los;
+      const losRate = angleWrap(los - b._prevLos) / dt;
+      b._prevLos = los;
+
+      const N = 3.5; // PN constant (2.5–5.5 is typical)
+      const cmdTurn = clamp(N * losRate, -b.turnRate, b.turnRate);
+
+      const bearingErr = angleWrap(los - b.angle);
+      const blend = 0.25;
+      const desiredRate = clamp(cmdTurn + blend * (bearingErr / dt), -b.turnRate, b.turnRate);
+
+      b.angle = angleWrap(b.angle + desiredRate * dt);
+
+      const turnMag = Math.abs(desiredRate) / b.turnRate;
+      const turnDrag = 1 - 0.25 * turnMag;
+      b.speed = Math.min(b.maxSpeed, (b.speed + b.accel * dt) * turnDrag);
+
+      b.x += Math.cos(b.angle) * b.speed * dt;
+      b.y += Math.sin(b.angle) * b.speed * dt;
 
       b.smoke -= dt;
-      if (b.smoke <= 0) {
-        smokes.push({ x: b.x, y: b.y, life: 0.5 });
-        b.smoke = 0.05;
-      }
+      if (b.smoke <= 0) { b.smoke = 0.05; smokes.push({ x: b.x, y: b.y, life: 0.5 }); }
 
-      const newDist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
-      const hitRadius = b.target.r + 2;
-      if (newDist <= hitRadius) {
+      // proximity fuse
+      const fuseR = 10 + (b.target.r || 6);
+      const dist = Math.hypot(b.target.x - b.x, b.target.y - b.y);
+      if (dist <= fuseR) {
         b.target.health -= b.damage;
-        if (b.variant === 'rocket' || b.variant === 'hellfire') {
-          playAudio(ROCKET_HIT_SOUND);
-        }
+        if (b.variant === 'rocket' || b.variant === 'hellfire') playAudio(ROCKET_HIT_SOUND);
         if (b.variant === 'nuke') {
           playAudio(NUKE_HIT_SOUND);
-          const targetX = b.target.x;
-          const targetY = b.target.y;
+          const tx2 = b.target.x, ty2 = b.target.y;
           for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
-            if (e !== b.target && Math.hypot(e.x - targetX, e.y - targetY) <= NUKE_SPLASH_RADIUS) {
-                e.health -= b.damage * 0.8;
-                if (e.health <= 0) {
-                  enemies.splice(i, 1);
-                  money += killReward;
-                  if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-                }
+            if (e !== b.target && Math.hypot(e.x - tx2, e.y - ty2) <= NUKE_SPLASH_RADIUS) {
+              e.health -= b.damage * 0.8;
+              if (e.health <= 0) { enemies.splice(i, 1); money += killReward; if (b.source) b.source.kills = (b.source.kills || 0) + 1; }
             }
           }
-          explosions.push({ x: targetX, y: targetY, life: 0.3, max: 0.3 });
+          explosions.push({ x: tx2, y: ty2, life: 0.3, max: 0.3 });
         }
         if (b.target.health <= 0) {
-          const targetIndex = enemies.indexOf(b.target);
-          if (targetIndex !== -1) {
-            enemies.splice(targetIndex, 1);
-            money += killReward;
-            if (b.source) b.source.kills = (b.source.kills || 0) + 1;
-          }
+          const idx = enemies.indexOf(b.target);
+          if (idx !== -1) { enemies.splice(idx, 1); money += killReward; if (b.source) b.source.kills = (b.source.kills || 0) + 1; }
         }
         return false;
       }
@@ -1540,6 +1543,13 @@ function update(dt) {
       t.targets = null;
     }
     t.target = target;
+    if ((t.type === 'rocket' || t.type === 'hellfire' || t.type === 'nuke') && t.target) {
+      for (const b of bullets) {
+        if (b.type === 'rocket' && b.source === t && b.state === 'idle') {
+          igniteRocket(b, t.target);
+        }
+      }
+    }
     if (target) {
       t.angle = Math.atan2(target.y - t.y, target.x - t.x);
     }
@@ -1553,22 +1563,33 @@ function update(dt) {
       const baseAngle = t.type === 'nuke' ? -Math.PI / 2 : (t.angle || 0);
       const sx = t.x + Math.cos(baseAngle) * (CELL_PX / 2);
       const sy = t.y + Math.sin(baseAngle) * (CELL_PX / 2);
+      const idle = !target;  // no target in range? spawn as idle
       if (cap > 0) {
         if (existing < cap && t.cooldown <= 0) {
           bullets.push({
             x: sx,
             y: sy,
-            target,
-            speed: maxSpeed * 0.2,
+            target,                 // may be null
+            speed: idle ? 0 : maxSpeed * 0.25,  // do NOT move while idle
             maxSpeed,
-            accel: maxSpeed,
+            accel: maxSpeed * 4,
             damage: t.damage,
             source: t,
             type: 'rocket',
             angle: baseAngle,
-            turnRate: Math.PI,
+            turnRate: Math.PI,      // rad/s cap
             smoke: 0,
-            variant: t.type
+            variant: t.type,
+
+            // NEW: passive loiter behavior
+            state: idle ? 'idle' : 'homing',
+            acqCooldown: 0,               // check for targets every 0.1s
+            hoverR: 22,
+            hoverOmega: 1.2,
+            hoverTheta: 0,
+            hoverHeight: CELL_PX * 1.25,
+            // Nav memory
+            _prevLos: null,
           });
           t.cooldown = 1 / t.fireRate;
           t.anim = 0.1;
@@ -1578,17 +1599,27 @@ function update(dt) {
         bullets.push({
           x: sx,
           y: sy,
-          target,
-          speed: maxSpeed * 0.2,
+          target,                 // may be null
+          speed: idle ? 0 : maxSpeed * 0.25,  // do NOT move while idle
           maxSpeed,
-          accel: maxSpeed,
+          accel: maxSpeed * 4,
           damage: t.damage,
           source: t,
           type: 'rocket',
           angle: baseAngle,
-          turnRate: Math.PI,
+          turnRate: Math.PI,      // rad/s cap
           smoke: 0,
-          variant: t.type
+          variant: t.type,
+
+          // NEW: passive loiter behavior
+          state: idle ? 'idle' : 'homing',
+          acqCooldown: 0,               // check for targets every 0.1s
+          hoverR: 22,
+          hoverOmega: 1.2,
+          hoverTheta: 0,
+          hoverHeight: CELL_PX * 1.25,
+          // Nav memory
+          _prevLos: null,
         });
         t.cooldown = 1 / t.fireRate;
         t.anim = 0.1;
