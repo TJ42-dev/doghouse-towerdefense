@@ -1008,6 +1008,9 @@ const WAVE_COMPLETE_SOUND = 'assets/sounds/wave_complete.wav';
 const BOSS_WAVE_START_SOUND = 'assets/sounds/boss_wave_start.wav';
 const ROCKET_HIT_SOUND = 'assets/sounds/rocket_hit.wav';
 const NUKE_HIT_SOUND = 'assets/sounds/nuke_hit.wav';
+const GAME_START_SOUND = 'assets/sounds/game_start.wav';
+const GAME_OVER_SOUND = 'assets/sounds/game_over.wav';
+const CAT_DEATH_SOUND = 'assets/sounds/cat_death.wav';
 const TOWER_CONFIG_IDS = [
   'cannon',
   'laser',
@@ -1523,7 +1526,7 @@ function update(dt) {
     const dtgt = Math.hypot(target.x - e.x, target.y - e.y);
     if (dtgt < e.r + target.r) {
       target.alive = false;
-      sfx(160, 0.15, 0.06, 'sawtooth');
+      playAudio(CAT_DEATH_SOUND);
       return false;
     }
 
@@ -1742,6 +1745,7 @@ function update(dt) {
   }
 
   updateProjectiles(dt);
+  if (catLives.every(l => !l.alive)) { endGame(); return; }
   if (!waveActive) {
     if (!firstPlacementDone) return;
     preWaveTimer -= dt;
@@ -1766,8 +1770,6 @@ function update(dt) {
       }
     }
   }
-
-  if (catLives.every(l => !l.alive)) { endGame(); return; }
 
   if (waveElapsed >= BALANCE.wave.time) {
     queueWave();
@@ -2224,13 +2226,14 @@ async function startGame() {
   resetGame();
   bindInputs();
   running = true; lastT = 0;
-  sfx(520, 0.07, 0.04, 'square');
+  playAudio(GAME_START_SOUND);
   rafId = requestAnimationFrame(loop);
 }
 
 function endGame() {
   if (!ctx) return;
   running = false;
+  playAudio(GAME_OVER_SOUND);
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
   unbindInputs();
