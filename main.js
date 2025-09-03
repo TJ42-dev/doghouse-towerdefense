@@ -68,28 +68,10 @@ const battlefieldBtn = document.getElementById('battlefieldBtn');
 const battlefieldDlg = document.getElementById('battlefieldDialog');
 const saveBattlefieldBtn = document.getElementById('saveBattlefield');
 const MAP_KEY = 'godot_web_battlefield';
-const MAPS = {
-  backyard: {
-    name: 'Backyard',
-    img: './assets/maps/backyard/backyard.png',
-    grid: 'medium',
-    entries: [{ x: 0, y: 0 }],
-    catLives() {
-      const cols = 3, rows = 3;
-      const startCellX = DOGHOUSE_DOOR_CELL.x + 2;
-      const yOffset = GRID_ROWS === GRID_SIZES.medium.rows ? 5 : 1;
-      const startCellY = DOGHOUSE_DOOR_CELL.y - yOffset;
-      const cells = [];
-      for (let i = 0; i < cols * rows; i++) {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        cells.push({ x: startCellX + col, y: startCellY + row });
-      }
-      return cells;
-    }
-  }
+const MAP_CONFIG_FILES = {
+  backyard: './assets/maps/backyard/config.json'
 };
-let currentMap = MAPS.backyard;
+let currentMap = null;
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
@@ -160,27 +142,16 @@ railgunCostSpan && (railgunCostSpan.textContent = `$${BALANCE.specializationCost
 nukeCostSpan && (nukeCostSpan.textContent = `$${BALANCE.specializationCosts.nuke}`);
 hellfireCostSpan && (hellfireCostSpan.textContent = `$${BALANCE.specializationCosts.hellfire}`);
 
-// Landmarks
-let DOGHOUSE_DOOR_CELL = { x: 28, y: 20 };
-let DOGHOUSE_SPAWN_CELL = { x: 27, y: 20 };
-
-
 const GRID_SIZES = {
   large: { cols: 36, rows: 24 },
   medium: { cols: 30, rows: 20 },
   small: { cols: 24, rows: 16 }
 };
 
-function updateLandmarks() {
-  DOGHOUSE_DOOR_CELL = { x: GRID_COLS - 8, y: GRID_ROWS - 4 };
-  DOGHOUSE_SPAWN_CELL = { x: GRID_COLS - 9, y: GRID_ROWS - 4 };
-}
-
 function applyGridSize(size) {
   const g = GRID_SIZES[size] || GRID_SIZES.medium;
   GRID_COLS = g.cols;
   GRID_ROWS = g.rows;
-  updateLandmarks();
   initOccupancy();
   resizeCanvas();
 }
@@ -229,8 +200,6 @@ function inBounds(cell) {
     cell.y < GRID_ROWS
   );
 }
-function doorPx() { return cellToPx(DOGHOUSE_DOOR_CELL); }
-function doorSpawnPx() { return cellToPx(DOGHOUSE_SPAWN_CELL); }
 
 function isWallAt(gx, gy) {
   return occupancy.has(key(gx, gy));
@@ -280,7 +249,7 @@ function canPlace(cell) {
   // Temporarily occupy to test pathing without bumping nav version
   occupancy.add(key(cell.x, cell.y));
   const target = catLives.find(l => l.alive);
-  const goal = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
+  const goal = target ? { x: target.gx, y: target.gy } : currentMap.entries[0];
   const ok =
     currentMap.entries.every(e => findPath(e, goal).length > 0) &&
     enemies.every(en => findPath(pxToCell({ x: en.x, y: en.y }), goal).length > 0);
@@ -290,7 +259,7 @@ function canPlace(cell) {
 
 function recalcEnemyPaths() {
   const target = catLives.find(l => l.alive);
-  const goal = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
+  const goal = target ? { x: target.gx, y: target.gy } : currentMap.entries[0];
   for (const en of enemies) {
     const start = pxToCell({ x: en.x, y: en.y });
     en.path = findPath(start, goal);
@@ -457,8 +426,7 @@ optGridOverride?.addEventListener('change', () => {
 });
 saveBtn?.addEventListener('click', () => {
   const override = optGridOverride?.checked;
-  const map = loadBattlefield();
-  const grid = override ? optGridSize?.value : MAPS[map].grid;
+  const grid = override ? optGridSize?.value : (currentMap?.grid || 'medium');
   const difficulty = optDifficulty?.value || 'medium';
   const opts = {
     mute: optMute?.checked,
@@ -499,25 +467,34 @@ function loadBattlefield() {
   }
 }
 function saveBattlefield(v) { localStorage.setItem(MAP_KEY, v); }
-function setBattlefield(map) {
-  const m = MAPS[map] || MAPS.backyard;
-  currentMap = m;
-  if (gameCanvas) {
-    gameCanvas.style.background = `url('${m.img}') center/cover no-repeat`;
+async function setBattlefield(map) {
+  const path = MAP_CONFIG_FILES[map] || MAP_CONFIG_FILES.backyard;
+  try {
+    const m = await fetch(path).then(r => r.json());
+    currentMap = m;
+    if (gameCanvas) {
+      gameCanvas.style.background = `url('${m.img}') center/cover no-repeat`;
+    }
+  } catch (err) {
+    console.warn('Failed to load map config', err);
   }
 }
 
-ensureCanvas();
-const initialMap = loadBattlefield();
-setBattlefield(initialMap);
-const initialOpts = loadOpts();
-const initialGrid = initialOpts.gridOverride ? initialOpts.gridSize : MAPS[initialMap].grid;
-if (!initialOpts.gridOverride && initialOpts.gridSize !== initialGrid) {
-  initialOpts.gridSize = initialGrid;
-  saveOpts(initialOpts);
+async function init() {
+  ensureCanvas();
+  const initialMap = loadBattlefield();
+  await setBattlefield(initialMap);
+  const initialOpts = loadOpts();
+  const initialGrid = initialOpts.gridOverride ? initialOpts.gridSize : currentMap.grid;
+  if (!initialOpts.gridOverride && initialOpts.gridSize !== initialGrid) {
+    initialOpts.gridSize = initialGrid;
+    saveOpts(initialOpts);
+  }
+  applyGridSize(initialGrid);
+  syncBestWave();
 }
-applyGridSize(initialGrid);
-syncBestWave();
+
+init();
 
 
 // ----- Hover Menu -----
@@ -1133,7 +1110,7 @@ function resetGame() {
 
   // place initial cat lives at map-specific locations
   catLives = [];
-  for (const cell of currentMap.catLives()) {
+  for (const cell of currentMap.catLives) {
     const p = cellToPx(cell);
     catLives.push({ x: p.x, y: p.y, r: CELL_PX / 2, alive: true, gx: cell.x, gy: cell.y });
   }
@@ -1163,7 +1140,7 @@ function spawnEnemy(waveNum) {
     health *= WAVE1_DEBUFF;
   }
   const target = catLives.find(l => l.alive);
-  const goalCell = target ? { x: target.gx, y: target.gy } : DOGHOUSE_DOOR_CELL;
+  const goalCell = target ? { x: target.gx, y: target.gy } : entry;
   const path = findPath(entry, goalCell);
 
   enemies.push({ x: p.x, y: p.y, r, speed, img, path, goalCell, health, velX: 0, velY: 0, waveNum, navVersion: NAV_VERSION });
@@ -2090,14 +2067,15 @@ async function startGame() {
   gameOverPanel && (gameOverPanel.style.display = 'none');
 
   // Canvas
-  
-ensureCanvas();
-  setBattlefield(loadBattlefield());
+  ensureCanvas();
+  await setBattlefield(loadBattlefield());
+  const opts = loadOpts();
+  const grid = opts.gridOverride ? opts.gridSize : currentMap.grid;
+  applyGridSize(grid);
   gameCanvas.style.display = 'block';
   resizeCanvas();
 
   // Optional fullscreen
-  const opts = loadOpts();
   if (opts.fullscreen && !document.fullscreenElement && document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
@@ -2179,23 +2157,19 @@ battlefieldBtn?.addEventListener('click', () => {
     battlefieldDlg.showModal();
   }
 });
-saveBattlefieldBtn?.addEventListener('click', () => {
+saveBattlefieldBtn?.addEventListener('click', async () => {
   const selected = battlefieldDlg?.querySelector('input[name="battlefield"]:checked')?.value || 'backyard';
   saveBattlefield(selected);
-  setBattlefield(selected);
+  await setBattlefield(selected);
   const opts = loadOpts();
   if (!opts.gridOverride) {
-    opts.gridSize = MAPS[selected].grid;
+    opts.gridSize = currentMap.grid;
     saveOpts(opts);
     applyGridSize(opts.gridSize);
   }
 });
 
 startBtn?.addEventListener('click', () => {
-  const opts = loadOpts();
-  if (!opts.gridOverride) {
-    applyGridSize(MAPS[loadBattlefield()].grid);
-  }
   startGame();
 });
 quitGameBtn?.addEventListener('click', () => endGame());
