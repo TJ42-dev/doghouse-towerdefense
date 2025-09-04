@@ -21,7 +21,7 @@ const ids = [
   'upgradeRailgun','upgradeNuke','upgradeHellfire','upgradeTerminator','upgradeWunderwaffe',
   'sniperCost','shotgunCost','dualLaserCost','railgunCost','nukeCost','hellfireCost',
   'terminatorCost','wunderwaffeCost','quitInMenuBtn','gameCanvas',
-  'toolbarQuit','toolbarPause','towerPrev','towerNext','towerPreview',
+  'toolbarQuit','toolbarPause','bottomToolbar','towerPrev','towerNext','towerPreview',
   'tbUpgradeDamage','tbUpgradeRange','tbUpgradeSpeed','infoCash','infoEnemies',
   'infoWave','infoKills','waveClock',
   'selDamage','selRange','selSpeed'
@@ -1058,24 +1058,24 @@ function cssCenter() {
 let DEFAULT_DOG_STATS = { ...BALANCE.defaultDogStats };
 let DOG_TYPES = [];
 const CAT_SRC = 'assets/animals/cat.png';
-const CANNON_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const CANNON_BASE_SRC = 'assets/towers/bases/cannon.svg';
 const CANNON_TURRET_SRC = 'assets/towers/turrets/cannon_turret.svg';
-const LASER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const LASER_BASE_SRC = 'assets/towers/bases/laser.svg';
 const LASER_TURRET_SRC = 'assets/towers/turrets/laser_turret.svg';
-const ROCKET_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const ROCKET_BASE_SRC = 'assets/towers/bases/rocket.svg';
 const ROCKET_TURRET_SRC = 'assets/towers/turrets/rocket_launcher_turret.svg';
 const NUKE_BASE_SRC = 'assets/towers/bases/nuke_base.svg';
 const NUKE_TURRET_SRC = 'assets/towers/turrets/nuke_turret.svg';
-const HELLFIRE_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const HELLFIRE_BASE_SRC = 'assets/towers/bases/hellfire.svg';
 const HELLFIRE_TURRET_SRC = 'assets/towers/turrets/hellfire_turret.svg';
-const DUAL_LASER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const DUAL_LASER_BASE_SRC = 'assets/towers/bases/laser_dual.svg';
 const DUAL_LASER_TURRET_SRC = 'assets/towers/turrets/laser_dual_turret.svg';
-const RAILGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const RAILGUN_BASE_SRC = 'assets/towers/bases/railgun.svg';
 const RAILGUN_TURRET_SRC = 'assets/towers/turrets/railgun_turret.svg';
 const WALL_SRC = 'assets/towers/bases/fence.png';
-const SNIPER_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const SNIPER_BASE_SRC = 'assets/towers/bases/sniper.svg';
 const SNIPER_TURRET_SRC = 'assets/towers/turrets/sniper_turret.svg';
-const SHOTGUN_BASE_SRC = 'assets/towers/bases/tower_base.svg';
+const SHOTGUN_BASE_SRC = 'assets/towers/bases/shotgun.svg';
 const SHOTGUN_TURRET_SRC = 'assets/towers/turrets/shotgun_turret.svg';
 const TESLA_BASE_SRC = 'assets/towers/bases/tesla_base.svg';
 const TESLA_TURRET_SRC = 'assets/towers/turrets/tesla_turret.svg';
@@ -2249,6 +2249,7 @@ async function startGame() {
   el.gameOverPanel && (el.gameOverPanel.style.display = 'none');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
   el.toolbarPause && (el.toolbarPause.textContent = 'Pause');
+  el.bottomToolbar && (el.bottomToolbar.style.display = 'flex');
 
   // Canvas
   ensureCanvas();
@@ -2306,6 +2307,7 @@ function endGame() {
   el.gameOverPanel && (el.gameOverPanel.style.display = 'block');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
   el.toolbarPause && (el.toolbarPause.textContent = 'Pause');
+  el.bottomToolbar && (el.bottomToolbar.style.display = 'none');
 
   const wavesCompleted = waveIndex;
   recordBestWave(wavesCompleted);
@@ -2333,6 +2335,7 @@ function returnToMenu() {
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
   el.toolbarPause && (el.toolbarPause.textContent = 'Pause');
+  el.bottomToolbar && (el.bottomToolbar.style.display = 'none');
 }
 
 // -------------------- Hooks --------------------
