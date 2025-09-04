@@ -1124,12 +1124,17 @@ dialog::backdrop {
   gap: 0.25rem;
 }
 
-.bottom-toolbar .tower-display {
-  text-align: center;
+.bottom-toolbar .tower-preview {
+  width: 40px;
+  height: 40px;
+  background: #222;
+  border: 1px solid #555;
+  cursor: pointer;
 }
 
-.bottom-toolbar .tower-name {
-  font-weight: bold;
+.bottom-toolbar .tower-preview.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .bottom-toolbar .upgrade-item {

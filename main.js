@@ -21,9 +21,9 @@ const ids = [
   'upgradeRailgun','upgradeNuke','upgradeHellfire','upgradeTerminator','upgradeWunderwaffe',
   'sniperCost','shotgunCost','dualLaserCost','railgunCost','nukeCost','hellfireCost',
   'terminatorCost','wunderwaffeCost','quitInMenuBtn','gameCanvas',
-  'toolbarQuit','toolbarPause','towerPrev','towerNext','towerName','towerDamage',
-  'towerRange','towerSpeed','towerBuild','tbUpgradeDamage','tbUpgradeRange',
-  'tbUpgradeSpeed','infoCash','infoEnemies','infoWave','infoKills','waveClock',
+  'toolbarQuit','toolbarPause','towerPrev','towerNext','towerPreview',
+  'tbUpgradeDamage','tbUpgradeRange','tbUpgradeSpeed','infoCash','infoEnemies',
+  'infoWave','infoKills','waveClock',
   'selDamage','selRange','selSpeed'
 ];
 const el = Object.fromEntries(ids.map(k => [k, $id(k)]));
@@ -411,18 +411,28 @@ function renderBuildMenu() {
 renderBuildMenu();
 
 function updateTowerSelector() {
-  if (!el.towerName) return;
+  if (!el.towerPreview) return;
   const builds = getBuildItems();
   if (!builds.length) return;
   if (toolbarBuildIndex < 0) toolbarBuildIndex = 0;
   if (toolbarBuildIndex >= builds.length) toolbarBuildIndex = builds.length - 1;
   const b = builds[toolbarBuildIndex];
-  el.towerName.textContent = `${b.name} $${b.cost}`;
-  el.towerDamage.textContent = b.damage;
-  el.towerRange.textContent = b.range;
-  el.towerSpeed.textContent = b.fireRate;
-  if (el.towerBuild) {
-    el.towerBuild.disabled = money < b.cost;
+  el.towerPreview.title = `${b.name} $${b.cost}`;
+  const ctx = el.towerPreview.getContext('2d');
+  ctx.clearRect(0, 0, el.towerPreview.width, el.towerPreview.height);
+  const art = ASSETS[b.id];
+  if (art) {
+    if (imgReady(art.base)) {
+      ctx.drawImage(art.base, 0, 0, el.towerPreview.width, el.towerPreview.height);
+    }
+    if (imgReady(art.turret)) {
+      ctx.drawImage(art.turret, 0, 0, el.towerPreview.width, el.towerPreview.height);
+    }
+  }
+  if (money < b.cost) {
+    el.towerPreview.classList.add('disabled');
+  } else {
+    el.towerPreview.classList.remove('disabled');
   }
 }
 updateTowerSelector();
@@ -715,7 +725,7 @@ el.towerNext?.addEventListener('click', () => {
   toolbarBuildIndex = (toolbarBuildIndex + 1) % builds.length;
   updateTowerSelector();
 });
-el.towerBuild?.addEventListener('click', () => {
+el.towerPreview?.addEventListener('click', () => {
   const builds = getBuildItems();
   const b = builds[toolbarBuildIndex];
   if (money >= b.cost) setBuildMode(b.id);
