@@ -68,6 +68,7 @@ let currentMap = DEFAULT_MAP;
 let selectedTower = null;
 let contextTarget = null;
 let rangePreview = null;
+let ASSETS = { dogs: [] };
 
 // -------------------- Grid & Build --------------------
 // Fixed logical grid
@@ -1175,7 +1176,6 @@ function loadImage(src) {
   });
 }
 
-let ASSETS = { dogs: [] };
 let assetsReady; // Promise
 
 async function ensureAssets() {
