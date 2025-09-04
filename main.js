@@ -20,7 +20,11 @@ const ids = [
   'basicUpgrades','specialUpgrades','upgradeSniper','upgradeShotgun','upgradeDualLaser',
   'upgradeRailgun','upgradeNuke','upgradeHellfire','upgradeTerminator','upgradeWunderwaffe',
   'sniperCost','shotgunCost','dualLaserCost','railgunCost','nukeCost','hellfireCost',
-  'terminatorCost','wunderwaffeCost','quitInMenuBtn','gameCanvas'
+  'terminatorCost','wunderwaffeCost','quitInMenuBtn','gameCanvas',
+  'toolbarQuit','toolbarPause','towerPrev','towerNext','towerName','towerDamage',
+  'towerRange','towerSpeed','towerBuild','tbUpgradeDamage','tbUpgradeRange',
+  'tbUpgradeSpeed','infoCash','infoEnemies','infoWave','infoKills','waveClock',
+  'selDamage','selRange','selSpeed'
 ];
 const el = Object.fromEntries(ids.map(k => [k, $id(k)]));
 
@@ -84,6 +88,7 @@ let walls = [];
 let NAV_VERSION = 0;
 function bumpNav() { NAV_VERSION++; }
 let selectedBuild = null;
+let toolbarBuildIndex = 0;
 let towers = [];
 let bullets = [];
 let smokes = [];
@@ -405,6 +410,42 @@ function renderBuildMenu() {
 }
 renderBuildMenu();
 
+function updateTowerSelector() {
+  if (!el.towerName) return;
+  const builds = getBuildItems();
+  if (!builds.length) return;
+  if (toolbarBuildIndex < 0) toolbarBuildIndex = 0;
+  if (toolbarBuildIndex >= builds.length) toolbarBuildIndex = builds.length - 1;
+  const b = builds[toolbarBuildIndex];
+  el.towerName.textContent = `${b.name} $${b.cost}`;
+  el.towerDamage.textContent = b.damage;
+  el.towerRange.textContent = b.range;
+  el.towerSpeed.textContent = b.fireRate;
+  if (el.towerBuild) {
+    el.towerBuild.disabled = money < b.cost;
+  }
+}
+updateTowerSelector();
+
+function updateToolbarUpgradeInfo() {
+  if (!el.selDamage) return;
+  if (selectedTower) {
+    el.selDamage.textContent = Math.round(selectedTower.damage);
+    el.selRange.textContent = Math.round(selectedTower.range);
+    el.selSpeed.textContent = selectedTower.fireRate.toFixed(1);
+    el.tbUpgradeDamage.disabled = money < getUpgradeCost(selectedTower, 'damage') || (selectedTower.upgrades?.damage >= 10);
+    el.tbUpgradeRange.disabled = money < getUpgradeCost(selectedTower, 'range') || (selectedTower.upgrades?.range >= 10);
+    el.tbUpgradeSpeed.disabled = money < getUpgradeCost(selectedTower, 'fireRate') || (selectedTower.upgrades?.fireRate >= 10);
+  } else {
+    el.selDamage.textContent = '-';
+    el.selRange.textContent = '-';
+    el.selSpeed.textContent = '-';
+    el.tbUpgradeDamage.disabled = true;
+    el.tbUpgradeRange.disabled = true;
+    el.tbUpgradeSpeed.disabled = true;
+  }
+}
+
 // Basic BFS pathfinding to navigate around walls
 function findPath(start, goal) {
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -651,21 +692,58 @@ for (const [kind, btn] of Object.entries(SPECIAL_BUTTONS)) {
     updateSelectedTowerInfo();
   });
 }
+el.tbUpgradeDamage?.addEventListener('click', () => {
+  if (!selectedTower) return;
+  if (upgradeTower(selectedTower, 'damage')) { rankUp(); updateSelectedTowerInfo(); }
+});
+el.tbUpgradeRange?.addEventListener('click', () => {
+  if (!selectedTower) return;
+  if (upgradeTower(selectedTower, 'range')) { rankUp(); updateSelectedTowerInfo(); }
+});
+el.tbUpgradeSpeed?.addEventListener('click', () => {
+  if (!selectedTower) return;
+  if (upgradeTower(selectedTower, 'fireRate')) { rankUp(); updateSelectedTowerInfo(); }
+});
+
+el.towerPrev?.addEventListener('click', () => {
+  const builds = getBuildItems();
+  toolbarBuildIndex = (toolbarBuildIndex - 1 + builds.length) % builds.length;
+  updateTowerSelector();
+});
+el.towerNext?.addEventListener('click', () => {
+  const builds = getBuildItems();
+  toolbarBuildIndex = (toolbarBuildIndex + 1) % builds.length;
+  updateTowerSelector();
+});
+el.towerBuild?.addEventListener('click', () => {
+  const builds = getBuildItems();
+  const b = builds[toolbarBuildIndex];
+  if (money >= b.cost) setBuildMode(b.id);
+});
+el.toolbarQuit?.addEventListener('click', () => endGame());
+el.waveClock?.addEventListener('click', () => {
+  if (!running) return;
+  queueWave();
+});
 el.quitInMenuBtn?.addEventListener('click', () => returnToMenu());
 
-el.pauseBtn?.addEventListener('click', () => {
+function togglePause() {
   if (running) {
     running = false;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
-    el.pauseBtn.textContent = 'Resume';
+    if (el.pauseBtn) el.pauseBtn.textContent = 'Resume';
+    if (el.toolbarPause) el.toolbarPause.textContent = 'Resume';
   } else {
     running = true;
     lastT = 0;
     rafId = requestAnimationFrame(loop);
-    el.pauseBtn.textContent = 'Pause';
+    if (el.pauseBtn) el.pauseBtn.textContent = 'Pause';
+    if (el.toolbarPause) el.toolbarPause.textContent = 'Pause';
   }
-});
+}
+el.pauseBtn?.addEventListener('click', togglePause);
+el.toolbarPause?.addEventListener('click', togglePause);
 
 function updateSelectedTowerInfo() {
   if (!el.selectedTowerName) return;
@@ -756,6 +834,8 @@ function updateSelectedTowerInfo() {
     if (el.basicUpgrades) el.basicUpgrades.style.display = '';
     if (el.specialUpgrades) el.specialUpgrades.style.display = 'none';
   }
+
+  updateToolbarUpgradeInfo();
 }
 
 gameCanvas?.addEventListener('contextmenu', (e) => {
@@ -1834,7 +1914,29 @@ function drawSellGhost() {
 function drawHUD() {
   const statsEl = $id('gameStats');
   const overlayEl = el.overlayStats;
-  if (!statsEl && !overlayEl && !el.upNextBanner) return;
+  if (!statsEl && !overlayEl && !el.upNextBanner && !el.infoCash) return;
+  if (el.infoCash) el.infoCash.textContent = `$${money}`;
+  if (el.infoEnemies) el.infoEnemies.textContent = `Enemies: ${enemies.length}`;
+  if (el.infoWave) el.infoWave.textContent = `Wave: ${waveIndex + 1}`;
+  if (el.infoKills) {
+    const kills = towers.reduce((s, t) => s + (t.kills || 0), 0);
+    el.infoKills.textContent = `Kills: ${kills}`;
+  }
+  if (el.waveClock) {
+    let txt = '';
+    if (!waveActive) {
+      if (firstPlacementDone && preWaveTimer > 0) {
+        txt = Math.ceil(preWaveTimer);
+      } else {
+        txt = '▶';
+      }
+    } else {
+      txt = Math.ceil(Math.max(0, BALANCE.wave.time - waveElapsed));
+    }
+    el.waveClock.textContent = txt;
+  }
+  updateTowerSelector();
+  updateToolbarUpgradeInfo();
   let html = '';
   html += `Wave: ${waveIndex + 1}<br>`;
   html += `Enemies: ${enemies.length}<br>`;
@@ -2135,6 +2237,8 @@ async function startGame() {
   el.overlayStats && (el.overlayStats.style.display = 'block');
   el.upNextBanner && (el.upNextBanner.style.display = 'block');
   el.gameOverPanel && (el.gameOverPanel.style.display = 'none');
+  el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
+  el.toolbarPause && (el.toolbarPause.textContent = 'Pause');
 
   // Canvas
   ensureCanvas();
@@ -2191,6 +2295,7 @@ function endGame() {
   el.statsOverlay && (el.statsOverlay.style.display = 'block');
   el.gameOverPanel && (el.gameOverPanel.style.display = 'block');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
+  el.toolbarPause && (el.toolbarPause.textContent = 'Pause');
 
   const wavesCompleted = waveIndex;
   recordBestWave(wavesCompleted);
@@ -2217,6 +2322,7 @@ function returnToMenu() {
   clearBuildMode();
   el.contextMenu && (el.contextMenu.style.display = 'none');
   el.pauseBtn && (el.pauseBtn.textContent = 'Pause');
+  el.toolbarPause && (el.toolbarPause.textContent = 'Pause');
 }
 
 // -------------------- Hooks --------------------

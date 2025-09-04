@@ -367,6 +367,34 @@
   </div>
 </div>
 
+<div id="bottomToolbar" class="bottom-toolbar">
+  <div class="toolbar-left">
+    <button id="toolbarQuit" class="btn xs ghost">Quit</button>
+    <button id="toolbarPause" class="btn xs">Pause</button>
+  </div>
+  <div class="tower-selector">
+    <button id="towerPrev" class="btn xs" aria-label="Previous tower">◀</button>
+    <div class="tower-display">
+      <div id="towerName" class="tower-name"></div>
+      <div class="tower-stats">DMG <span id="towerDamage"></span> • RNG <span id="towerRange"></span> • SPD <span id="towerSpeed"></span></div>
+      <button id="towerBuild" class="btn xs">Build</button>
+    </div>
+    <button id="towerNext" class="btn xs" aria-label="Next tower">▶</button>
+  </div>
+  <div class="upgrade-controls">
+    <div class="upgrade-item">DMG <span id="selDamage">-</span> <button id="tbUpgradeDamage" class="btn xs">+</button></div>
+    <div class="upgrade-item">RNG <span id="selRange">-</span> <button id="tbUpgradeRange" class="btn xs">+</button></div>
+    <div class="upgrade-item">SPD <span id="selSpeed">-</span> <button id="tbUpgradeSpeed" class="btn xs">+</button></div>
+  </div>
+  <div class="game-info">
+    <span id="infoCash">$0</span>
+    <span id="infoEnemies">Enemies:0</span>
+    <span id="infoWave">Wave:1</span>
+    <span id="infoKills">Kills:0</span>
+  </div>
+  <button id="waveClock" class="wave-clock" aria-label="Next Wave"></button>
+</div>
+
   <script src="./main.js" defer></script>
 </body>
 </html>

@@ -1100,6 +1100,61 @@ dialog::backdrop {
   display: none;
 }
 
+/* Bottom toolbar */
+.bottom-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  z-index: 1000;
+}
+
+.bottom-toolbar .tower-selector,
+.bottom-toolbar .upgrade-controls,
+.bottom-toolbar .game-info {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.bottom-toolbar .tower-display {
+  text-align: center;
+}
+
+.bottom-toolbar .tower-name {
+  font-weight: bold;
+}
+
+.bottom-toolbar .upgrade-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.bottom-toolbar .game-info span {
+  margin-right: 0.5rem;
+}
+
+.bottom-toolbar .wave-clock {
+  margin-left: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
 .context-header {
   color: var(--game-accent);
   font-weight: 700;
