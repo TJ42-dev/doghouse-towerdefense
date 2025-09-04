@@ -50,8 +50,11 @@ body {
 }
 
 /* Enhanced decor - sparks instead of paws */
-.menu-page .paw::before { 
-    content: "✦"; 
+.menu-page .decor {
+    pointer-events: none;
+}
+.menu-page .paw::before {
+    content: "✦";
     font-size: 1.2rem;
 }
 
@@ -63,6 +66,7 @@ body {
     animation: rise 8s linear infinite, sparkle 3s ease-in-out infinite;
     filter: drop-shadow(var(--glow-secondary));
     animation-delay: var(--d);
+    pointer-events: none;
 }
 
 @keyframes rise {
