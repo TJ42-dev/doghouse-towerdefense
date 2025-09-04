@@ -605,10 +605,11 @@ dialog::backdrop {
 #gameCanvas {
   border: 2px solid var(--game-accent);
   border-radius: 8px;
-  box-shadow: 
+  box-shadow:
     0 0 20px rgba(239, 68, 68, 0.3),
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   background: var(--game-bg);
+  display: none;
 }
 
 /* Stats Overlay */
