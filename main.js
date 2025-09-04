@@ -480,12 +480,13 @@ function victory() {
 }
 
 const audioCache = new Map();
-function playAudio(url) {
+function playAudio(url, volume = 1) {
   let a = audioCache.get(url);
   if (!a) {
     a = new Audio(url);
     audioCache.set(url, a);
   }
+  a.volume = volume;
   a.currentTime = 0;
   a.play().catch(() => {});
 }
@@ -2173,7 +2174,7 @@ async function startGame() {
 function endGame() {
   if (!ctx) return;
   running = false;
-  playAudio(GAME_OVER_SOUND);
+  playAudio(GAME_OVER_SOUND, 0.3);
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
   unbindInputs();
