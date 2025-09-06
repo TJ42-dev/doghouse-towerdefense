@@ -2124,9 +2124,25 @@ function onKey(e) {
 }
 
 async function startGame() {
-  // UI
+  // Hide menu and show loading screen
   container && (container.style.display = 'none');
   menu && (menu.style.display = 'none');
+  const loadingEl = document.getElementById('loadingScreen');
+  loadingEl && (loadingEl.style.display = 'flex');
+
+  // Load assets before showing game
+  await ensureAssets(); // never throws; missing files are filtered out
+
+  // Prepare canvas and battlefield
+  ensureCanvas();
+  await setBattlefield(loadBattlefield());
+  const opts = loadOpts();
+  const grid = opts.gridOverride ? opts.gridSize : currentMap.grid;
+  applyGridSize(grid);
+  gameCanvas.style.display = 'block';
+  resizeCanvas();
+
+  // Show game UI
   el.quitGameBtn && (el.quitGameBtn.style.display = 'inline-block');
   el.nextWaveBtn && (el.nextWaveBtn.style.display = 'inline-block');
   el.statsOverlay && (el.statsOverlay.style.display = 'block');
@@ -2136,32 +2152,13 @@ async function startGame() {
   el.upNextBanner && (el.upNextBanner.style.display = 'block');
   el.gameOverPanel && (el.gameOverPanel.style.display = 'none');
 
-  // Canvas
-  ensureCanvas();
-  await setBattlefield(loadBattlefield());
-  const opts = loadOpts();
-  const grid = opts.gridOverride ? opts.gridSize : currentMap.grid;
-  applyGridSize(grid);
-  gameCanvas.style.display = 'block';
-  resizeCanvas();
-
   // Optional fullscreen
   if (opts.fullscreen && !document.fullscreenElement && document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
 
-  // ---- Load assets (FIX) with a tiny loading screen ----
-  let loading = true;
-  const loadingLoop = () => {
-    if (!loading) return;
-    drawBG();
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.fillText('Loading assets…', 12, 12);
-    requestAnimationFrame(loadingLoop);
-  };
-  loadingLoop();
-  await ensureAssets(); // never throws; missing files are filtered out
-  loading = false;
+  // Hide loading screen
+  loadingEl && (loadingEl.style.display = 'none');
 
   // Reset state & go
   resetGame();
