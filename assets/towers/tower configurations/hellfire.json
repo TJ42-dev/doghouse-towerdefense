@@ -4,6 +4,6 @@
   "fireRate": 0.6,
   "range": 5.5,
   "bulletSpeed": 4,
-  "cost": 2000,
+  "cost": 1800,
   "fireSound": "assets/towers/tower configurations/rocket-fire.wav"
 }
