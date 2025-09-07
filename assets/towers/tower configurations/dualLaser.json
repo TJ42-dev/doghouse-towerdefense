@@ -1,6 +1,6 @@
 {
   "id": "dualLaser",
-  "damage": 144,
+  "damage": 420,
   "fireRate": 0.8,
   "range": 4,
   "cost": 1500,
