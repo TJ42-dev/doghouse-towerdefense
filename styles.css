@@ -440,10 +440,22 @@ dialog::backdrop {
     margin: 0;
 }
 
-#optionsDialog .grid-size-control {
+#optionsDialog .grid-size-option {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+#optionsDialog .grid-size-option .checkbox-line {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+#optionsDialog .grid-size-option select {
+    width: 100%;
 }
 
 .dialog-content h2 {

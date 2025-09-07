@@ -100,17 +100,17 @@
                         <span>Start in fullscreen</span>
                         <input type="checkbox" id="optFullscreen" checked>
                     </label>
-                    <label class="row">
-                        <span>Grid size</span>
-                        <div class="grid-size-control">
+                    <div class="row grid-size-option">
+                        <div class="checkbox-line">
+                            <label for="optGridOverride">Grid size override</label>
                             <input type="checkbox" id="optGridOverride">
-                            <select id="optGridSize" disabled>
-                                <option value="large">large – 36×24</option>
-                                <option value="medium" selected>medium – 30×20</option>
-                                <option value="small">small – 24×16</option>
-                            </select>
                         </div>
-                    </label>
+                        <select id="optGridSize" disabled>
+                            <option value="large">large – 36×24</option>
+                            <option value="medium" selected>medium – 30×20</option>
+                            <option value="small">small – 24×16</option>
+                        </select>
+                    </div>
                     <label class="row">
                         <span>Difficulty</span>
                         <select id="optDifficulty">
