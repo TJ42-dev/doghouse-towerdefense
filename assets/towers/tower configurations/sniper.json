@@ -1,6 +1,6 @@
 {
   "id": "sniper",
-  "damage": 1000,
+  "damage": 1500,
   "fireRate": 0.6,
   "range": 6,
   "bulletSpeed": 8,
