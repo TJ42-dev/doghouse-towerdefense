@@ -1144,6 +1144,7 @@ const WAVE1_DEBUFF = 0.5; // enemies start at half health on wave 1
 let wave1DebuffActive = true;
 let bossBaseHealthBonus = 0;
 let healthBuffMultiplier = 1;
+let nonBossBuffMultiplier = 1;
 
 function resetGame() {
   enemies = [];
@@ -1159,6 +1160,7 @@ function resetGame() {
   money = difficultySettings.startingCash;
   killReward = difficultySettings.killReward;
   healthBuffMultiplier = 1;
+  nonBossBuffMultiplier = 1;
   bossBaseHealthBonus = 0;
   wave1DebuffActive = true;
   selectedTower = null;
@@ -1203,6 +1205,9 @@ function spawnEnemy(waveNum) {
     baseHealth += bossBaseHealthBonus;
   }
   let health = baseHealth * difficultySettings.healthMultiplier * healthBuffMultiplier;
+  if (type.id !== 'boss') {
+    health *= nonBossBuffMultiplier;
+  }
   if (waveNum === 1 && wave1DebuffActive) {
     health *= WAVE1_DEBUFF;
   }
@@ -1241,8 +1246,14 @@ function applyWaveEndRewards(completedWave) {
     const healthInc = (stage === 3) ? 0.15 : (stage === 2) ? 0.2 : 0.3;
     healthBuffMultiplier *= 1 + healthInc;
     const bossCount = completedWave / 5;
-    // Scale boss base health linearly to avoid runaway difficulty
-    bossBaseHealthBonus += 250 * bossCount;
+    // Scale non-boss enemy health using boss count
+    nonBossBuffMultiplier *= 1 + bossCount * 0.05;
+    // Scale boss base health linearly, but taper growth sharply after the 7th boss
+    let bossHealthGain = 250 * bossCount;
+    if (bossCount >= 7) {
+      bossHealthGain *= 0.5; // further reduce late-game scaling
+    }
+    bossBaseHealthBonus += bossHealthGain;
     money += (stage === 3) ? 1000 : (stage === 2) ? 500 : 0;
     killReward += (stage === 3) ? 20 : (stage === 2) ? 10 : 5;
   }
@@ -2124,9 +2135,25 @@ function onKey(e) {
 }
 
 async function startGame() {
-  // UI
+  // Hide menu and show loading screen
   container && (container.style.display = 'none');
   menu && (menu.style.display = 'none');
+  const loadingEl = document.getElementById('loadingScreen');
+  loadingEl && (loadingEl.style.display = 'flex');
+
+  // Load assets before showing game
+  await ensureAssets(); // never throws; missing files are filtered out
+
+  // Prepare canvas and battlefield
+  ensureCanvas();
+  await setBattlefield(loadBattlefield());
+  const opts = loadOpts();
+  const grid = opts.gridOverride ? opts.gridSize : currentMap.grid;
+  applyGridSize(grid);
+  gameCanvas.style.display = 'block';
+  resizeCanvas();
+
+  // Show game UI
   el.quitGameBtn && (el.quitGameBtn.style.display = 'inline-block');
   el.nextWaveBtn && (el.nextWaveBtn.style.display = 'inline-block');
   el.statsOverlay && (el.statsOverlay.style.display = 'block');
@@ -2136,32 +2163,13 @@ async function startGame() {
   el.upNextBanner && (el.upNextBanner.style.display = 'block');
   el.gameOverPanel && (el.gameOverPanel.style.display = 'none');
 
-  // Canvas
-  ensureCanvas();
-  await setBattlefield(loadBattlefield());
-  const opts = loadOpts();
-  const grid = opts.gridOverride ? opts.gridSize : currentMap.grid;
-  applyGridSize(grid);
-  gameCanvas.style.display = 'block';
-  resizeCanvas();
-
   // Optional fullscreen
   if (opts.fullscreen && !document.fullscreenElement && document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
 
-  // ---- Load assets (FIX) with a tiny loading screen ----
-  let loading = true;
-  const loadingLoop = () => {
-    if (!loading) return;
-    drawBG();
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.fillText('Loading assets…', 12, 12);
-    requestAnimationFrame(loadingLoop);
-  };
-  loadingLoop();
-  await ensureAssets(); // never throws; missing files are filtered out
-  loading = false;
+  // Hide loading screen
+  loadingEl && (loadingEl.style.display = 'none');
 
   // Reset state & go
   resetGame();
