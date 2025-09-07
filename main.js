@@ -1088,6 +1088,27 @@ function loadImage(src) {
 let ASSETS = { dogs: [] };
 let assetsReady; // Promise
 
+let ENEMY_CYCLE = [];
+let BOSS_TYPE = null;
+
+function updateEnemyCycle() {
+  const groups = {};
+  ENEMY_CYCLE = [];
+  BOSS_TYPE = null;
+  for (const d of ASSETS.dogs) {
+    if (d.id === 'boss') { BOSS_TYPE = d; continue; }
+    if (!groups[d.id]) groups[d.id] = [];
+    groups[d.id].push(d);
+  }
+  const types = Object.keys(groups).sort();
+  const maxLen = Math.max(0, ...types.map(t => groups[t].length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const t of types) {
+      if (groups[t][i]) ENEMY_CYCLE.push(groups[t][i]);
+    }
+  }
+}
+
 async function ensureAssets() {
   await loadData();
   if (!assetsReady) {
@@ -1110,6 +1131,7 @@ async function ensureAssets() {
         sniper: art.sniper, shotgun: art.shotgun, tesla: art.tesla,
         terminator: art.terminator, wunderwaffe: art.wunderwaffe
       };
+      updateEnemyCycle();
     })();
   }
   return assetsReady;
@@ -1145,6 +1167,7 @@ let wave1DebuffActive = true;
 let bossBaseHealthBonus = 0;
 let healthBuffMultiplier = 1;
 let nonBossBuffMultiplier = 1;
+let bossesDefeated = 0;
 
 function resetGame() {
   enemies = [];
@@ -1162,6 +1185,7 @@ function resetGame() {
   healthBuffMultiplier = 1;
   nonBossBuffMultiplier = 1;
   bossBaseHealthBonus = 0;
+  bossesDefeated = 0;
   wave1DebuffActive = true;
   selectedTower = null;
   updateSelectedTowerInfo();
@@ -1190,12 +1214,12 @@ function spawnEnemy(waveNum) {
   const p = cellToPx(entry);
   const r = CELL_PX / 2;
   let type;
-  if (waveNum % 5 === 0) {
-    type = ASSETS.dogs.find(t => t.id === 'boss') || {};
+  const cycleLength = ENEMY_CYCLE.length;
+  const pos = (waveNum - 1) % (cycleLength + 1);
+  if (pos === cycleLength) {
+    type = BOSS_TYPE || {};
   } else {
-    const nonBoss = ASSETS.dogs.filter(t => t.id !== 'boss');
-    const nonBossIndex = (waveNum - 1) - Math.floor((waveNum - 1) / 5);
-    type = nonBoss[nonBossIndex % nonBoss.length] || {};
+    type = ENEMY_CYCLE[pos] || {};
   }
   const stats = { ...DEFAULT_DOG_STATS, ...type };
   const img = imgReady(type.img) ? type.img : null;
@@ -1225,27 +1249,25 @@ function getNextWaveEnemyName() {
   } else {
     nextWaveNum = waveIndex + 1;
   }
-  if (!ASSETS.dogs || ASSETS.dogs.length === 0) return '';
-  if (nextWaveNum % 5 === 0) {
-    const boss = ASSETS.dogs.find(t => t.id === 'boss');
-    return boss ? boss.name : '';
+  if (!ENEMY_CYCLE.length) return '';
+  const cycleLength = ENEMY_CYCLE.length;
+  const pos = (nextWaveNum - 1) % (cycleLength + 1);
+  if (pos === cycleLength) {
+    return BOSS_TYPE ? BOSS_TYPE.name : '';
   }
-  const nonBoss = ASSETS.dogs.filter(t => t.id !== 'boss');
-  const nonBossIndex = (nextWaveNum - 1) - Math.floor((nextWaveNum - 1) / 5);
-  const type = nonBoss[nonBossIndex % nonBoss.length];
+  const type = ENEMY_CYCLE[pos];
   return type ? type.name : '';
 }
 
-function applyWaveEndRewards(completedWave) {
+function applyWaveEndRewards(completedWave, wasBossWave) {
   // Slightly increase kill reward every wave
   killReward += (completedWave >= 30) ? 3 : (completedWave > 20) ? 2 : 1;
 
-  // Every 5 waves, buff enemy health and give bonus money
-  if (completedWave % 5 === 0) {
-    const stage = (completedWave >= 30) ? 3 : (completedWave > 20) ? 2 : 1;
+  if (wasBossWave) {
+    const bossCount = bossesDefeated;
+    const stage = (bossCount >= 6) ? 3 : (bossCount >= 4) ? 2 : 1;
     const healthInc = (stage === 3) ? 0.15 : (stage === 2) ? 0.2 : 0.3;
     healthBuffMultiplier *= 1 + healthInc;
-    const bossCount = completedWave / 5;
     // Scale non-boss enemy health using boss count
     nonBossBuffMultiplier *= 1 + bossCount * 0.05;
     // Scale boss base health linearly, but taper growth sharply after the 7th boss
@@ -1264,7 +1286,8 @@ function applyWaveEndRewards(completedWave) {
 
 function queueWave() {
   const nextWaveNum = waveIndex + waveQueue.length + 1;
-  const isBossWave = nextWaveNum % 5 === 0;
+  const cycleLength = ENEMY_CYCLE.length;
+  const isBossWave = ((nextWaveNum - 1) % (cycleLength + 1)) === cycleLength;
   if (!waveActive) {
     waveActive = true;
     preWaveTimer = 0;
@@ -1275,7 +1298,7 @@ function queueWave() {
     playAudio(isBossWave ? BOSS_WAVE_START_SOUND : WAVE_START_SOUND);
   }
   const total = isBossWave ? 1 : BALANCE.wave.enemiesPerWave;
-  waveQueue.push({ waveNum: nextWaveNum, enemiesSpawned: 0, total, spawnTimer: 0 });
+  waveQueue.push({ waveNum: nextWaveNum, enemiesSpawned: 0, total, spawnTimer: 0, isBoss: isBossWave });
 }
 
 function updateProjectiles(dt) {
@@ -1784,16 +1807,17 @@ function update(dt) {
   const currentWave = waveQueue[0];
   if (currentWave && currentWave.enemiesSpawned >= currentWave.total) {
     const remaining = enemies.some(e => e.waveNum === currentWave.waveNum);
-    if (!remaining) {
-      money += difficultySettings.waveReward;
-      playAudio(WAVE_COMPLETE_SOUND);
-      const completedWave = currentWave.waveNum;
-      applyWaveEndRewards(completedWave);
-      waveQueue.shift();
-      waveIndex++;
-      waveElapsed = 0;
-      if (waveQueue.length === 0) {
-        waveActive = false;
+      if (!remaining) {
+        money += difficultySettings.waveReward;
+        playAudio(WAVE_COMPLETE_SOUND);
+        const completedWave = currentWave.waveNum;
+        if (currentWave.isBoss) bossesDefeated++;
+        applyWaveEndRewards(completedWave, currentWave.isBoss);
+        waveQueue.shift();
+        waveIndex++;
+        waveElapsed = 0;
+        if (waveQueue.length === 0) {
+          waveActive = false;
         preWaveTimer = BALANCE.wave.postWaveDelay;
       }
     }
