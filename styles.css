@@ -1294,3 +1294,18 @@ dialog::backdrop {
   font-size: 2rem;
   z-index: 1000;
 }
+
+.loading-screen img {
+  max-width: 200px;
+  height: auto;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
