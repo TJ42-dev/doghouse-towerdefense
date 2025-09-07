@@ -439,6 +439,12 @@ dialog::backdrop {
     margin: 0;
 }
 
+#optionsDialog .grid-size-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .dialog-content h2 {
     letter-spacing: 0.1em;
     text-transform: uppercase;
