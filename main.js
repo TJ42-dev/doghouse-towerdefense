@@ -1144,6 +1144,7 @@ const WAVE1_DEBUFF = 0.5; // enemies start at half health on wave 1
 let wave1DebuffActive = true;
 let bossBaseHealthBonus = 0;
 let healthBuffMultiplier = 1;
+let nonBossBuffMultiplier = 1;
 
 function resetGame() {
   enemies = [];
@@ -1159,6 +1160,7 @@ function resetGame() {
   money = difficultySettings.startingCash;
   killReward = difficultySettings.killReward;
   healthBuffMultiplier = 1;
+  nonBossBuffMultiplier = 1;
   bossBaseHealthBonus = 0;
   wave1DebuffActive = true;
   selectedTower = null;
@@ -1203,6 +1205,9 @@ function spawnEnemy(waveNum) {
     baseHealth += bossBaseHealthBonus;
   }
   let health = baseHealth * difficultySettings.healthMultiplier * healthBuffMultiplier;
+  if (type.id !== 'boss') {
+    health *= nonBossBuffMultiplier;
+  }
   if (waveNum === 1 && wave1DebuffActive) {
     health *= WAVE1_DEBUFF;
   }
@@ -1241,6 +1246,8 @@ function applyWaveEndRewards(completedWave) {
     const healthInc = (stage === 3) ? 0.15 : (stage === 2) ? 0.2 : 0.3;
     healthBuffMultiplier *= 1 + healthInc;
     const bossCount = completedWave / 5;
+    // Scale non-boss enemy health using boss count
+    nonBossBuffMultiplier *= 1 + bossCount * 0.05;
     // Scale boss base health linearly, but taper growth after the 7th boss
     let bossHealthGain = 250 * bossCount;
     if (bossCount >= 7) {
