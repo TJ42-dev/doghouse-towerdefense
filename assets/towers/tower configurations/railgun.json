@@ -1,6 +1,6 @@
 {
   "id": "railgun",
-  "damage": 700,
+  "damage": 2000,
   "fireRate": 0.2,
   "range": 4,
   "cost": 2500,
