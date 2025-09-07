@@ -1,6 +1,6 @@
 {
   "id": "terminator",
-  "damage": 480,
+  "damage": 888,
   "fireRate": 0.36,
   "range": 6,
   "cost": 2200,
