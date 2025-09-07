@@ -91,35 +91,37 @@
         <dialog id="optionsDialog">
             <form method="dialog" class="dialog-content">
                 <h2>Loadout</h2>
-                <label class="row">
-                    <span>Mute audio</span>
-                    <input type="checkbox" id="optMute">
-                </label>
-                <label class="row">
-                    <span>Start in fullscreen</span>
-                    <input type="checkbox" id="optFullscreen" checked>
-                </label>
-                <label class="row">
-                    <span>Override grid size</span>
-                    <input type="checkbox" id="optGridOverride">
-                </label>
-                <label class="row">
-                    <span>Grid size</span>
-                    <select id="optGridSize" disabled>
-                        <option value="large">large – 36×24</option>
-                        <option value="medium" selected>medium – 30×20</option>
-                        <option value="small">small – 24×16</option>
-                    </select>
-                </label>
-                <label class="row">
-                    <span>Difficulty</span>
-                    <select id="optDifficulty">
-                        <option value="easy">easy</option>
-                        <option value="medium" selected>medium</option>
-                        <option value="hard">hard</option>
-                        <option value="free">free mode</option>
-                    </select>
-                </label>
+                <div class="options-grid">
+                    <label class="row">
+                        <span>Mute audio</span>
+                        <input type="checkbox" id="optMute">
+                    </label>
+                    <label class="row">
+                        <span>Start in fullscreen</span>
+                        <input type="checkbox" id="optFullscreen" checked>
+                    </label>
+                    <label class="row">
+                        <span>Override grid size</span>
+                        <input type="checkbox" id="optGridOverride">
+                    </label>
+                    <label class="row">
+                        <span>Grid size</span>
+                        <select id="optGridSize" disabled>
+                            <option value="large">large – 36×24</option>
+                            <option value="medium" selected>medium – 30×20</option>
+                            <option value="small">small – 24×16</option>
+                        </select>
+                    </label>
+                    <label class="row">
+                        <span>Difficulty</span>
+                        <select id="optDifficulty">
+                            <option value="easy">easy</option>
+                            <option value="medium" selected>medium</option>
+                            <option value="hard">hard</option>
+                            <option value="free">free mode</option>
+                        </select>
+                    </label>
+                </div>
                 <menu class="dialog-actions">
                     <button value="cancel" class="btn ghost">Cancel</button>
                     <button id="saveOptions" value="default" class="btn tactical">Save</button>
@@ -193,10 +195,6 @@
 
   <div class="tab-container">
     <div id="tab-build" class="tab-content active">
-      <div class="tab-header">
-        <h3>Build Towers</h3>
-        <div class="tab-subtitle">Select a tower to build</div>
-      </div>
       <div id="buildList" class="build-list"></div>
     </div>
 

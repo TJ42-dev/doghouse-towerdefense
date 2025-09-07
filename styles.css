@@ -424,6 +424,21 @@ dialog::backdrop {
     padding: 2rem;
 }
 
+#optionsDialog {
+    width: 700px;
+    max-width: 95vw;
+}
+
+#optionsDialog .options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+#optionsDialog .options-grid .row {
+    margin: 0;
+}
+
 .dialog-content h2 {
     letter-spacing: 0.1em;
     text-transform: uppercase;
