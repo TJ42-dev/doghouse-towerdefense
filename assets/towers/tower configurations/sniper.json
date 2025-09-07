@@ -2,7 +2,7 @@
   "id": "sniper",
   "damage": 1500,
   "fireRate": 0.6,
-  "range": 6,
+  "range": 10,
   "bulletSpeed": 8,
   "cost": 950,
   "fireSound": "assets/towers/tower configurations/sniper-fire.wav"
