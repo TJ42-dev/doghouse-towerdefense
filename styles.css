@@ -1294,3 +1294,8 @@ dialog::backdrop {
   font-size: 2rem;
   z-index: 1000;
 }
+
+.loading-screen img {
+  max-width: 200px;
+  height: auto;
+}
