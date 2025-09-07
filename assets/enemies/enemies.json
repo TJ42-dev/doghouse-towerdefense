@@ -6,8 +6,8 @@
     { "id": "tank", "name": "bulldog", "src": "assets/enemies/tank/bulldog2.png", "baseHealth": 220, "baseSpeed": 0.6 },
     { "id": "speed", "name": "Pitbull", "src": "assets/enemies/speed/pitbull.png", "baseHealth": 80, "baseSpeed": 1.5 },
     { "id": "normal", "name": "Labrador", "src": "assets/enemies/normal/labrador.png", "baseHealth": 100, "baseSpeed": 1.0 },
-    { "id": "tank", "name": "Malamute", "src": "assets/enemies/tank/bulldog.png", "baseHealth": 180, "baseSpeed": 0.8 },
-    { "id": "speed", "name": "Rottweiler", "src": "assets/enemies/speed/pitbull.png", "baseHealth": 120, "baseSpeed": 1.4},
+    { "id": "tank", "name": "Malamute", "src": "assets/enemies/tank/malamute.png", "baseHealth": 180, "baseSpeed": 0.8 },
+    { "id": "speed", "name": "Rottweiler", "src": "assets/enemies/speed/rottweiler.png", "baseHealth": 120, "baseSpeed": 1.4},
     { "id": "boss", "name": "German Shepard", "src": "assets/enemies/boss/german_shepard.png", "baseHealth": 500, "baseSpeed": 1.2 }
   ]
 }
