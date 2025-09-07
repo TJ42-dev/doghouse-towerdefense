@@ -2,7 +2,7 @@
   "id": "dualLaser",
   "damage": 420,
   "fireRate": 0.8,
-  "range": 4,
+  "range": 5.5,
   "cost": 1500,
   "fireSound": "assets/towers/tower configurations/laser_fire.wav"
 }

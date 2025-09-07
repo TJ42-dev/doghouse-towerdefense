@@ -2,7 +2,7 @@
   "id": "terminator",
   "damage": 888,
   "fireRate": 0.36,
-  "range": 6,
+  "range": 8,
   "cost": 2200,
   "fireSound": "assets/towers/tower configurations/tesla_hit.wav"
 }

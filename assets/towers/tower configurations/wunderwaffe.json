@@ -2,7 +2,7 @@
   "id": "wunderwaffe",
   "damage": 777,
   "fireRate": 0.225,
-  "range": 6,
+  "range": 8,
   "cost": 2600,
   "fireSound": "assets/towers/tower configurations/tesla_hit.wav"
 }

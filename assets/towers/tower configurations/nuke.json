@@ -2,8 +2,8 @@
   "id": "nuke",
   "damage": 1500,
   "fireRate": 0.6,
-  "range": 5.5,
-  "bulletSpeed": 4,
+  "range": 6.9,
+  "bulletSpeed": 5,
   "cost": 2000,
   "fireSound": "assets/towers/tower configurations/nuke-fire.wav"
 }

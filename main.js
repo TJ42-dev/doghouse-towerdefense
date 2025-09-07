@@ -348,6 +348,11 @@ let ROCKET_BASE = TOWER_BASES.rocket;
 let TESLA_BASE  = TOWER_BASES.tesla;
 let TOWER_TYPES = [];
 
+// Upgrade settings
+const MAX_UPGRADES = 7;
+const UPGRADE_PCT = 1 / MAX_UPGRADES; // ~14.29% per level
+const ROCKET_DAMAGE_PCT = 1.5 / MAX_UPGRADES; // maintain 150% total over 7 levels
+
 function makeTower(type, gx, gy) {
   const base = TOWER_BASES[type];
   const p = cellToPx({ x: gx, y: gy });
@@ -626,7 +631,7 @@ function stopDrag() {
 function tryUpgrade(stat, max = false) {
   if (!selectedTower) return;
   let upgraded = false;
-  const limit = () => (selectedTower.upgrades?.[stat] ?? 0) < 10;
+  const limit = () => (selectedTower.upgrades?.[stat] ?? 0) < MAX_UPGRADES;
   if (max) {
     while (limit() && money >= getUpgradeCost(selectedTower, stat)) {
       if (!upgradeTower(selectedTower, stat)) break;
@@ -673,7 +678,7 @@ function updateSelectedTowerInfo() {
     el.selectedTowerName.classList.remove('no-selection');
     const isSpecial = SPECIAL_TYPES.has(selectedTower.type);
     const isBaseTower = BASE_TYPES.has(selectedTower.type);
-    const fullyUpgraded = isBaseTower && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= 10);
+    const fullyUpgraded = isBaseTower && ['damage','fireRate','range'].every(s => selectedTower.upgrades?.[s] >= MAX_UPGRADES);
     rangePreview = { x: selectedTower.x, y: selectedTower.y, r: selectedTower.range * CELL_PX };
     if (fullyUpgraded) {
       el.selectedTowerName.textContent = 'Choose specialization';
@@ -699,7 +704,8 @@ function updateSelectedTowerInfo() {
       for (const [stat, els] of Object.entries(stats)) {
         const lvl = selectedTower.upgrades?.[stat] || 0;
         const curr = selectedTower[stat];
-        const next = selectedTower.base[stat] * (1 + 0.1 * (lvl + 1));
+        const pct = (selectedTower.type === 'rocket' && stat === 'damage') ? ROCKET_DAMAGE_PCT : UPGRADE_PCT;
+        const next = selectedTower.base[stat] * (1 + pct * (lvl + 1));
         const inc = next - curr;
         if (els.value) {
           els.value.textContent =
@@ -719,7 +725,7 @@ function updateSelectedTowerInfo() {
           if (isSpecial) {
             els.cost.textContent = '';
             els.cost.style.display = 'none';
-          } else if (lvl >= 10) {
+          } else if (lvl >= MAX_UPGRADES) {
             els.cost.textContent = '(MAX!)';
             els.cost.style.display = '';
           } else {
@@ -732,7 +738,7 @@ function updateSelectedTowerInfo() {
             els.btn.style.display = 'none';
           } else {
             els.btn.style.display = '';
-            els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
+            els.btn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= MAX_UPGRADES;
           }
         }
         if (els.maxBtn) {
@@ -740,7 +746,7 @@ function updateSelectedTowerInfo() {
             els.maxBtn.style.display = 'none';
           } else {
             els.maxBtn.style.display = '';
-            els.maxBtn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= 10;
+            els.maxBtn.disabled = money < getUpgradeCost(selectedTower, stat) || lvl >= MAX_UPGRADES;
           }
         }
       }
@@ -817,17 +823,14 @@ function getUpgradeCost(t, stat) {
 function upgradeTower(t, stat) {
   if (!t.upgrades) t.upgrades = { damage: 0, fireRate: 0, range: 0 };
   if (!t.base) t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
-  if (t.upgrades[stat] >= 10) return false;
+  if (t.upgrades[stat] >= MAX_UPGRADES) return false;
   const cost = getUpgradeCost(t, stat);
   if (money < cost) return false;
   money -= cost;
   t.spent = (t.spent || t.cost || 0) + cost;
   t.upgrades[stat]++;
-  if (t.type === 'rocket' && stat === 'damage') {
-    t[stat] = t.base[stat] * (1 + 0.15 * t.upgrades[stat]);
-  } else {
-    t[stat] = t.base[stat] * (1 + 0.1 * t.upgrades[stat]);
-  }
+  const pct = (t.type === 'rocket' && stat === 'damage') ? ROCKET_DAMAGE_PCT : UPGRADE_PCT;
+  t[stat] = t.base[stat] * (1 + pct * t.upgrades[stat]);
   if (stat === 'range' && rangePreview && selectedTower === t) {
     rangePreview.r = t.range * CELL_PX;
   }
@@ -836,74 +839,24 @@ function upgradeTower(t, stat) {
 
 function specializeTower(t, kind) {
   if (!t.upgrades) return;
-  const maxed = ['damage','fireRate','range'].every(s => t.upgrades[s] >= 10);
+  const maxed = ['damage','fireRate','range'].every(s => t.upgrades[s] >= MAX_UPGRADES);
   if (!maxed) return;
   const cost = BALANCE.specializationCosts[kind];
   if (money < cost) return;
+  const allowed = SPECIALIZE_BY_BASE[t.type] || [];
+  if (!allowed.includes(kind)) return;
   money -= cost;
   t.spent = (t.spent || t.cost || 0) + cost;
-  if (t.type === 'cannon') {
-    if (kind === 'sniper') {
-      const idx = Math.max(0, waveIndex - 1);
-      const scale = 1 + idx * BALANCE.healthScalePerWave;
-      t.type = 'sniper';
-      t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
-      t.fireRate = 0.6;
-      t.range = t.range * 1.5;
-    } else if (kind === 'shotgun') {
-      t.type = 'shotgun';
-      t.damage = Math.round(t.damage * 1.5);
-      // fireRate unchanged; reduce range for close-quarters spread
-      t.range = 4.5;
-    }
-  } else if (t.type === 'laser') {
-    if (kind === 'dualLaser') {
-      t.type = 'dualLaser';
-      t.damage = Math.round(t.damage * 1.2);
-      t.fireRate = t.fireRate * 2;
-      // range unchanged
-    } else if (kind === 'railgun') {
-      t.type = 'railgun';
-      t.damage = Math.round(t.damage * 4);
-      t.fireRate = t.fireRate * 0.5;
-      // range unchanged
-    }
-  } else if (t.type === 'rocket') {
-    if (kind === 'nuke') {
-      const idx = Math.max(0, waveIndex - 1);
-      const scale = 1 + idx * BALANCE.healthScalePerWave;
-      removeTowerProjectiles(t);
-      t.type = 'nuke';
-      t.damage = Math.round(DEFAULT_DOG_STATS.baseHealth * scale);
-      t.fireRate = 0.6;
-      // range unchanged
-    } else if (kind === 'hellfire') {
-      t.type = 'hellfire';
-      // moderate fire rate boost
-      t.fireRate = t.fireRate * 1.5;
-      // damage unchanged
-    } else {
-      return;
-    }
-  } else if (t.type === 'tesla') {
-    if (kind === 'terminator') {
-      t.type = 'terminator';
-      t.damage = Math.round(t.damage * 1.2);
-      t.fireRate = t.fireRate * 1.2;
-      // range unchanged
-    } else if (kind === 'wunderwaffe') {
-      t.type = 'wunderwaffe';
-      t.damage = Math.round(t.damage * 1.5);
-      t.fireRate = t.fireRate * 0.75;
-      // range unchanged
-    } else {
-      return;
-    }
-  } else {
-    return;
-  }
-  const cfg = (typeof TOWER_TYPES !== 'undefined') ? TOWER_TYPES.find(x => x.id === t.type) : null;
-  if (cfg && cfg.fireSound) t.fireSound = cfg.fireSound;
+  const prevType = t.type;
+  const cfg = (typeof TOWER_TYPES !== 'undefined') ? TOWER_TYPES.find(x => x.id === kind) : null;
+  if (!cfg) return;
+  if (prevType === 'rocket') removeTowerProjectiles(t);
+  t.type = kind;
+  if (cfg.damage != null) t.damage = cfg.damage;
+  if (cfg.fireRate != null) t.fireRate = cfg.fireRate;
+  if (cfg.range != null) t.range = cfg.range;
+  if (cfg.bulletSpeed != null) t.bulletSpeed = cfg.bulletSpeed;
+  if (cfg.fireSound) t.fireSound = cfg.fireSound;
   t.base = { damage: t.damage, fireRate: t.fireRate, range: t.range };
   t.upgrades = { damage: 0, fireRate: 0, range: 0 };
 }
@@ -1591,7 +1544,9 @@ function update(dt) {
     if (t.type === 'rocket' || t.type === 'hellfire' || t.type === 'nuke') {
       const isHellfire = t.type === 'hellfire';
       const isRocket = t.type === 'rocket';
-      const hasCap = isHellfire ? true : t.upgrades.range >= 5 && t.upgrades.fireRate >= 3;
+      const hasCap = isHellfire ? true :
+        t.upgrades.range >= Math.ceil(0.5 * MAX_UPGRADES) &&
+        t.upgrades.fireRate >= Math.ceil(0.3 * MAX_UPGRADES);
       const cap = isHellfire ? 5 : (isRocket && hasCap ? 3 : 0);
       const existing = bullets.filter(b => b.type === 'rocket' && b.source === t).length;
       const maxSpeed = ROCKET_BASE.bulletSpeed * CELL_PX;
