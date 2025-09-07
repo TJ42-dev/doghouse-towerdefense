@@ -15,7 +15,7 @@
 - Rocket launchers keep up to three persistent rockets between waves, regenerating missing rockets even when no wave is active.
 - Sentry rockets now visibly launch from their tower before spiraling outward to patrol for targets.
 - Replaced wall.svg with fence.png for the wall base asset.
-- Slower boss base health scaling after each boss wave, with reduced increases from the seventh boss onward.
+- Slower boss base health scaling after each boss wave, with sharply reduced increases from the seventh boss onward.
 - Non-boss enemies gain extra health buffs after each boss wave that scale with the number of bosses defeated.
 - Show '(MAX!)' instead of the cost when a tower stat reaches level 10.
 - Added placeholder rocket and nuke hit sounds and silenced other bullet impacts.

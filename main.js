@@ -1248,10 +1248,10 @@ function applyWaveEndRewards(completedWave) {
     const bossCount = completedWave / 5;
     // Scale non-boss enemy health using boss count
     nonBossBuffMultiplier *= 1 + bossCount * 0.05;
-    // Scale boss base health linearly, but taper growth after the 7th boss
+    // Scale boss base health linearly, but taper growth sharply after the 7th boss
     let bossHealthGain = 250 * bossCount;
     if (bossCount >= 7) {
-      bossHealthGain *= 0.8; // slightly reduce late-game scaling
+      bossHealthGain *= 0.5; // further reduce late-game scaling
     }
     bossBaseHealthBonus += bossHealthGain;
     money += (stage === 3) ? 1000 : (stage === 2) ? 500 : 0;
